@@ -1,0 +1,1 @@
+{"main-window":{"identifier":"main-window","description":"Allows the main window to open the native project directory picker.","local":true,"windows":["main"],"permissions":["dialog:allow-open"]}}
