@@ -49,6 +49,7 @@ Minimal attribution attached to created or changed artifacts. It may contain a s
 ## Relationships
 
 - A Project contains many ProjectAreas and gives all other entities their context.
+- Future specialist role profiles consume relevant subsets of the same Project context; they do not own separate project truth or independent knowledge databases.
 - A ProjectArea groups KnowledgeEntries; one entry may relate to several Systems.
 - A Decision may resolve, lock, deprecate, or supersede KnowledgeEntries and other Decisions.
 - A Milestone references the Systems, Decisions, and FeatureContracts in its scope.

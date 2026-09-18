@@ -36,7 +36,11 @@ Compares selected Intent claims with supported Reality evidence and produces exp
 
 ### AI Provider Boundary
 
-Accepts provider-neutral reasoning tasks and deliberately assembled context, then normalizes responses for validation, source attribution, and human review. Nebius Token Factory and an NVIDIA Nemotron open model are planned evaluation targets, not domain dependencies.
+Accepts provider-neutral reasoning tasks and deliberately assembled context, then normalizes responses for validation, source attribution, and human review. The next planned milestone evaluates this boundary with Nebius Token Factory and allowed models while keeping credentials and provider telemetry outside core domain data. Nebius and NVIDIA Nemotron models are evaluation targets, not domain dependencies.
+
+### Shared Project Brain and Specialist Profiles
+
+Future specialist roles receive deliberately scoped views of the same Project knowledge and evidence. They are role/profile configurations over shared context, not separate truth stores or autonomous services. If multi-perspective review is pursued, it should begin as bounded prompts whose assumptions and outputs remain individually inspectable.
 
 ### Git Integration Boundary
 
@@ -58,6 +62,8 @@ A separate bridge/package observes supported Unity project facts and emits a ver
 
 Derived indexes or caches may later improve retrieval, but they must be rebuildable and never become the only copy of project knowledge.
 
+Future content-production integrations follow the same authority flow: ForgeMind may prepare an Asset Brief and coordinate a specialized external generator, but generated output remains a candidate until validation and human approval. See [AI Specialists and Content Production Direction](AI_SPECIALISTS_AND_PRODUCTION.md).
+
 ## Replaceability and portability
 
 Core entities contain no Nebius-, Nemotron-, Unity-, Git-host-, database-, or UI-framework-specific fields. Adapters translate external formats at boundaries. Human-readable formats are preferred where practical, and no proprietary binary project format is planned.
@@ -67,7 +73,7 @@ Core entities contain no Nebius-, Nemotron-, Unity-, Git-host-, database-, or UI
 - supported operating systems and distribution strategy beyond the currently validated Windows development build;
 - file formats and validation for entities beyond the minimal 0C Project identity;
 - schema migration beyond rejecting unsupported project metadata versions;
-- AI provider/model selection and retrieval strategy;
+- AI provider/model selection beyond the bounded 0D evaluation harness and any retrieval strategy;
 - Alignment implementation approach and final status vocabulary;
 - Unity compatibility range, scan transport, and full observation coverage;
 - Git library, command-line strategy, host integrations, and branching policy;

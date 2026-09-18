@@ -66,6 +66,12 @@ These are product concepts, not commitments to separate technical services or st
 
 ForgeMind should integrate with Unity, Git, repositories, IDEs, coding agents, and planning tools instead of replacing them. Repositories remain authoritative; Unity supplies evidence about Reality; AI proposes and explains; ForgeMind orchestrates context, interpretation, review, and promotion into durable knowledge. Project data should remain portable and human-readable where practical.
 
+## Future specialist and production direction
+
+ForgeMind may eventually expose specialist game-development role profiles and coordinate external content-production tools. Every profile must use the same Project Brain rather than maintain isolated truth, and every generated proposal or asset remains subject to evidence labeling and human review. This is **FUTURE DIRECTION**, is **NOT IMPLEMENTED**, and does not expand the required MVP.
+
+See [AI Specialists and Content Production Direction](AI_SPECIALISTS_AND_PRODUCTION.md) for potential roles, multi-perspective review, the distinction between simulation and AI scenario reasoning, content-production orchestration, private-project dogfooding boundaries, and the planned model-evaluation approach.
+
 ## What ForgeMind is not
 
 - **Not an AI coding agent:** it may prepare grounded implementation context, but its core job is project understanding, decisions, and alignment—not autonomous coding.
