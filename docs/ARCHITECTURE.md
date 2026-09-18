@@ -2,13 +2,13 @@
 
 ## Current state
 
-Milestone 0C implements the local Tauri desktop shell and a narrow persistent-project metadata boundary. AI integration, Project Compendium, Decision History, Alignment logic, Git integration, and the Unity Bridge are **NOT IMPLEMENTED**.
+Milestone 0D adds a replaceable AI-provider boundary and a bounded Nebius Token Factory evaluation harness to the 0C local Tauri workspace. AI Project Interview, Project Compendium generation, Decision History, specialist agents, Alignment logic, Git integration, and the Unity Bridge are **NOT IMPLEMENTED**.
 
 ## Architectural stance
 
 ForgeMind is intended as a desktop-first orchestration and interpretation layer over a local game repository. The repository remains authoritative for durable project files; Git provides durable history; Unity supplies evidence about Reality. ForgeMind owns neither the underlying game project nor its development tools.
 
-The current desktop shell uses Tauri 2 with React and TypeScript. The UI receives no generic filesystem access: it invokes only workspace-specific inspect and initialize commands, while the native layer reads or creates `.forgemind/project.json` under the explicitly selected directory.
+The current desktop shell uses Tauri 2 with React and TypeScript. The UI receives no generic filesystem or network access: it invokes workspace-specific inspect and initialize commands plus one normalized evaluation command. The native layer reads or creates `.forgemind/project.json` under the explicitly selected directory and separately owns provider credentials and outbound inference HTTP.
 
 The boundaries below describe responsibilities, not services, deployable processes, or a production-scale architecture.
 
@@ -36,7 +36,11 @@ Compares selected Intent claims with supported Reality evidence and produces exp
 
 ### AI Provider Boundary
 
-Accepts provider-neutral reasoning tasks and deliberately assembled context, then normalizes responses for validation, source attribution, and human review. The next planned milestone evaluates this boundary with Nebius Token Factory and allowed models while keeping credentials and provider telemetry outside core domain data. Nebius and NVIDIA Nemotron models are evaluation targets, not domain dependencies.
+Accepts the small normalized `AIRequest` contract and returns `AIResponse` with response text, model identity, measured latency, and optional provider-reported token counts. `AIProvider` is a Rust trait; `NebiusTokenFactoryProvider` is its current production adapter and `MockAIProvider` supplies deterministic offline test behavior. Nebius request and response structures remain private to the adapter.
+
+React invokes only `run_ai_evaluation` and cannot supply or retrieve a credential. The native provider reads `NEBIUS_API_KEY` from its process environment immediately before an explicitly requested evaluation and sends it as a bearer token to the official Token Factory chat-completions endpoint. Errors cross the command boundary as controlled codes and safe messages; provider bodies, headers, and keys do not. Model identifiers are entered manually and the central frontend configuration contains no guessed account-specific model IDs.
+
+The harness makes no request on startup, performs no polling or automatic retry, and persists no result. Its conservative default output cap is 128 tokens; the documented closure smoke uses 32. This is an evaluation facility, not the AI Project Interview or a project-knowledge workflow.
 
 ### Shared Project Brain and Specialist Profiles
 
@@ -73,7 +77,7 @@ Core entities contain no Nebius-, Nemotron-, Unity-, Git-host-, database-, or UI
 - supported operating systems and distribution strategy beyond the currently validated Windows development build;
 - file formats and validation for entities beyond the minimal 0C Project identity;
 - schema migration beyond rejecting unsupported project metadata versions;
-- AI provider/model selection beyond the bounded 0D evaluation harness and any retrieval strategy;
+- provider/model discovery, benchmark history, comparison runs, pricing, human scoring, and retrieval beyond the bounded 0D evaluation harness;
 - Alignment implementation approach and final status vocabulary;
 - Unity compatibility range, scan transport, and full observation coverage;
 - Git library, command-line strategy, host integrations, and branching policy;

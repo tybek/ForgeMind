@@ -282,6 +282,13 @@ button:focus-visible {
   background: #29334e;
 }
 
+.evaluation-nav {
+  margin-top: 14px;
+  border-top: 1px solid #2b3038;
+  border-radius: 0 0 6px 6px;
+  padding-top: 13px;
+}
+
 .change-project-button {
   margin-top: auto;
   border: 1px solid #30353e;
@@ -342,6 +349,116 @@ button:focus-visible {
 .overview-card,
 .placeholder-card {
   padding: 26px;
+}
+
+.evaluation-stack {
+  display: grid;
+  gap: 22px;
+  max-width: 900px;
+}
+
+.evaluation-card,
+.evaluation-error {
+  padding: 26px;
+  border: 1px solid #2a2f37;
+  border-radius: 10px;
+  background: #181b20;
+}
+
+.evaluation-card h2 {
+  margin: 8px 0 7px;
+}
+
+.evaluation-form {
+  display: grid;
+  gap: 18px;
+  margin-top: 24px;
+}
+
+.evaluation-form label {
+  display: grid;
+  gap: 7px;
+  color: #b8bec9;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.evaluation-form input,
+.evaluation-form textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #373d47;
+  border-radius: 6px;
+  color: #eef0f5;
+  background: #121419;
+  font: inherit;
+}
+
+.evaluation-form input:focus,
+.evaluation-form textarea:focus {
+  border-color: #6687e3;
+  outline: none;
+}
+
+.evaluation-form input[readonly] {
+  color: #aeb4bf;
+  background: #20242b;
+}
+
+.evaluation-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.evaluation-form .primary-button {
+  justify-self: start;
+}
+
+.evaluation-error {
+  border-color: #753b42;
+  color: #ffd9dc;
+  background: #372126;
+}
+
+.evaluation-error p {
+  margin: 7px 0 0;
+}
+
+.evaluation-result pre {
+  margin: 20px 0;
+  padding: 18px;
+  border: 1px solid #2c313a;
+  border-radius: 7px;
+  overflow: auto;
+  white-space: pre-wrap;
+  color: #e8eaf0;
+  background: #121419;
+  font: inherit;
+  line-height: 1.55;
+}
+
+.result-metadata {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin: 0;
+}
+
+.result-metadata div {
+  padding: 12px;
+  border: 1px solid #2c313a;
+  border-radius: 7px;
+}
+
+.result-metadata dt {
+  color: #858c99;
+  font-size: 11px;
+}
+
+.result-metadata dd {
+  margin: 5px 0 0;
+  overflow-wrap: anywhere;
 }
 
 .overview-card h2,

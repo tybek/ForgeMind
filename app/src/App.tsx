@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { EvaluationPage } from "./EvaluationPage";
 import {
   initializeWorkspace,
   inspectWorkspace,
@@ -19,6 +20,7 @@ const workspaceAreas = [
 ] as const;
 
 type WorkspaceArea = (typeof workspaceAreas)[number];
+type WorkspaceView = WorkspaceArea | "AI Evaluation";
 
 export interface Workspace extends ProjectMetadata {
   path: string;
@@ -168,7 +170,7 @@ function LoadingWorkspace({ path }: { path: string }) {
 function Overview({ workspace }: { workspace: Workspace }) {
   const statuses = [
     ["Workspace", "Local workspace"],
-    ["AI", "Not configured"],
+    ["AI", "Manual evaluation only"],
     ["Unity", "Not scanned"],
     ["Git", "Not integrated"],
   ];
@@ -226,7 +228,7 @@ export function WorkspaceShell({
   workspace: Workspace;
   onOpen: () => Promise<void>;
 }) {
-  const [activeArea, setActiveArea] = useState<WorkspaceArea>("Overview");
+  const [activeArea, setActiveArea] = useState<WorkspaceView>("Overview");
 
   return (
     <div className="workspace-shell">
@@ -259,6 +261,15 @@ export function WorkspaceShell({
           ))}
         </nav>
 
+        <button
+          className={activeArea === "AI Evaluation" ? "nav-item nav-item-active evaluation-nav" : "nav-item evaluation-nav"}
+          type="button"
+          aria-current={activeArea === "AI Evaluation" ? "page" : undefined}
+          onClick={() => setActiveArea("AI Evaluation")}
+        >
+          AI Evaluation
+        </button>
+
         <button className="change-project-button" type="button" onClick={() => void onOpen()}>
           Open another project
         </button>
@@ -270,11 +281,15 @@ export function WorkspaceShell({
             <span className="eyebrow">{workspace.name}</span>
             <h1>{activeArea}</h1>
           </div>
-          <span className="milestone-badge">0C Local Workspace</span>
+          <span className="milestone-badge">
+            {activeArea === "AI Evaluation" ? "0D Evaluation Harness" : "0C Local Workspace"}
+          </span>
         </header>
 
         <div className="workspace-content">
-          {activeArea === "Overview" ? (
+          {activeArea === "AI Evaluation" ? (
+            <EvaluationPage />
+          ) : activeArea === "Overview" ? (
             <Overview workspace={workspace} />
           ) : (
             <Placeholder area={activeArea} />

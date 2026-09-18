@@ -110,12 +110,22 @@ describe("ForgeMind local workspace", () => {
       expect(screen.getByRole("button", { name: area })).toBeInTheDocument();
     }
 
-    expect(screen.getByText("Not configured")).toBeInTheDocument();
+    expect(screen.getByText("Manual evaluation only")).toBeInTheDocument();
     expect(screen.getByText("Not scanned")).toBeInTheDocument();
     expect(screen.getByText("Not integrated")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Alignment" }));
     expect(screen.getByText("Alignment workspace is not implemented yet.")).toBeInTheDocument();
+  });
+
+  it("opens the bounded AI evaluation harness from the workspace shell", async () => {
+    const user = userEvent.setup();
+    render(<WorkspaceShell workspace={workspace} onOpen={async () => undefined} />);
+
+    await user.click(screen.getByRole("button", { name: "AI Evaluation" }));
+
+    expect(screen.getByRole("heading", { name: "AI Evaluation", level: 2 })).toBeInTheDocument();
+    expect(screen.getByLabelText("Provider")).toHaveValue("Nebius Token Factory");
   });
 
   it("shows invalid metadata honestly without offering initialization", async () => {
