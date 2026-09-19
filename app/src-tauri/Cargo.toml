@@ -5,6 +5,7 @@ description = "ForgeMind AI Game Development Workspace"
 authors = ["ForgeMind contributors"]
 edition = "2021"
 license = "MIT"
+default-run = "forgemind"
 
 [lib]
 name = "forgemind_lib"
@@ -16,13 +17,13 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 async-trait = "0.1"
 chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
-reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "native-tls"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tauri = { version = "2", features = [] }
 tauri-plugin-dialog = "2"
+tokio = { version = "1", features = ["macros", "rt"] }
 uuid = { version = "1", features = ["v4"] }
 
 [dev-dependencies]
 tempfile = "3"
-tokio = { version = "1", features = ["macros", "rt"] }

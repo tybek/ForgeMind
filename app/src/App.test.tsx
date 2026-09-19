@@ -3,12 +3,14 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import App, { WorkspaceShell, type Workspace } from "./App";
 import {
+  getDevelopmentWorkspacePath,
   initializeWorkspace,
   inspectWorkspace,
   selectWorkspaceDirectory,
 } from "./platform/workspaceDirectory";
 
 vi.mock("./platform/workspaceDirectory", () => ({
+  getDevelopmentWorkspacePath: vi.fn(),
   selectWorkspaceDirectory: vi.fn(),
   inspectWorkspace: vi.fn(),
   initializeWorkspace: vi.fn(),
@@ -48,6 +50,7 @@ const requiredAreas = [
 describe("ForgeMind local workspace", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(getDevelopmentWorkspacePath).mockResolvedValue(null);
   });
 
   it("renders the welcome screen with the Open Project action", () => {
@@ -55,6 +58,16 @@ describe("ForgeMind local workspace", () => {
 
     expect(screen.getByRole("heading", { name: "ForgeMind" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Open Project" })).toBeEnabled();
+  });
+
+  it("loads a debug-configured workspace through the normal inspection path without opening the picker", async () => {
+    vi.mocked(getDevelopmentWorkspacePath).mockResolvedValue(selectedPath);
+    vi.mocked(inspectWorkspace).mockResolvedValue(validInspection);
+    render(<App />);
+
+    expect(await screen.findByText(workspace.projectId)).toBeInTheDocument();
+    expect(inspectWorkspace).toHaveBeenCalledWith(selectedPath);
+    expect(selectWorkspaceDirectory).not.toHaveBeenCalled();
   });
 
   it("shows an explicit initialization action for an uninitialized directory", async () => {

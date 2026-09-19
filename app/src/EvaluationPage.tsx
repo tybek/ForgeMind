@@ -7,6 +7,7 @@ import {
 } from "./config/evaluation";
 import {
   runEvaluation,
+  type AIProviderDiagnostics,
   type AIProviderError,
   type AIResponse,
 } from "./platform/aiProvider";
@@ -25,6 +26,32 @@ function providerErrorMessage(error: unknown): string {
 
 function usageValue(value: number | undefined): string {
   return value === undefined ? "Not provided" : String(value);
+}
+
+function providerDiagnostics(error: unknown): AIProviderDiagnostics | undefined {
+  if (typeof error !== "object" || error === null || !("diagnostics" in error)) return undefined;
+  const diagnostics = error.diagnostics;
+  if (
+    typeof diagnostics !== "object" ||
+    diagnostics === null ||
+    !("choicesPresent" in diagnostics) ||
+    typeof diagnostics.choicesPresent !== "boolean" ||
+    !("messageContentPresent" in diagnostics) ||
+    typeof diagnostics.messageContentPresent !== "boolean" ||
+    !("reasoningContentPresent" in diagnostics) ||
+    typeof diagnostics.reasoningContentPresent !== "boolean" ||
+    !("refusalPresent" in diagnostics) ||
+    typeof diagnostics.refusalPresent !== "boolean" ||
+    !("toolCallsPresent" in diagnostics) ||
+    typeof diagnostics.toolCallsPresent !== "boolean"
+  ) {
+    return undefined;
+  }
+  return diagnostics as AIProviderDiagnostics;
+}
+
+function presence(value: boolean): string {
+  return value ? "Yes" : "No";
 }
 
 export function EvaluationPage() {
@@ -61,7 +88,11 @@ export function EvaluationPage() {
         typeof evaluationError.code === "string"
           ? evaluationError.code
           : "EVALUATION_FAILED";
-      setError({ code, message: providerErrorMessage(evaluationError) });
+      setError({
+        code,
+        message: providerErrorMessage(evaluationError),
+        diagnostics: providerDiagnostics(evaluationError),
+      });
     } finally {
       setIsRunning(false);
     }
@@ -146,6 +177,22 @@ export function EvaluationPage() {
         <section className="evaluation-error" role="alert">
           <strong>{error.code}</strong>
           <p>{error.message}</p>
+          {error.diagnostics ? (
+            <dl className="result-metadata" aria-label="Provider diagnostics">
+              <div><dt>HTTP status</dt><dd>{error.diagnostics.httpStatus ?? "Unavailable"}</dd></div>
+              <div><dt>Response object</dt><dd>{error.diagnostics.responseObject ?? "Unavailable"}</dd></div>
+              <div><dt>Finish reason</dt><dd>{error.diagnostics.finishReason ?? "Unavailable"}</dd></div>
+              <div><dt>Choices present</dt><dd>{presence(error.diagnostics.choicesPresent)}</dd></div>
+              <div><dt>Message content present</dt><dd>{presence(error.diagnostics.messageContentPresent)}</dd></div>
+              <div><dt>Reasoning content present</dt><dd>{presence(error.diagnostics.reasoningContentPresent)}</dd></div>
+              <div><dt>Refusal present</dt><dd>{presence(error.diagnostics.refusalPresent)}</dd></div>
+              <div><dt>Tool calls present</dt><dd>{presence(error.diagnostics.toolCallsPresent)}</dd></div>
+              <div><dt>Reasoning tokens</dt><dd>{error.diagnostics.reasoningTokens ?? "Unavailable"}</dd></div>
+              <div><dt>Provider request ID</dt><dd>{error.diagnostics.providerRequestId ?? "Unavailable"}</dd></div>
+              <div><dt>Provider error code</dt><dd>{error.diagnostics.providerErrorCode ?? "Unavailable"}</dd></div>
+              <div><dt>Provider error type</dt><dd>{error.diagnostics.providerErrorType ?? "Unavailable"}</dd></div>
+            </dl>
+          ) : null}
         </section>
       ) : null}
 

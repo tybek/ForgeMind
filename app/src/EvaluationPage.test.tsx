@@ -132,4 +132,35 @@ describe("AI evaluation harness", () => {
     expect(alert).toHaveTextContent("Set NEBIUS_API_KEY");
     expect(alert).not.toHaveTextContent("Explain this trade-off.");
   });
+
+  it("shows allowlisted provider diagnostics without response content", async () => {
+    vi.mocked(runEvaluation).mockRejectedValue({
+      code: "OUTPUT_TRUNCATED",
+      message: "The output limit was reached before readable text was returned.",
+      diagnostics: {
+        httpStatus: 200,
+        responseObject: "chat.completion",
+        finishReason: "length",
+        choicesPresent: true,
+        messageContentPresent: false,
+        reasoningContentPresent: true,
+        refusalPresent: false,
+        toolCallsPresent: false,
+        reasoningTokens: 32,
+        providerRequestId: "request-safe-123",
+      },
+      responseBody: "private reasoning must not be rendered",
+    });
+    render(<EvaluationPage />);
+    const user = await completeRequiredFields();
+    await user.click(screen.getByRole("button", { name: "Run Evaluation" }));
+
+    const diagnostics = await screen.findByLabelText("Provider diagnostics");
+    expect(diagnostics).toHaveTextContent("200");
+    expect(diagnostics).toHaveTextContent("chat.completion");
+    expect(diagnostics).toHaveTextContent("length");
+    expect(diagnostics).toHaveTextContent("32");
+    expect(diagnostics).toHaveTextContent("request-safe-123");
+    expect(diagnostics).not.toHaveTextContent("private reasoning must not be rendered");
+  });
 });

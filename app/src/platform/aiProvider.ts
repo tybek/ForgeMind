@@ -6,6 +6,7 @@ export interface AIRequest {
   userPrompt: string;
   temperature?: number;
   maxTokens?: number;
+  reasoningEffort?: "none" | "minimal" | "low" | "medium" | "high" | "xhigh";
 }
 
 export interface AIResponse {
@@ -15,11 +16,29 @@ export interface AIResponse {
   outputTokens?: number;
   totalTokens?: number;
   latencyMs: number;
+  finishReason?: string;
+  providerRequestId?: string;
+}
+
+export interface AIProviderDiagnostics {
+  httpStatus?: number;
+  responseObject?: string;
+  finishReason?: string;
+  choicesPresent: boolean;
+  messageContentPresent: boolean;
+  reasoningContentPresent: boolean;
+  refusalPresent: boolean;
+  toolCallsPresent: boolean;
+  reasoningTokens?: number;
+  providerRequestId?: string;
+  providerErrorCode?: string;
+  providerErrorType?: string;
 }
 
 export interface AIProviderError {
   code: string;
   message: string;
+  diagnostics?: AIProviderDiagnostics;
 }
 
 export async function runEvaluation(request: AIRequest): Promise<AIResponse> {

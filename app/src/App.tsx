@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { EvaluationPage } from "./EvaluationPage";
 import {
+  getDevelopmentWorkspacePath,
   initializeWorkspace,
   inspectWorkspace,
   selectWorkspaceDirectory,
@@ -327,6 +328,36 @@ export default function App() {
     }
   }
 
+  async function loadWorkspace(path: string) {
+    setView({ kind: "loading", path });
+    try {
+      applyInspection(await inspectWorkspace(path));
+    } catch (inspectionError) {
+      setView({
+        kind: "access-error",
+        path,
+        message: messageFromError(
+          inspectionError,
+          "ForgeMind could not access the selected directory.",
+        ),
+      });
+    }
+  }
+
+  useEffect(() => {
+    let active = true;
+
+    void getDevelopmentWorkspacePath().then((path) => {
+      if (active && path !== null) {
+        void loadWorkspace(path);
+      }
+    });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
   async function openProject() {
     setError(null);
     let selected: string | null;
@@ -342,19 +373,7 @@ export default function App() {
       return;
     }
 
-    setView({ kind: "loading", path: selected });
-    try {
-      applyInspection(await inspectWorkspace(selected));
-    } catch (inspectionError) {
-      setView({
-        kind: "access-error",
-        path: selected,
-        message: messageFromError(
-          inspectionError,
-          "ForgeMind could not access the selected directory.",
-        ),
-      });
-    }
+    await loadWorkspace(selected);
   }
 
   async function initializeSelectedWorkspace() {

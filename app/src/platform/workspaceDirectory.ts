@@ -36,3 +36,11 @@ export function inspectWorkspace(path: string): Promise<WorkspaceInspection> {
 export function initializeWorkspace(path: string): Promise<WorkspaceInspection> {
   return invoke<WorkspaceInspection>("initialize_workspace", { path });
 }
+
+export async function getDevelopmentWorkspacePath(): Promise<string | null> {
+  try {
+    return await invoke<string | null>("development_workspace_path");
+  } catch {
+    return null;
+  }
+}
