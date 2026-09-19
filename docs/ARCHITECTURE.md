@@ -2,7 +2,7 @@
 
 ## Current state
 
-Milestones through 0G are complete, including user-driven validation of the bounded AI Behavior Designer specialist profile. Additional specialists, autonomous agents, Alignment logic, Git integration, Unity GroundTruth, and Feature Contracts are **NOT IMPLEMENTED**. 0H has not started.
+Milestones through 0G.7 are complete, including user-driven validation of the bounded AI Behavior Designer specialist profile. 0G.8 Game Wiki is implemented with automated validation complete and a short user-driven visual and persistence smoke pending. Additional specialists, autonomous agents, Alignment logic, Git integration, Unity GroundTruth, and Feature Contracts are **NOT IMPLEMENTED**. 0H has not started.
 
 ## Architectural stance
 
@@ -66,6 +66,10 @@ The Game Compendium is current project knowledge, not interview history or Decis
 
 Interview import is an explicit command. It reuses the validated interview loader, preserves the supported candidate status and provenance, maps the bounded interview areas into Compendium sections, retains `.forgemind/interview.json`, and skips exact title-plus-statement duplicates. Startup never imports or mutates knowledge.
 
+Game Wiki is a React aggregation over the existing Compendium, Decisions, and Specialist Analysis History boundaries. It groups references by the established Compendium Area vocabulary and does not add a file, schema, or competing source of truth. Compendium knowledge, approved and non-approved Decision states, and AI analysis retain distinct authority labels.
+
+A stored successful specialist finding can enter project knowledge only through the explicit native promotion command. The user edits Area, title, statement, and status and confirms before persistence; Rust verifies the finding against the unchanged stored run, applies the existing exact title-plus-statement duplicate rule, and writes one Compendium entry with `AI_INFERRED` provenance and `specialist_analysis` source. The command never creates a Decision or mutates Specialist Analysis History.
+
 Decisions use an independent native domain and `.forgemind/decisions.json`. Every Decision requires a non-empty rationale and begins `PROPOSED`; only a separate approval command makes it `APPROVED`. Knowledge promotion pre-populates a proposed Decision and explicit relationship but does not modify the source entry. A proposed successor may reference one active approved predecessor. Approving it atomically marks the predecessor `SUPERSEDED` and retains both records. The 0F author is the explicit local label `Local User`; accounts, permissions, and version-history UI are deferred.
 
 ### Shared Project Brain and Specialist Profiles
@@ -76,7 +80,7 @@ Each run supplies selected Compendium and Decision IDs plus an explicit scenario
 
 The 0G.2 structured-output hardening accepts one deterministically extractable JSON object, including whitespace, a single code fence, or brief wrapper text, while rejecting malformed, competing, or non-object JSON. Missing optional lists normalize to empty arrays, and only `open_questions` / `suggested_tests` are accepted as explicit aliases. Unknown fields, wrong types, oversized lists, empty summary, and invalid strings remain errors. Safe diagnostics report categories and field names without raw provider text, prompts, reasoning, or secrets.
 
-The normalized result separates assumptions from project facts and retains selected-reference IDs for visible provenance. Native code appends normalized successes and safe failure categories/diagnostics to portable `.forgemind/specialist-runs.json`, including scenario and usage when available. The versioned file rejects malformed or unsupported data and excludes raw provider content, requests, paths, reasoning, and secrets. This is work history, not Project truth; no automatic Compendium or Decision promotion exists. Additional profiles and multi-perspective review remain future work.
+The normalized result separates assumptions from project facts and retains selected-reference IDs for visible provenance. Native code appends normalized successes and safe failure categories/diagnostics to portable `.forgemind/specialist-runs.json`, including scenario and usage when available. The versioned file rejects malformed or unsupported data and excludes raw provider content, requests, paths, reasoning, and secrets. This is work history, not Project truth; promotion of one selected finding requires explicit human review and confirmation, and no automatic Compendium or Decision promotion exists. Additional profiles and multi-perspective review remain future work.
 
 History is an auxiliary boundary. React loads profile metadata, registry models, Compendium, Decisions, and history independently, so one history failure cannot erase otherwise valid state. Native specialist execution also treats history append failure as a safe warning rather than replacing a valid current result. Explicit recovery archives only the history file and initializes an empty format-version `1` document; it never mutates other `.forgemind` domains.
 

@@ -993,6 +993,12 @@ button:focus-visible {
   justify-self: start;
 }
 
+.specialist-run-button-active {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+}
+
 .specialist-error {
   border-color: #753b42;
   color: #ffd9dc;
@@ -1001,22 +1007,6 @@ button:focus-visible {
 
 .specialist-error p {
   margin: 7px 0 0;
-}
-
-.specialist-running {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.specialist-running h2,
-.specialist-running p {
-  margin: 0;
-}
-
-.specialist-running p {
-  margin-top: 5px;
-  color: #aeb5c0;
 }
 
 .specialist-spinner {
@@ -1029,6 +1019,13 @@ button:focus-visible {
   animation: specialist-spin 0.8s linear infinite;
 }
 
+.specialist-spinner-small {
+  width: 16px;
+  height: 16px;
+  flex-basis: 16px;
+  border-width: 2px;
+}
+
 @keyframes specialist-spin {
   to { transform: rotate(360deg); }
 }
@@ -1038,7 +1035,72 @@ button:focus-visible {
   gap: 16px;
 }
 
+.specialist-result-heading,
+.specialist-copy-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.specialist-result-heading h2 {
+  margin: 0;
+}
+
+.specialist-copy-actions {
+  justify-content: flex-start;
+}
+
+.specialist-copy-actions button {
+  padding: 8px 11px;
+}
+
+.specialist-run-detail {
+  display: grid;
+  gap: 14px;
+}
+
+.specialist-history-scenario {
+  padding: 12px 14px;
+  border: 1px solid #2c313a;
+  border-radius: 7px;
+  background: #14171c;
+}
+
+.specialist-history-scenario h3,
+.specialist-history-scenario p {
+  margin: 0;
+}
+
+.specialist-history-scenario h3 {
+  margin-bottom: 7px;
+  font-size: 14px;
+}
+
+.specialist-history-scenario p {
+  color: #d6dae2;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.specialist-copy-notice {
+  margin: 0;
+  padding: 8px 11px;
+  border: 1px solid #37684c;
+  border-radius: 6px;
+  color: #bdebd0;
+  background: #1d3528;
+}
+
+.specialist-copy-failed {
+  border-color: #765148;
+  color: #f0c9bd;
+  background: #30231f;
+}
+
 .specialist-result > p,
+.specialist-result-summary p,
 .specialist-result-section p,
 .specialist-result-section ul,
 .specialist-evidence p,
@@ -1046,6 +1108,20 @@ button:focus-visible {
   margin: 0;
   color: #c4c9d2;
   line-height: 1.55;
+}
+
+.specialist-result-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 12px;
+}
+
+.specialist-result-summary button {
+  min-height: 30px;
+  padding: 5px 9px;
+  font-size: 11px;
+  white-space: nowrap;
 }
 
 .specialist-result-section,
@@ -1062,9 +1138,197 @@ button:focus-visible {
   font-size: 14px;
 }
 
+.specialist-result-section li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 12px;
+  margin-bottom: 7px;
+}
+
+.specialist-result-section li button {
+  min-height: 28px;
+  padding: 4px 8px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.specialist-promotion-form {
+  display: grid;
+  gap: 12px;
+}
+
+.specialist-promotion-form h2,
+.specialist-promotion-form p {
+  margin: 0;
+}
+
 .specialist-assumptions {
   border-color: #8d7137;
   background: #272317;
+}
+
+.wiki-page {
+  display: grid;
+  gap: 16px;
+}
+
+.wiki-intro h2,
+.wiki-intro p {
+  margin: 0;
+}
+
+.wiki-intro h2 {
+  margin-top: 6px;
+}
+
+.wiki-intro p {
+  margin-top: 8px;
+  color: #aeb5c1;
+  line-height: 1.5;
+}
+
+.wiki-area-nav {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+  gap: 6px;
+}
+
+.wiki-area-nav button {
+  display: flex;
+  min-height: 36px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 9px;
+  border-color: #303742;
+  color: #c5cad3;
+  background: #15191f;
+  font-size: 12px;
+  text-align: left;
+}
+
+.wiki-area-nav button small {
+  color: #7f8795;
+}
+
+.wiki-area-nav .wiki-area-active {
+  border-color: #6687c7;
+  color: #f1f4fa;
+  background: #202a3d;
+}
+
+.wiki-area {
+  display: grid;
+  gap: 10px;
+}
+
+.wiki-area-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.wiki-area-heading h3 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.wiki-area-heading span,
+.wiki-empty {
+  color: #8f97a4;
+  font-size: 12px;
+}
+
+.wiki-rows {
+  display: grid;
+  gap: 6px;
+}
+
+.wiki-row {
+  border: 1px solid #2c323b;
+  border-radius: 6px;
+  background: #14171c;
+}
+
+.wiki-row summary {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr) auto;
+  min-height: 40px;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  cursor: pointer;
+  list-style-position: inside;
+}
+
+.wiki-row summary strong {
+  overflow: hidden;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wiki-row summary small {
+  color: #858d9a;
+  font-size: 10px;
+}
+
+.wiki-type {
+  width: fit-content;
+  padding: 3px 6px;
+  border: 1px solid #46505d;
+  border-radius: 4px;
+  color: #c8ced8;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.wiki-type-knowledge {
+  border-color: #526fae;
+  color: #c8d8ff;
+}
+
+.wiki-type-approved,
+.wiki-type-decision.wiki-type-approved {
+  border-color: #4f9d69;
+  color: #bdebd0;
+}
+
+.wiki-type-analysis {
+  border-color: #8d7137;
+  color: #ead69b;
+}
+
+.wiki-row-detail {
+  padding: 10px 14px 13px;
+  border-top: 1px solid #272d35;
+  color: #c4c9d2;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.wiki-row-detail p,
+.wiki-row-detail h4,
+.wiki-row-detail ul {
+  margin: 0 0 8px;
+}
+
+.wiki-analysis-warning {
+  color: #ead69b;
+  font-weight: 700;
+}
+
+.wiki-source-warning {
+  padding: 10px 12px;
+  border: 1px solid #765148;
+  border-radius: 6px;
+  color: #f0c9bd;
+}
+
+.wiki-source-warning p {
+  margin: 0;
 }
 
 .specialist-history h2 {
@@ -1428,5 +1692,14 @@ button:focus-visible {
 @media (max-width: 900px) {
   .status-grid {
     grid-template-columns: repeat(2, minmax(140px, 1fr));
+  }
+
+  .wiki-row summary {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .wiki-row summary strong {
+    grid-column: 1 / -1;
+    grid-row: 2;
   }
 }

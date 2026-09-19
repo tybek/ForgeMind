@@ -16,7 +16,7 @@ A stable category used to organize knowledge, such as Overview, Game Design, Nar
 
 ### KnowledgeEntry
 
-An addressable statement about current project intent. The 0F schema contains stable `id`, bounded `area`, `title`, `statement`, `status`, `provenance`, `source`, `createdAt`, and `updatedAt` fields. Knowledge status is `DIRECTION`, `LOCKED`, `TBD`, or `DEPRECATED`; provenance is `USER_STATED`, `AI_INFERRED`, `MANUAL`, or the preserved interview value `UNRESOLVED`; source is `project_interview`, `manual_entry`, or `decision`. Entries are stored in `.forgemind/compendium.json`.
+An addressable statement about current project intent. The 0F schema contains stable `id`, bounded `area`, `title`, `statement`, `status`, `provenance`, `source`, `createdAt`, and `updatedAt` fields. Knowledge status is `DIRECTION`, `LOCKED`, `TBD`, or `DEPRECATED`; provenance is `USER_STATED`, `AI_INFERRED`, `MANUAL`, or the preserved interview value `UNRESOLVED`; source is `project_interview`, `manual_entry`, `decision`, or `specialist_analysis`. Entries are stored in `.forgemind/compendium.json`.
 
 ### InterviewCandidate
 
@@ -58,7 +58,7 @@ A reviewable record of one explicit specialist request. Format version `1` store
 
 - A Project contains many ProjectAreas and gives all other entities their context.
 - An approved InterviewCandidate belongs to one Project and may be explicitly imported into the Compendium. Startup never imports it automatically, and deterministic title-plus-statement matching prevents repeated import duplicates.
-- Specialist role profiles consume explicitly selected subsets of the same Project context; they do not own separate project truth or independent knowledge databases. A SpecialistRun preserves the working proposal and its evidence references without making that proposal authoritative.
+- Specialist role profiles consume explicitly selected subsets of the same Project context; they do not own separate project truth or independent knowledge databases. A SpecialistRun preserves the working proposal and its evidence references without making that proposal authoritative. One selected finding may become a new Compendium entry only after explicit human editing and confirmation, with truthful AI provenance and source.
 - A ProjectArea groups KnowledgeEntries; one entry may relate to several Systems.
 - A Decision may reference KnowledgeEntries. An approved successor may supersede one approved predecessor; the predecessor remains stored as `SUPERSEDED` history.
 - A Milestone references the Systems, Decisions, and FeatureContracts in its scope.
@@ -82,7 +82,7 @@ Brainstorming, AI analysis, alternatives, and rejected ideas are temporary unles
 
 For the 0E workflow, questions, answers, provider responses, and pending or discarded candidates remain transient. Only edited and explicitly approved candidates are serialized to `.forgemind/interview.json`.
 
-For the specialist workflow, normalized proposals and safe failure metadata may remain durable work history in `.forgemind/specialist-runs.json`. Persistence alone is not approval: history is never imported into the Compendium or Decisions automatically.
+For the specialist workflow, normalized proposals and safe failure metadata may remain durable work history in `.forgemind/specialist-runs.json`. Persistence alone is not approval: history is never imported into the Compendium or Decisions automatically. Game Wiki reads that history as non-authoritative analysis; it is an aggregated view and adds no `wiki.json` storage.
 
 ### Current versus superseded decisions
 

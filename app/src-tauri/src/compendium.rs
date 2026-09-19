@@ -1,4 +1,5 @@
 use crate::interview::{self, CandidateArea, CandidateProvenance, CandidateStatus};
+use crate::specialist_history::{self, SpecialistRunStatus};
 use crate::workspace::{self, WorkspaceInspection};
 use chrono::{DateTime, SecondsFormat, Utc};
 use serde::{Deserialize, Serialize};
@@ -51,6 +52,7 @@ pub enum KnowledgeSource {
     ProjectInterview,
     ManualEntry,
     Decision,
+    SpecialistAnalysis,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
@@ -112,6 +114,19 @@ pub struct KnowledgeEntryActionRequest {
 pub struct ImportInterviewRequest {
     pub root_path: String,
     pub project_id: String,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct PromoteSpecialistFindingRequest {
+    pub root_path: String,
+    pub project_id: String,
+    pub specialist_run_id: String,
+    pub source_finding: String,
+    pub area: KnowledgeArea,
+    pub title: String,
+    pub statement: String,
+    pub status: KnowledgeStatus,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
@@ -210,7 +225,7 @@ pub fn import_interview(request: ImportInterviewRequest) -> Result<InterviewImpo
     for candidate in interview.candidates {
         let title = candidate.title.trim();
         let statement = candidate.statement.trim();
-        if document.entries.iter().any(|entry| entry.title == title && entry.statement == statement) {
+        if is_duplicate(&document, title, statement) {
             skipped_duplicate_count += 1;
             continue;
         }
@@ -236,6 +251,82 @@ pub fn import_interview(request: ImportInterviewRequest) -> Result<InterviewImpo
 
     let document = save(root, document)?;
     Ok(InterviewImportResult { document, imported_count, skipped_duplicate_count })
+}
+
+pub fn promote_specialist_finding(
+    request: PromoteSpecialistFindingRequest,
+) -> Result<CompendiumDocument, CompendiumError> {
+    let root = Path::new(&request.root_path);
+    verify_project(root, &request.project_id)?;
+    validate_text(&request.title, 1, 120)?;
+    validate_text(&request.statement, 1, 2_000)?;
+    validate_text(&request.source_finding, 1, 1_200)?;
+
+    let history = specialist_history::load(root)
+        .map_err(|error| CompendiumError::new(&error.code, &error.message))?
+        .ok_or_else(|| CompendiumError::new(
+            "SPECIALIST_RUN_NOT_FOUND",
+            "The selected specialist analysis run no longer exists.",
+        ))?;
+    let run = history.runs.iter().find(|run| run.id == request.specialist_run_id)
+        .ok_or_else(|| CompendiumError::new(
+            "SPECIALIST_RUN_NOT_FOUND",
+            "The selected specialist analysis run no longer exists.",
+        ))?;
+    let result = run.result.as_ref().filter(|_| run.status == SpecialistRunStatus::Succeeded)
+        .ok_or_else(|| CompendiumError::new(
+            "SPECIALIST_RUN_NOT_PROMOTABLE",
+            "Only findings from a successful specialist analysis can become project knowledge.",
+        ))?;
+    let source_finding = request.source_finding.trim();
+    if !specialist_result_contains(result, source_finding) {
+        return Err(CompendiumError::new(
+            "SPECIALIST_FINDING_NOT_FOUND",
+            "The selected finding is not part of that specialist analysis run.",
+        ));
+    }
+
+    let mut document = load_for_project(root, &request.project_id)?
+        .unwrap_or_else(|| empty_document(&request.project_id));
+    let title = request.title.trim();
+    let statement = request.statement.trim();
+    if is_duplicate(&document, title, statement) {
+        return Err(CompendiumError::new(
+            "DUPLICATE_KNOWLEDGE_ENTRY",
+            "An exact Compendium entry with this title and statement already exists.",
+        ));
+    }
+    let now = timestamp();
+    document.entries.push(KnowledgeEntry {
+        id: Uuid::new_v4().to_string(),
+        area: request.area,
+        title: title.to_owned(),
+        statement: statement.to_owned(),
+        status: request.status,
+        provenance: KnowledgeProvenance::AiInferred,
+        source: KnowledgeSource::SpecialistAnalysis,
+        created_at: now.clone(),
+        updated_at: now,
+    });
+    save(root, document)
+}
+
+fn specialist_result_contains(
+    result: &crate::specialists::BehaviorDesignerResult,
+    finding: &str,
+) -> bool {
+    result.summary.trim() == finding
+        || result.assumptions.iter()
+            .chain(&result.recommendations)
+            .chain(&result.risks)
+            .chain(&result.exploits)
+            .chain(&result.open_questions)
+            .chain(&result.suggested_tests)
+            .any(|item| item.trim() == finding)
+}
+
+fn is_duplicate(document: &CompendiumDocument, title: &str, statement: &str) -> bool {
+    document.entries.iter().any(|entry| entry.title == title && entry.statement == statement)
 }
 
 fn save(root: &Path, mut document: CompendiumDocument) -> Result<CompendiumDocument, CompendiumError> {
@@ -352,6 +443,8 @@ fn provenance_from_candidate(provenance: CandidateProvenance) -> KnowledgeProven
 mod tests {
     use super::*;
     use crate::interview::{InterviewCandidate, ReviewDecision, ReviewedCandidate, SaveInterviewRequest};
+    use crate::specialist_history::{SpecialistRunBudgetMetadata, SpecialistRunUsage};
+    use crate::specialists::{BehaviorDesignerResult, SpecialistAnalysisRequest, SpecialistTaskType};
     use serde_json::{json, Value};
     use tempfile::TempDir;
 
@@ -379,6 +472,36 @@ mod tests {
                 status: CandidateStatus::Locked, provenance: CandidateProvenance::UserStated,
             }}],
         }).unwrap();
+    }
+
+    fn save_specialist_run(root: &Path, project_id: &str) -> (String, String) {
+        let finding = "Orient before moving.".to_owned();
+        let request = SpecialistAnalysisRequest {
+            root_path: root.display().to_string(),
+            project_id: project_id.to_owned(),
+            profile_id: "ai_behavior_designer".to_owned(),
+            task_type: SpecialistTaskType::ReactionModel,
+            model_id: "test/model".to_owned(),
+            knowledge_entry_ids: Vec::new(),
+            decision_ids: Vec::new(),
+            max_completion_tokens: Some(4600),
+            scenario: "A guard hears a shot.".to_owned(),
+        };
+        let run = specialist_history::append_success(
+            &request,
+            BehaviorDesignerResult {
+                summary: "Investigate under uncertainty.".to_owned(),
+                assumptions: Vec::new(),
+                recommendations: vec![finding.clone()],
+                risks: Vec::new(),
+                exploits: Vec::new(),
+                open_questions: Vec::new(),
+                suggested_tests: Vec::new(),
+            },
+            SpecialistRunUsage::default(),
+            SpecialistRunBudgetMetadata::default(),
+        ).unwrap();
+        (run.id, finding)
     }
 
     #[test]
@@ -450,6 +573,48 @@ mod tests {
         assert_eq!(imported.skipped_duplicate_count, 1);
         assert_eq!(imported.document.entries.len(), 1);
         assert_eq!(imported.document.entries[0].source, KnowledgeSource::ManualEntry);
+    }
+
+    #[test]
+    fn specialist_finding_promotion_is_explicit_truthful_and_duplicate_safe() {
+        let (directory, project_id) = workspace();
+        let (run_id, finding) = save_specialist_run(directory.path(), &project_id);
+        let request = PromoteSpecialistFindingRequest {
+            root_path: directory.path().display().to_string(),
+            project_id: project_id.clone(),
+            specialist_run_id: run_id,
+            source_finding: finding,
+            area: KnowledgeArea::Systems,
+            title: "Guard investigation".to_owned(),
+            statement: "Guards orient toward uncertain sounds before moving.".to_owned(),
+            status: KnowledgeStatus::Locked,
+        };
+        let document = promote_specialist_finding(request.clone()).unwrap();
+        assert_eq!(document.entries.len(), 1);
+        assert_eq!(document.entries[0].provenance, KnowledgeProvenance::AiInferred);
+        assert_eq!(document.entries[0].source, KnowledgeSource::SpecialistAnalysis);
+        assert_eq!(document.entries[0].status, KnowledgeStatus::Locked);
+        assert_eq!(promote_specialist_finding(request).unwrap_err().code, "DUPLICATE_KNOWLEDGE_ENTRY");
+        assert_eq!(specialist_history::load(directory.path()).unwrap().unwrap().runs.len(), 1);
+        assert!(crate::decisions::load(directory.path()).unwrap().is_none());
+    }
+
+    #[test]
+    fn specialist_promotion_rejects_text_not_found_in_the_stored_run() {
+        let (directory, project_id) = workspace();
+        let (run_id, _) = save_specialist_run(directory.path(), &project_id);
+        let error = promote_specialist_finding(PromoteSpecialistFindingRequest {
+            root_path: directory.path().display().to_string(),
+            project_id,
+            specialist_run_id: run_id,
+            source_finding: "Invented finding.".to_owned(),
+            area: KnowledgeArea::Systems,
+            title: "Invented".to_owned(),
+            statement: "Invented statement.".to_owned(),
+            status: KnowledgeStatus::Direction,
+        }).unwrap_err();
+        assert_eq!(error.code, "SPECIALIST_FINDING_NOT_FOUND");
+        assert!(load(directory.path()).unwrap().is_none());
     }
 
     #[test]

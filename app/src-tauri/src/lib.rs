@@ -17,7 +17,7 @@ use ai::{AIError, AIRequest, AIResponse};
 use compendium::{
     CompendiumDocument, CompendiumError, CreateKnowledgeEntryRequest,
     ImportInterviewRequest, InterviewImportResult, KnowledgeEntryActionRequest,
-    UpdateKnowledgeEntryRequest,
+    PromoteSpecialistFindingRequest, UpdateKnowledgeEntryRequest,
 };
 use decisions::{
     CreateDecisionRequest, DecisionActionRequest, DecisionError, DecisionsDocument,
@@ -191,6 +191,13 @@ fn load_specialist_runs(path: String) -> Result<Option<SpecialistRunsDocument>, 
 }
 
 #[tauri::command]
+fn promote_specialist_finding(
+    request: PromoteSpecialistFindingRequest,
+) -> Result<CompendiumDocument, CompendiumError> {
+    compendium::promote_specialist_finding(request)
+}
+
+#[tauri::command]
 fn archive_and_reset_specialist_history(
     path: String,
 ) -> Result<specialist_history::SpecialistHistoryRecovery, SpecialistError> {
@@ -332,6 +339,7 @@ pub fn run() {
             list_specialist_profiles,
             run_specialist_analysis,
             load_specialist_runs,
+            promote_specialist_finding,
             archive_and_reset_specialist_history,
             get_usage_summary,
             run_project_interview_turn,

@@ -3,10 +3,13 @@ import { loadDecisions, type Decision } from "./platform/decisions";
 import { loadModelRegistry, type ModelEntry } from "./platform/modelRegistry";
 import {
   KNOWLEDGE_AREAS,
+  KNOWLEDGE_STATUSES,
   knowledgeAreaLabel,
   loadCompendium,
+  promoteSpecialistFinding,
   type KnowledgeArea,
   type KnowledgeEntry,
+  type KnowledgeStatus,
 } from "./platform/projectKnowledge";
 import {
   archiveAndResetSpecialistHistory,
@@ -22,6 +25,7 @@ import {
   type SpecialistRunUsage,
   type SpecialistTaskType,
 } from "./platform/specialists";
+import { formatSpecialistResultMarkdown } from "./specialistMarkdown";
 
 interface SpecialistWorkspace {
   path: string;
@@ -38,6 +42,17 @@ interface ResultView {
   preferredTaskBudget?: number;
   effectiveCompletionBudget?: number;
   knownModelMaxCompletionTokens?: number;
+  scenario: string;
+  timestamp?: string;
+}
+
+interface PromotionDraft {
+  specialistRunId: string;
+  sourceFinding: string;
+  area: KnowledgeArea;
+  title: string;
+  statement: string;
+  status: KnowledgeStatus;
 }
 
 function errorDetails(error: unknown): SpecialistError {
@@ -62,7 +77,7 @@ function estimatedCost(value: number | undefined): string {
   return value === undefined ? "Unavailable" : `$${value.toFixed(6)} (Estimated)`;
 }
 
-function currentResultView(result: SpecialistAnalysisResult, model: ModelEntry | undefined): ResultView {
+function currentResultView(result: SpecialistAnalysisResult, model: ModelEntry | undefined, scenario: string): ResultView {
   let estimatedCostUsd: number | undefined;
   if (model?.pricing && result.inputTokens !== undefined && result.outputTokens !== undefined) {
     estimatedCostUsd = (result.inputTokens * model.pricing.inputUsdPerMillionTokens
@@ -84,6 +99,7 @@ function currentResultView(result: SpecialistAnalysisResult, model: ModelEntry |
     preferredTaskBudget: result.preferredTaskBudget,
     effectiveCompletionBudget: result.effectiveCompletionBudget,
     knownModelMaxCompletionTokens: result.knownModelMaxCompletionTokens,
+    scenario,
   };
 }
 
@@ -99,14 +115,26 @@ function historyResultView(run: SpecialistRun): ResultView | null {
     preferredTaskBudget: run.preferredTaskBudget,
     effectiveCompletionBudget: run.effectiveCompletionBudget,
     knownModelMaxCompletionTokens: run.knownModelMaxCompletionTokens,
+    scenario: run.scenario,
+    timestamp: run.createdAt,
   };
 }
 
-function ResultList({ title, items, className = "" }: { title: string; items: string[]; className?: string }) {
+function ResultList({
+  title,
+  items,
+  className = "",
+  onPromote,
+}: {
+  title: string;
+  items: string[];
+  className?: string;
+  onPromote?: (item: string) => void;
+}) {
   return (
     <section className={`specialist-result-section ${className}`.trim()} aria-label={title}>
       <h3>{title}</h3>
-      {items.length > 0 ? <ul>{items.map((item) => <li key={item}>{item}</li>)}</ul> : <p>None provided.</p>}
+      {items.length > 0 ? <ul>{items.map((item) => <li key={item}><span>{item}</span>{onPromote ? <button type="button" onClick={() => onPromote(item)}>Add to Project Knowledge</button> : null}</li>)}</ul> : <p>None provided.</p>}
     </section>
   );
 }
@@ -175,6 +203,7 @@ export function SpecialistPage({ workspace }: { workspace: SpecialistWorkspace }
   const [scenario, setScenario] = useState("");
   const [maxCompletionTokens, setMaxCompletionTokens] = useState("");
   const [result, setResult] = useState<SpecialistAnalysisResult | null>(null);
+  const [resultScenario, setResultScenario] = useState("");
   const [isProfileLoading, setIsProfileLoading] = useState(true);
   const [isModelLoading, setIsModelLoading] = useState(true);
   const [isKnowledgeLoading, setIsKnowledgeLoading] = useState(true);
@@ -191,6 +220,11 @@ export function SpecialistPage({ workspace }: { workspace: SpecialistWorkspace }
   const [decisionsLoadError, setDecisionsLoadError] = useState<SpecialistError | null>(null);
   const [historyError, setHistoryError] = useState<SpecialistError | null>(null);
   const [historyRecoveryNotice, setHistoryRecoveryNotice] = useState<string | null>(null);
+  const [copyNotice, setCopyNotice] = useState<"scenario" | "result" | "failed" | null>(null);
+  const [promotionDraft, setPromotionDraft] = useState<PromotionDraft | null>(null);
+  const [promotionError, setPromotionError] = useState<SpecialistError | null>(null);
+  const [promotionNotice, setPromotionNotice] = useState<string | null>(null);
+  const [isPromoting, setIsPromoting] = useState(false);
 
   const selectedModel = useMemo(() => models.find((model) => model.modelId === modelId), [modelId, models]);
   const guidance = useMemo(
@@ -240,7 +274,7 @@ export function SpecialistPage({ workspace }: { workspace: SpecialistWorkspace }
     });
   }, [decisions, guidance]);
   const selectedRun = history.find((run) => run.id === selectedRunId) ?? null;
-  const displayedResult = selectedRun ? historyResultView(selectedRun) : result ? currentResultView(result, selectedModel) : null;
+  const displayedResult = selectedRun ? historyResultView(selectedRun) : result ? currentResultView(result, selectedModel, resultScenario) : null;
 
   async function refreshHistory(selectNewest = false) {
     setIsHistoryLoading(true);
@@ -317,6 +351,12 @@ export function SpecialistPage({ workspace }: { workspace: SpecialistWorkspace }
   }, [isRunning]);
 
   useEffect(() => {
+    if (!copyNotice) return undefined;
+    const timer = window.setTimeout(() => setCopyNotice(null), 1800);
+    return () => window.clearTimeout(timer);
+  }, [copyNotice]);
+
+  useEffect(() => {
     if (defaultEffectiveBudget !== undefined) setMaxCompletionTokens(String(defaultEffectiveBudget));
   }, [defaultEffectiveBudget]);
 
@@ -330,7 +370,9 @@ export function SpecialistPage({ workspace }: { workspace: SpecialistWorkspace }
     setIsRunning(true);
     setError(null);
     setResult(null);
+    setResultScenario("");
     setSelectedRunId(null);
+    const submittedScenario = scenario.trim();
     try {
       const nextResult = await runSpecialistAnalysis({
         rootPath: workspace.path,
@@ -341,12 +383,14 @@ export function SpecialistPage({ workspace }: { workspace: SpecialistWorkspace }
         knowledgeEntryIds: selectedKnowledge,
         decisionIds: selectedDecisions,
         maxCompletionTokens: completionBudget,
-        scenario: scenario.trim(),
+        scenario: submittedScenario,
       });
       setResult(nextResult);
+      setResultScenario(submittedScenario);
       if (nextResult.historyWarning) {
         setHistoryError(nextResult.historyWarning);
       } else {
+        setScenario("");
         await refreshHistory(true);
       }
     } catch (runError) {
@@ -355,6 +399,67 @@ export function SpecialistPage({ workspace }: { workspace: SpecialistWorkspace }
     } finally {
       setIsRunning(false);
     }
+  }
+
+  async function copyText(text: string, kind: "scenario" | "result") {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopyNotice(kind);
+    } catch {
+      setCopyNotice("failed");
+    }
+  }
+
+  function beginPromotion(section: string, finding: string) {
+    if (!selectedRun || selectedRun.status !== "SUCCEEDED") return;
+    const relatedArea = selectedRun.selectedKnowledgeEntryIds
+      .map((id) => knowledge.find((entry) => entry.id === id)?.area)
+      .find((area): area is KnowledgeArea => Boolean(area))
+      ?? selectedRun.selectedDecisionIds
+        .map((id) => decisions.find((decision) => decision.id === id)?.area)
+        .find((area): area is KnowledgeArea => Boolean(area))
+      ?? "overview";
+    setPromotionDraft({
+      specialistRunId: selectedRun.id,
+      sourceFinding: finding,
+      area: relatedArea,
+      title: `${selectedRun.taskType}: ${section}`.slice(0, 120),
+      statement: finding,
+      status: "DIRECTION",
+    });
+    setPromotionError(null);
+    setPromotionNotice(null);
+  }
+
+  async function confirmPromotion(event: FormEvent) {
+    event.preventDefault();
+    if (!promotionDraft || isPromoting) return;
+    setIsPromoting(true);
+    setPromotionError(null);
+    try {
+      const document = await promoteSpecialistFinding(workspace.path, workspace.projectId, promotionDraft);
+      setKnowledge(document.entries.filter((entry) => entry.status !== "DEPRECATED"));
+      setPromotionDraft(null);
+      setPromotionNotice("Added to the Game Compendium and Game Wiki.");
+    } catch (saveError) {
+      setPromotionError(errorDetails(saveError));
+    } finally {
+      setIsPromoting(false);
+    }
+  }
+
+  function resultMarkdown(view: ResultView): string {
+    return formatSpecialistResultMarkdown({
+      taskType: view.taskType,
+      result: view.result,
+      scenario: view.scenario,
+      model: view.model,
+      timestamp: view.timestamp,
+      compendiumReferences: view.selectedKnowledgeEntryIds.map((id) => knowledge.find((entry) => entry.id === id)?.title ?? id),
+      decisionReferences: view.selectedDecisionIds.map((id) => decisions.find((decision) => decision.id === id)?.title ?? id),
+      usage: view.usage,
+      effectiveCompletionBudget: view.effectiveCompletionBudget,
+    });
   }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -511,18 +616,68 @@ export function SpecialistPage({ workspace }: { workspace: SpecialistWorkspace }
             <textarea required maxLength={4000} rows={6} value={scenario} onChange={(event) => setScenario(event.target.value)} />
             <small>Saved with this specialist run · {scenario.length}/4000 characters</small>
           </label>
-          <button className="primary-button" type="submit" disabled={isRunning || !profile || !taskType || !selectedModel || scenario.trim().length === 0 || Boolean(budgetError)}>
-            {isRunning ? "Running Analysis…" : "Run Analysis"}
+          <button className={`primary-button${isRunning ? " specialist-run-button-active" : ""}`} type="submit" disabled={isRunning || !profile || !taskType || !selectedModel || scenario.trim().length === 0 || Boolean(budgetError)}>
+            {isRunning ? <><span className="specialist-spinner specialist-spinner-small" aria-hidden="true" /><span role="status">Running analysis… {elapsedSeconds}s</span></> : "Run Analysis"}
           </button>
         </form>
       </section>
 
       <section className="specialist-output-pane" data-layout-share="60" aria-label="Specialist output and history">
-        {isRunning ? (
-          <section className="specialist-card specialist-running" role="status" aria-live="polite">
-            <span className="specialist-spinner" aria-hidden="true" />
-            <div><h2>Running analysis…</h2><p>Waiting for model response · {elapsedSeconds}s elapsed</p></div>
+        {copyNotice ? <p className={copyNotice === "failed" ? "specialist-copy-notice specialist-copy-failed" : "specialist-copy-notice"} role="status">{copyNotice === "failed" ? "Copy failed" : "Copied"}</p> : null}
+
+        {!isRunning && selectedRun ? (
+          <section className="specialist-card specialist-run-detail" aria-label="Selected historical run">
+            <span className="section-label">Saved {selectedRun.status.toLowerCase()} run · non-authoritative history</span>
+            <dl className="result-metadata" aria-label="Historical run summary">
+              <div><dt>Task Type</dt><dd>{selectedRun.taskType}</dd></div>
+              <div><dt>Timestamp</dt><dd>{new Date(selectedRun.createdAt).toLocaleString()}</dd></div>
+              <div><dt>Model</dt><dd>{selectedRun.modelId}</dd></div>
+            </dl>
+            <section className="specialist-history-scenario" aria-label="Scenario / Question">
+              <h3>Scenario / Question</h3>
+              <p>{selectedRun.scenario}</p>
+            </section>
+            <div className="specialist-copy-actions">
+              <button type="button" onClick={() => void copyText(selectedRun.scenario, "scenario")}>Copy Scenario</button>
+              {displayedResult ? <button className="primary-button" type="button" onClick={() => void copyText(resultMarkdown(displayedResult), "result")}>Copy Result as Markdown</button> : null}
+            </div>
           </section>
+        ) : null}
+
+        {promotionNotice ? <p className="knowledge-notice" role="status">{promotionNotice}</p> : null}
+        {promotionDraft ? (
+          <form className="specialist-card specialist-promotion-form" aria-label="Add finding to Project Knowledge" onSubmit={(event) => void confirmPromotion(event)}>
+            <span className="section-label">Human-reviewed promotion</span>
+            <h2>Add to Project Knowledge</h2>
+            <p className="scope-note">Creates one Compendium entry with AI_INFERRED provenance and specialist_analysis source. It does not create a Decision or modify Analysis History.</p>
+            <div className="knowledge-form-grid">
+              <label>
+                Area
+                <select value={promotionDraft.area} onChange={(event) => setPromotionDraft({ ...promotionDraft, area: event.target.value as KnowledgeArea })}>
+                  {KNOWLEDGE_AREAS.map(([area, label]) => <option key={area} value={area}>{label}</option>)}
+                </select>
+              </label>
+              <label>
+                Status
+                <select value={promotionDraft.status} onChange={(event) => setPromotionDraft({ ...promotionDraft, status: event.target.value as KnowledgeStatus })}>
+                  {KNOWLEDGE_STATUSES.map((status) => <option key={status} value={status}>{status}</option>)}
+                </select>
+              </label>
+            </div>
+            <label>
+              Title
+              <input required maxLength={120} value={promotionDraft.title} onChange={(event) => setPromotionDraft({ ...promotionDraft, title: event.target.value })} />
+            </label>
+            <label>
+              Statement
+              <textarea required maxLength={2000} rows={4} value={promotionDraft.statement} onChange={(event) => setPromotionDraft({ ...promotionDraft, statement: event.target.value })} />
+            </label>
+            {promotionError ? <p className="specialist-inline-warning" role="alert">{promotionError.code}: {promotionError.message}</p> : null}
+            <div className="knowledge-form-actions">
+              <button className="primary-button" type="submit" disabled={isPromoting}>{isPromoting ? "Adding..." : "Confirm Add to Project Knowledge"}</button>
+              <button type="button" disabled={isPromoting} onClick={() => { setPromotionDraft(null); setPromotionError(null); }}>Cancel</button>
+            </div>
+          </form>
         ) : null}
 
         {!isRunning && error && !selectedRun ? (
@@ -557,7 +712,6 @@ export function SpecialistPage({ workspace }: { workspace: SpecialistWorkspace }
 
         {!isRunning && selectedRun?.status === "FAILED" ? (
           <section className="specialist-error" role="alert">
-            <span className="section-label">Saved failed run · non-authoritative history</span>
             <h2>Analysis failed</h2>
             <strong>{selectedRun.safeError?.code ?? "SPECIALIST_ANALYSIS_FAILED"}</strong>
             <Diagnostics diagnostics={selectedRun.safeError?.diagnostics} />
@@ -567,14 +721,20 @@ export function SpecialistPage({ workspace }: { workspace: SpecialistWorkspace }
         {!isRunning && displayedResult ? (
           <section className="specialist-card specialist-result" aria-labelledby="specialist-result-title">
             <span className="section-label">AI-generated proposal · non-authoritative</span>
-            <h2 id="specialist-result-title">Analysis Result</h2>
-            <p>{displayedResult.result.summary}</p>
-            <ResultList title="Assumptions — not project facts" items={displayedResult.result.assumptions} className="specialist-assumptions" />
-            <ResultList title="Recommendations" items={displayedResult.result.recommendations} />
-            <ResultList title="Risks" items={displayedResult.result.risks} />
-            <ResultList title="Likely Exploits" items={displayedResult.result.exploits} />
-            <ResultList title="Open Questions" items={displayedResult.result.openQuestions} />
-            <ResultList title="Suggested Tests" items={displayedResult.result.suggestedTests} />
+            <div className="specialist-result-heading">
+              <h2 id="specialist-result-title">Analysis Result</h2>
+              {!selectedRun ? <button className="primary-button" type="button" onClick={() => void copyText(resultMarkdown(displayedResult), "result")}>Copy Result as Markdown</button> : null}
+            </div>
+            <div className="specialist-result-summary">
+              <p>{displayedResult.result.summary}</p>
+              {selectedRun ? <button type="button" onClick={() => beginPromotion("Summary", displayedResult.result.summary)}>Add to Project Knowledge</button> : null}
+            </div>
+            <ResultList title="Assumptions — not project facts" items={displayedResult.result.assumptions} className="specialist-assumptions" onPromote={selectedRun ? (item) => beginPromotion("Assumption", item) : undefined} />
+            <ResultList title="Recommendations" items={displayedResult.result.recommendations} onPromote={selectedRun ? (item) => beginPromotion("Recommendation", item) : undefined} />
+            <ResultList title="Risks" items={displayedResult.result.risks} onPromote={selectedRun ? (item) => beginPromotion("Risk", item) : undefined} />
+            <ResultList title="Likely Exploits" items={displayedResult.result.exploits} onPromote={selectedRun ? (item) => beginPromotion("Likely Exploit", item) : undefined} />
+            <ResultList title="Open Questions" items={displayedResult.result.openQuestions} onPromote={selectedRun ? (item) => beginPromotion("Open Question", item) : undefined} />
+            <ResultList title="Suggested Tests" items={displayedResult.result.suggestedTests} onPromote={selectedRun ? (item) => beginPromotion("Suggested Test", item) : undefined} />
 
             <section className="specialist-evidence" aria-label="Context used">
               <h3>Context used</h3>

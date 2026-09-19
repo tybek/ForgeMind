@@ -4,6 +4,7 @@ import { InterviewPage } from "./InterviewPage";
 import { CompendiumPage } from "./CompendiumPage";
 import { DecisionsPage } from "./DecisionsPage";
 import { SpecialistPage } from "./SpecialistPage";
+import { WikiPage } from "./WikiPage";
 import type { KnowledgeEntry } from "./platform/projectKnowledge";
 import {
   getDevelopmentWorkspacePath,
@@ -16,6 +17,7 @@ import {
 
 const workspaceAreas = [
   "Overview",
+  "Game Wiki",
   "Game Design",
   "Narrative",
   "Technical",
@@ -217,7 +219,7 @@ function Overview({ workspace }: { workspace: Workspace }) {
   );
 }
 
-function Placeholder({ area }: { area: Exclude<WorkspaceArea, "Overview"> }) {
+function Placeholder({ area }: { area: Exclude<WorkspaceArea, "Overview" | "Game Wiki"> }) {
   return (
     <section className="placeholder-card">
       <span className="section-label">Planned workspace area</span>
@@ -321,6 +323,8 @@ export function WorkspaceShell({
               ? "0E Project Interview"
               : activeArea === "AI Behavior Designer"
                 ? "0G Specialist Profile"
+              : activeArea === "Game Wiki"
+                ? "0G.8 Unified Knowledge"
               : activeArea === "AI Evaluation"
                 ? "0D.1 Model Lab"
                 : activeArea === "Game Design" || activeArea === "Decisions"
@@ -338,6 +342,8 @@ export function WorkspaceShell({
             <EvaluationPage projectId={workspace.projectId} />
           ) : activeArea === "Overview" ? (
             <Overview workspace={workspace} />
+          ) : activeArea === "Game Wiki" ? (
+            <WikiPage workspace={workspace} />
           ) : activeArea === "Game Design" ? (
             <CompendiumPage workspace={workspace} onPromote={promoteToDecision} />
           ) : activeArea === "Decisions" ? (

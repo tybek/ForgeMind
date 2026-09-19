@@ -75,6 +75,7 @@ vi.mock("./platform/projectKnowledge", async (importOriginal) => ({
   updateKnowledgeEntry: vi.fn(),
   deprecateKnowledgeEntry: vi.fn(),
   importInterviewKnowledge: vi.fn(),
+  promoteSpecialistFinding: vi.fn(),
 }));
 
 vi.mock("./platform/decisions", async (importOriginal) => ({
@@ -123,6 +124,7 @@ const validInspection = {
 
 const requiredAreas = [
   "Overview",
+  "Game Wiki",
   "Game Design",
   "Narrative",
   "Technical",
@@ -281,6 +283,14 @@ describe("ForgeMind local workspace", () => {
     await user.click(screen.getByRole("button", { name: "Decisions" }));
     expect(await screen.findByRole("heading", { name: "Decisions", level: 2 })).toBeInTheDocument();
     expect(screen.getByRole("navigation", { name: "Workspace areas" })).toBeInTheDocument();
+  });
+
+  it("opens Game Wiki as the project knowledge browsing surface", async () => {
+    const user = userEvent.setup();
+    render(<WorkspaceShell workspace={workspace} onOpen={async () => undefined} />);
+    await user.click(screen.getByRole("button", { name: "Game Wiki" }));
+    expect(await screen.findByRole("heading", { name: "Game Wiki", level: 2 })).toBeInTheDocument();
+    expect(screen.getByRole("navigation", { name: "Wiki areas" })).toBeInTheDocument();
   });
 
   it("shows invalid metadata honestly without offering initialization", async () => {

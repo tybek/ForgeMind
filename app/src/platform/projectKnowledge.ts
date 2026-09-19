@@ -19,7 +19,7 @@ export const KNOWLEDGE_STATUSES = ["DIRECTION", "LOCKED", "TBD", "DEPRECATED"] a
 export type KnowledgeArea = (typeof KNOWLEDGE_AREAS)[number][0];
 export type KnowledgeStatus = (typeof KNOWLEDGE_STATUSES)[number];
 export type KnowledgeProvenance = "USER_STATED" | "AI_INFERRED" | "MANUAL" | "UNRESOLVED";
-export type KnowledgeSource = "project_interview" | "manual_entry" | "decision";
+export type KnowledgeSource = "project_interview" | "manual_entry" | "decision" | "specialist_analysis";
 
 export interface KnowledgeEntry {
   id: string;
@@ -51,6 +51,11 @@ export interface InterviewImportResult {
   document: CompendiumDocument;
   importedCount: number;
   skippedDuplicateCount: number;
+}
+
+export interface SpecialistFindingInput extends KnowledgeEntryInput {
+  specialistRunId: string;
+  sourceFinding: string;
 }
 
 export function loadCompendium(path: string): Promise<CompendiumDocument | null> {
@@ -94,6 +99,16 @@ export function importInterviewKnowledge(
 ): Promise<InterviewImportResult> {
   return invoke<InterviewImportResult>("import_interview_to_compendium", {
     request: { rootPath, projectId },
+  });
+}
+
+export function promoteSpecialistFinding(
+  rootPath: string,
+  projectId: string,
+  input: SpecialistFindingInput,
+): Promise<CompendiumDocument> {
+  return invoke<CompendiumDocument>("promote_specialist_finding", {
+    request: { rootPath, projectId, ...input },
   });
 }
 
