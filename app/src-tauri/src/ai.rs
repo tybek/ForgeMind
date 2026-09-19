@@ -72,7 +72,7 @@ pub struct ProviderDiagnostics {
 }
 
 impl AIError {
-    fn new(code: &str, message: &str) -> Self {
+    pub(crate) fn new(code: &str, message: &str) -> Self {
         Self {
             code: code.to_owned(),
             message: message.to_owned(),

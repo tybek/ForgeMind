@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import type { TaskCategory } from "./usageMetering";
 
 export interface AIRequest {
   model: string;
@@ -41,6 +42,18 @@ export interface AIProviderError {
   diagnostics?: AIProviderDiagnostics;
 }
 
-export async function runEvaluation(request: AIRequest): Promise<AIResponse> {
-  return invoke<AIResponse>("run_ai_evaluation", { request });
+export interface EvaluationContext {
+  projectId?: string;
+  taskCategory?: TaskCategory;
+}
+
+export async function runEvaluation(
+  request: AIRequest,
+  context: EvaluationContext = {},
+): Promise<AIResponse> {
+  return invoke<AIResponse>("run_ai_evaluation", {
+    request,
+    projectId: context.projectId,
+    taskCategory: context.taskCategory,
+  });
 }

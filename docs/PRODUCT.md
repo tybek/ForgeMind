@@ -2,7 +2,7 @@
 
 ## Status
 
-This document defines the product direction. **Currently implemented:** the 0C local desktop shell and minimal persistent project identity in `.forgemind/project.json`. The product behavior described below remains planned MVP or future direction unless explicitly identified as current workspace behavior.
+This document defines the product direction. **Currently implemented:** the local desktop workspace through 0D.1 plus the offline-complete 0E Project Interview workflow pending user-driven live validation. Durable interview output is limited to explicitly approved candidates in `.forgemind/interview.json`. The broader product behavior described below remains planned MVP or future direction unless explicitly identified as current workspace behavior.
 
 ## Problem
 

@@ -2,7 +2,7 @@
 
 ## Scope
 
-This model establishes shared language and relationships. It is not a database schema or API contract. Milestone 0C serializes only the minimal Project identity in `.forgemind/project.json`; persistence choices for the remaining entities remain unresolved.
+This model establishes shared language and relationships. It is not a database schema or API contract. Milestone 0C serializes minimal Project identity in `.forgemind/project.json`. Milestone 0E adds the deliberately bounded `.forgemind/interview.json` format for approved onboarding candidates; it is not the future Compendium schema.
 
 ## Core entities
 
@@ -17,6 +17,10 @@ A stable category used to organize knowledge, such as Overview, Game Design, Nar
 ### KnowledgeEntry
 
 An addressable statement or document fragment about the project. An entry has a topic, content, provenance, relevant statuses, relationships, and timestamps. It may express an idea, approved direction, canon fact, technical constraint, unresolved question, or observed implementation fact.
+
+### InterviewCandidate
+
+A small Project Interview proposal awaiting human review. It contains an identifier, area, title, statement, proposed `DIRECTION`, `LOCKED`, or `TBD` status, and provenance of `USER_STATED`, `AI_INFERRED`, or `UNRESOLVED`. A candidate is temporary until explicitly approved. The 0E interview file stores only approved candidates and does not imply that the full Compendium or Decisions model exists.
 
 ### Decision
 
@@ -49,6 +53,7 @@ Minimal attribution attached to created or changed artifacts. It may contain a s
 ## Relationships
 
 - A Project contains many ProjectAreas and gives all other entities their context.
+- An approved InterviewCandidate belongs to one Project and may later inform a KnowledgeEntry during 0F; it is not silently promoted into the future Compendium.
 - Future specialist role profiles consume relevant subsets of the same Project context; they do not own separate project truth or independent knowledge databases.
 - A ProjectArea groups KnowledgeEntries; one entry may relate to several Systems.
 - A Decision may resolve, lock, deprecate, or supersede KnowledgeEntries and other Decisions.
@@ -70,6 +75,8 @@ Intent is normative: what the team has proposed, directed, locked, deprecated, o
 ### Temporary conversation versus durable knowledge
 
 Brainstorming, AI analysis, alternatives, and rejected ideas are temporary unless a user explicitly promotes selected material. Approved decisions, canon, constraints, milestone scope, and Feature Contracts are durable project knowledge with provenance. Conversation history alone is not team memory.
+
+For the 0E workflow, questions, answers, provider responses, and pending or discarded candidates remain transient. Only edited and explicitly approved candidates are serialized to `.forgemind/interview.json`.
 
 ### Current versus superseded decisions
 

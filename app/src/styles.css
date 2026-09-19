@@ -282,11 +282,15 @@ button:focus-visible {
   background: #29334e;
 }
 
-.evaluation-nav {
+.interview-nav {
   margin-top: 14px;
   border-top: 1px solid #2b3038;
   border-radius: 0 0 6px 6px;
   padding-top: 13px;
+}
+
+.evaluation-nav {
+  margin-top: 3px;
 }
 
 .change-project-button {
@@ -357,6 +361,127 @@ button:focus-visible {
   max-width: 900px;
 }
 
+.interview-stack {
+  display: grid;
+  gap: 22px;
+  max-width: 900px;
+}
+
+.interview-card {
+  display: grid;
+  gap: 20px;
+  padding: 26px;
+  border: 1px solid #2a2f37;
+  border-radius: 10px;
+  background: #181b20;
+}
+
+.interview-card h2,
+.interview-card h3,
+.interview-card p {
+  margin: 0;
+}
+
+.interview-model-select,
+.interview-answer,
+.candidate-review label {
+  display: grid;
+  gap: 7px;
+  color: #b8bec9;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.interview-card input,
+.interview-card textarea,
+.interview-card select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #373d47;
+  border-radius: 6px;
+  color: #eef0f5;
+  background: #121419;
+  font: inherit;
+}
+
+.interview-card input:focus,
+.interview-card textarea:focus,
+.interview-card select:focus {
+  border-color: #6687e3;
+  outline: none;
+}
+
+.interview-actions,
+.candidate-badges {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.interview-progress {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  color: #9da4b1;
+  font-size: 13px;
+}
+
+.existing-interview-notice {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid #3d4654;
+  border-radius: 8px;
+  background: #151a22;
+}
+
+.existing-interview-notice p {
+  color: #aeb4bf;
+}
+
+.candidate-review-list,
+.saved-candidate-list {
+  display: grid;
+  gap: 14px;
+}
+
+.candidate-review,
+.saved-candidate {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid #303640;
+  border-radius: 8px;
+  background: #14171c;
+}
+
+.candidate-approve {
+  border-color: #426b55;
+}
+
+.candidate-discard {
+  opacity: 0.65;
+}
+
+.candidate-badges span,
+.candidate-badges strong {
+  padding: 4px 7px;
+  border: 1px solid #3a414d;
+  border-radius: 999px;
+  color: #abb2bf;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+}
+
+.saved-candidate p {
+  color: #c4c9d2;
+  line-height: 1.55;
+}
+
+.interview-home-button {
+  justify-self: start;
+}
+
 .evaluation-card,
 .evaluation-error {
   padding: 26px;
@@ -384,7 +509,8 @@ button:focus-visible {
 }
 
 .evaluation-form input,
-.evaluation-form textarea {
+.evaluation-form textarea,
+.evaluation-form select {
   width: 100%;
   padding: 10px 12px;
   border: 1px solid #373d47;
@@ -395,7 +521,8 @@ button:focus-visible {
 }
 
 .evaluation-form input:focus,
-.evaluation-form textarea:focus {
+.evaluation-form textarea:focus,
+.evaluation-form select:focus {
   border-color: #6687e3;
   outline: none;
 }
@@ -403,6 +530,68 @@ button:focus-visible {
 .evaluation-form input[readonly] {
   color: #aeb4bf;
   background: #20242b;
+}
+
+.model-details,
+.model-usage-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+
+.model-details {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding: 14px;
+  border: 1px solid #2c313a;
+  border-radius: 7px;
+  background: #14171c;
+}
+
+.model-details div,
+.model-usage-list div {
+  min-width: 0;
+}
+
+.model-details dt,
+.model-usage-list dt {
+  color: #858c99;
+  font-size: 11px;
+}
+
+.model-details dd,
+.model-usage-list dd {
+  margin: 5px 0 0;
+  overflow-wrap: anywhere;
+}
+
+.usage-summary {
+  display: grid;
+  gap: 18px;
+}
+
+.usage-summary h2,
+.usage-group h3 {
+  margin: 0;
+}
+
+.usage-group {
+  display: grid;
+  gap: 12px;
+}
+
+.usage-group h3 {
+  color: #cbd0d8;
+  font-size: 14px;
+}
+
+.usage-metadata {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.model-usage-list div {
+  padding: 12px;
+  border: 1px solid #2c313a;
+  border-radius: 7px;
 }
 
 .evaluation-options {

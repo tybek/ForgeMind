@@ -1,6 +1,7 @@
 use std::process::ExitCode;
 
-use forgemind_lib::ai::{generate_with_nebius, AIRequest, ProviderDiagnostics};
+use forgemind_lib::ai::{AIRequest, ProviderDiagnostics};
+use forgemind_lib::evaluate_registered;
 use serde::Serialize;
 
 const SMOKE_PROMPT: &str = "Reply with exactly: ForgeMind smoke test passed.";
@@ -78,7 +79,7 @@ async fn main() -> ExitCode {
         reasoning_effort: Some("minimal".to_owned()),
     };
 
-    match generate_with_nebius(request).await {
+    match evaluate_registered(request, None, None).await {
         Ok(response) => {
             print_json(&SmokeOutput {
                 success: true,
