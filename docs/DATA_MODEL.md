@@ -2,7 +2,7 @@
 
 ## Scope
 
-This model establishes shared language and relationships. It is not a database schema or API contract. Milestone 0C serializes minimal Project identity in `.forgemind/project.json`; 0E adds approved onboarding evidence in `.forgemind/interview.json`; and 0F adds separate versioned Compendium and Decision documents.
+This model establishes shared language and relationships. It is not a database schema or API contract. Milestone 0C serializes minimal Project identity in `.forgemind/project.json`; 0E adds approved onboarding evidence in `.forgemind/interview.json`; and 0F adds separate versioned Compendium and Decision documents. The 0G specialist result is transient and adds no project-file schema.
 
 ## Core entities
 
@@ -54,7 +54,7 @@ Minimal attribution attached to created or changed artifacts. It may contain a s
 
 - A Project contains many ProjectAreas and gives all other entities their context.
 - An approved InterviewCandidate belongs to one Project and may be explicitly imported into the Compendium. Startup never imports it automatically, and deterministic title-plus-statement matching prevents repeated import duplicates.
-- Future specialist role profiles consume relevant subsets of the same Project context; they do not own separate project truth or independent knowledge databases.
+- Specialist role profiles consume explicitly selected subsets of the same Project context; they do not own separate project truth or independent knowledge databases. The 0G AI Behavior Designer output is an unpersisted proposal containing labeled assumptions rather than a durable entity.
 - A ProjectArea groups KnowledgeEntries; one entry may relate to several Systems.
 - A Decision may reference KnowledgeEntries. An approved successor may supersede one approved predecessor; the predecessor remains stored as `SUPERSEDED` history.
 - A Milestone references the Systems, Decisions, and FeatureContracts in its scope.

@@ -3,6 +3,7 @@ pub mod compendium;
 pub mod decisions;
 pub mod interview;
 pub mod model_registry;
+pub mod specialists;
 pub mod usage;
 mod workspace;
 
@@ -26,6 +27,9 @@ use interview::{
     SaveInterviewRequest,
 };
 use model_registry::{ModelEntry, ModelRegistryError};
+use specialists::{
+    SpecialistAnalysisRequest, SpecialistAnalysisResult, SpecialistError, SpecialistProfile,
+};
 use usage::{TaskCategory, UsageError, UsageSummary};
 
 static SESSION_ID: OnceLock<String> = OnceLock::new();
@@ -91,6 +95,40 @@ pub async fn evaluate_registered(
 #[tauri::command]
 fn list_models() -> Result<Vec<ModelEntry>, ModelRegistryError> {
     model_registry::models()
+}
+
+#[tauri::command]
+fn list_specialist_profiles() -> Vec<SpecialistProfile> {
+    specialists::profiles()
+}
+
+#[tauri::command]
+async fn run_specialist_analysis(
+    request: SpecialistAnalysisRequest,
+) -> Result<SpecialistAnalysisResult, SpecialistError> {
+    let prepared = specialists::build_ai_request(&request)?;
+    let response = evaluate_registered(
+        prepared.ai_request,
+        Some(request.project_id),
+        Some(specialists::task_category()),
+    )
+    .await
+    .map_err(|error| SpecialistError::new(&error.code, &error.message))?;
+    let result = specialists::normalize_result(&response.text)?;
+
+    Ok(SpecialistAnalysisResult {
+        profile_id: prepared.profile_id,
+        task_type: prepared.task_type,
+        selected_knowledge_entry_ids: prepared.selected_knowledge_entry_ids,
+        selected_decision_ids: prepared.selected_decision_ids,
+        result,
+        model: response.model,
+        latency_ms: response.latency_ms,
+        input_tokens: response.input_tokens,
+        output_tokens: response.output_tokens,
+        total_tokens: response.total_tokens,
+        finish_reason: response.finish_reason,
+    })
 }
 
 #[tauri::command]
@@ -225,6 +263,8 @@ pub fn run() {
             initialize_workspace,
             run_ai_evaluation,
             list_models,
+            list_specialist_profiles,
+            run_specialist_analysis,
             get_usage_summary,
             run_project_interview_turn,
             load_project_interview,

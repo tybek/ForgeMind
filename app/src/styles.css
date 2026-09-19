@@ -788,11 +788,142 @@ button:focus-visible {
 }
 
 .evaluation-card,
-.evaluation-error {
+.evaluation-error,
+.specialist-card,
+.specialist-error {
   padding: 26px;
   border: 1px solid #2a2f37;
   border-radius: 10px;
   background: #181b20;
+}
+
+.specialist-stack,
+.specialist-form {
+  display: grid;
+  gap: 18px;
+}
+
+.specialist-card h2 {
+  margin: 8px 0 7px;
+}
+
+.specialist-form {
+  margin-top: 24px;
+}
+
+.specialist-form > label,
+.specialist-controls label {
+  display: grid;
+  gap: 7px;
+  color: #b8bec9;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.specialist-controls {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.specialist-form select,
+.specialist-form textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #373d47;
+  border-radius: 6px;
+  color: #eef0f5;
+  background: #121419;
+  font: inherit;
+}
+
+.specialist-context {
+  display: grid;
+  gap: 9px;
+  margin: 0;
+  padding: 14px;
+  border: 1px solid #2c313a;
+  border-radius: 7px;
+}
+
+.specialist-context legend {
+  padding: 0 6px;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.specialist-context p {
+  margin: 0;
+  color: #9299a8;
+  font-size: 12px;
+}
+
+.specialist-context label {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 9px;
+  border-radius: 5px;
+  background: #14171c;
+}
+
+.specialist-context span {
+  display: grid;
+  gap: 3px;
+}
+
+.specialist-context small,
+.specialist-form > label small {
+  color: #858c99;
+  font-weight: 400;
+}
+
+.specialist-form .primary-button {
+  justify-self: start;
+}
+
+.specialist-error {
+  border-color: #753b42;
+  color: #ffd9dc;
+  background: #372126;
+}
+
+.specialist-error p {
+  margin: 7px 0 0;
+}
+
+.specialist-result {
+  display: grid;
+  gap: 16px;
+}
+
+.specialist-result > p,
+.specialist-result-section p,
+.specialist-result-section ul,
+.specialist-evidence p,
+.specialist-evidence ul {
+  margin: 0;
+  color: #c4c9d2;
+  line-height: 1.55;
+}
+
+.specialist-result-section,
+.specialist-evidence {
+  padding: 14px;
+  border: 1px solid #2c313a;
+  border-radius: 7px;
+  background: #14171c;
+}
+
+.specialist-result-section h3,
+.specialist-evidence h3 {
+  margin: 0 0 9px;
+  font-size: 14px;
+}
+
+.specialist-assumptions {
+  border-color: #8d7137;
+  background: #272317;
 }
 
 .evaluation-card h2 {

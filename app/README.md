@@ -1,6 +1,6 @@
 # ForgeMind desktop application
 
-The ForgeMind desktop application uses Tauri 2, React, TypeScript, and Vite. Milestone 0F Game Compendium + Decisions and the 0F.1 UX density polish are complete. 0G has not started.
+The ForgeMind desktop application uses Tauri 2, React, TypeScript, and Vite. Milestones through 0G are complete, including user-driven validation of the AI Behavior Designer specialist profile. 0H has not started.
 
 It selects a local directory through Tauri's native dialog plugin, inspects `.forgemind/project.json`, and explicitly initializes that file when requested. Initialization creates no other ForgeMind paths and does not read, scan, or modify game-project files.
 
@@ -9,6 +9,8 @@ The workspace also exposes a small AI Evaluation page backed by the native model
 Project Interview is a separate review-before-save workflow. Starting it makes no request; each explicit **Next** action sends one compact turn through the registered, metered native provider with task category `project_interview`. Interview turns retain `minimal` reasoning, use a bounded 1,200-token completion budget to leave room for provider reasoning tokens, and accept at most three compact candidates. Strictly validated candidates remain transient until the user edits and approves them. The native layer writes only approved candidates to `.forgemind/interview.json`, and existing data cannot be replaced without explicit confirmation.
 
 The Game Design workspace now hosts the Game Compendium. Users explicitly import approved interview knowledge or add entries manually; repeated exact title-and-statement imports are skipped. Entries retain section, status, provenance, source, and timestamps in `.forgemind/compendium.json`. The Decisions workspace stores separate proposed or human-approved choices, rationale, authorship, related knowledge, and one-predecessor supersession history in `.forgemind/decisions.json`. No AI call is required for either workflow.
+
+AI Behavior Designer is a structured specialist workbench, not chat or simulation. A user chooses a bounded task, enabled registry model, selected current Compendium entries, selected approved Decisions, and a transient scenario. One explicit action routes compact context through the shared native provider and `ai_behavior` usage path. Strictly validated results separate assumptions, recommendations, risks, exploits, questions, and suggested tests. Results are transient proposals and are not written to project knowledge in 0G.
 
 ## Development
 
@@ -41,7 +43,7 @@ npm run build
 npm run tauri build -- --no-bundle
 ```
 
-Use `npm run check` for fast TypeScript and component-test feedback. Frontend tests mock provider, registry, metering, interview, Compendium, and Decisions boundaries and never use the network. Run `npm run test:native` for deterministic provider and portable workspace-persistence tests. Run `npm run build` before meaningful commits and keep the separate Tauri build for native milestone validation.
+Use `npm run check` for fast TypeScript and component-test feedback. Frontend tests mock provider, registry, metering, interview, Compendium, Decisions, and specialist boundaries and never use the network. Run `npm run test:native` for deterministic provider, specialist prompt/output, and portable workspace-persistence tests. Run `npm run build` before meaningful commits and keep the separate Tauri build for native milestone validation.
 
 Live provider validation is an optional, explicit headless command:
 
@@ -53,4 +55,4 @@ It calls the registered production Rust evaluation service exactly once with a f
 
 Usage history is application-global rather than stored in a game project. On Windows it is written as JSON Lines to `%LOCALAPPDATA%\ForgeMind\usage-v1.jsonl`; equivalent user data locations are used on macOS and Linux. Records contain timestamps, session and optional project IDs, model/provider identity, optional task category, token counts, latency, estimated cost when explicit pricing exists, success, and safe error category. They never contain prompts, response text, credentials, or authorization headers. Pricing that is not explicitly configured remains unavailable and is never inferred from provider billing.
 
-The only plugin capability granted by `src-tauri/capabilities/main.json` is opening a native dialog. React has no generic filesystem or network capability. Narrow Tauri commands inspect or initialize ForgeMind metadata, list configured models, read aggregate usage, run normalized native evaluation/interview turns, and load or save validated interview, Compendium, and Decision data. Shell, Git, Unity, and arbitrary frontend network capabilities are not configured.
+The only plugin capability granted by `src-tauri/capabilities/main.json` is opening a native dialog. React has no generic filesystem or network capability. Narrow Tauri commands inspect or initialize ForgeMind metadata, list configured models and specialist profiles, read aggregate usage, run normalized native evaluation/interview/specialist requests, and load or save validated interview, Compendium, and Decision data. Shell, Git, Unity, and arbitrary frontend network capabilities are not configured.

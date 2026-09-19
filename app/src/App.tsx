@@ -3,6 +3,7 @@ import { EvaluationPage } from "./EvaluationPage";
 import { InterviewPage } from "./InterviewPage";
 import { CompendiumPage } from "./CompendiumPage";
 import { DecisionsPage } from "./DecisionsPage";
+import { SpecialistPage } from "./SpecialistPage";
 import type { KnowledgeEntry } from "./platform/projectKnowledge";
 import {
   getDevelopmentWorkspacePath,
@@ -25,7 +26,7 @@ const workspaceAreas = [
 ] as const;
 
 type WorkspaceArea = (typeof workspaceAreas)[number];
-type WorkspaceView = WorkspaceArea | "Project Interview" | "AI Evaluation";
+type WorkspaceView = WorkspaceArea | "Project Interview" | "AI Behavior Designer" | "AI Evaluation";
 
 export interface Workspace extends ProjectMetadata {
   path: string;
@@ -287,6 +288,15 @@ export function WorkspaceShell({
         </button>
 
         <button
+          className={activeArea === "AI Behavior Designer" ? "nav-item nav-item-active specialist-nav" : "nav-item specialist-nav"}
+          type="button"
+          aria-current={activeArea === "AI Behavior Designer" ? "page" : undefined}
+          onClick={() => openArea("AI Behavior Designer")}
+        >
+          AI Behavior Designer
+        </button>
+
+        <button
           className={activeArea === "AI Evaluation" ? "nav-item nav-item-active evaluation-nav" : "nav-item evaluation-nav"}
           type="button"
           aria-current={activeArea === "AI Evaluation" ? "page" : undefined}
@@ -309,6 +319,8 @@ export function WorkspaceShell({
           <span className="milestone-badge">
             {activeArea === "Project Interview"
               ? "0E Project Interview"
+              : activeArea === "AI Behavior Designer"
+                ? "0G Specialist Profile"
               : activeArea === "AI Evaluation"
                 ? "0D.1 Model Lab"
                 : activeArea === "Game Design" || activeArea === "Decisions"
@@ -320,6 +332,8 @@ export function WorkspaceShell({
         <div className="workspace-content">
           {activeArea === "Project Interview" ? (
             <InterviewPage workspace={workspace} />
+          ) : activeArea === "AI Behavior Designer" ? (
+            <SpecialistPage workspace={workspace} />
           ) : activeArea === "AI Evaluation" ? (
             <EvaluationPage projectId={workspace.projectId} />
           ) : activeArea === "Overview" ? (

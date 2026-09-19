@@ -85,6 +85,17 @@ vi.mock("./platform/decisions", async (importOriginal) => ({
   deprecateDecision: vi.fn(),
 }));
 
+vi.mock("./platform/specialists", () => ({
+  loadSpecialistProfiles: vi.fn().mockResolvedValue([{
+    id: "ai_behavior_designer",
+    displayName: "AI Behavior Designer",
+    description: "Analyze tactical behavior.",
+    supportedTaskTypes: ["DESIGN_BEHAVIOR"],
+    defaultTaskType: "DESIGN_BEHAVIOR",
+  }]),
+  runSpecialistAnalysis: vi.fn(),
+}));
+
 const selectedPath = "D:\\Games\\SampleGame";
 const workspace: Workspace = {
   formatVersion: 1,
@@ -215,6 +226,17 @@ describe("ForgeMind local workspace", () => {
     expect(
       screen.getByRole("button", { name: "Project Interview" }),
     ).toBeInTheDocument();
+  });
+
+  it("opens AI Behavior Designer inside the existing workspace shell", async () => {
+    const user = userEvent.setup();
+    render(<WorkspaceShell workspace={workspace} onOpen={async () => undefined} />);
+
+    await user.click(screen.getByRole("button", { name: "AI Behavior Designer" }));
+
+    expect(await screen.findByRole("heading", { name: "AI Behavior Designer", level: 2 })).toBeInTheDocument();
+    expect(screen.getByRole("navigation", { name: "Workspace areas" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Overview" })).toBeInTheDocument();
   });
 
   it("can leave AI Evaluation and open other workspace areas", async () => {

@@ -2,13 +2,13 @@
 
 ## Current state
 
-Milestones through 0F and the 0F.1 Compendium/Decision UX density polish are complete. ForgeMind now has its first durable Intent layer. Specialist agents, Alignment logic, Git integration, Unity GroundTruth, and Feature Contracts are **NOT IMPLEMENTED**.
+Milestones through 0G are complete, including user-driven validation of the bounded AI Behavior Designer specialist profile. Additional specialists, autonomous agents, Alignment logic, Git integration, Unity GroundTruth, and Feature Contracts are **NOT IMPLEMENTED**. 0H has not started.
 
 ## Architectural stance
 
 ForgeMind is intended as a desktop-first orchestration and interpretation layer over a local game repository. The repository remains authoritative for durable project files; Git provides durable history; Unity supplies evidence about Reality. ForgeMind owns neither the underlying game project nor its development tools.
 
-The current desktop shell uses Tauri 2 with React and TypeScript. The UI receives no generic filesystem or network access: it invokes narrow workspace, model-registry, aggregate-usage, evaluation, interview, Compendium, and Decision commands. The native layer owns validation and file access under `.forgemind`, provider credentials, outbound inference HTTP, and ForgeMind's application-global usage history.
+The current desktop shell uses Tauri 2 with React and TypeScript. The UI receives no generic filesystem or network access: it invokes narrow workspace, model-registry, aggregate-usage, evaluation, interview, Compendium, Decision, and specialist commands. The native layer owns validation and file access under `.forgemind`, provider credentials, outbound inference HTTP, and ForgeMind's application-global usage history.
 
 The boundaries below describe responsibilities, not services, deployable processes, or a production-scale architecture.
 
@@ -70,7 +70,11 @@ Decisions use an independent native domain and `.forgemind/decisions.json`. Ever
 
 ### Shared Project Brain and Specialist Profiles
 
-Future specialist roles receive deliberately scoped views of the same Project knowledge and evidence. They are role/profile configurations over shared context, not separate truth stores or autonomous services. If multi-perspective review is pursued, it should begin as bounded prompts whose assumptions and outputs remain individually inspectable.
+The 0G `SpecialistProfile` abstraction is a small native configuration containing identity, description, supported tasks, default task, and a centralized system prompt. Exactly one profile exists: AI Behavior Designer. React lists public profile metadata and provides a structured workbench rather than chat.
+
+Each run supplies selected Compendium and Decision IDs plus a transient scenario. Native code revalidates workspace identity, resolves only those references, excludes deprecated knowledge, accepts only `APPROVED` Decisions as authoritative context, and builds a compact prompt. The request uses an enabled model from the existing registry and the same provider service, with `minimal` reasoning, a bounded 1,600-token completion allowance, no retry, and `ai_behavior` metering. Strict output validation rejects unknown fields, oversized lists, and malformed JSON.
+
+The normalized result separates assumptions from project facts and retains selected-reference IDs for visible provenance. Results are transient proposals; no specialist database or proposal persistence is present. Additional profiles and multi-perspective review remain future work.
 
 ### Git Integration Boundary
 
