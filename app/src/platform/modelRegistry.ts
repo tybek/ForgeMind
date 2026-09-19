@@ -5,6 +5,12 @@ export interface ModelPricing {
   outputUsdPerMillionTokens: number;
 }
 
+export interface ModelCapabilities {
+  maxCompletionTokens?: number;
+  supportsReasoningEffort?: boolean;
+  supportsStructuredOutput?: boolean;
+}
+
 export interface ModelEntry {
   provider: string;
   modelId: string;
@@ -15,6 +21,7 @@ export interface ModelEntry {
   availability: string;
   pricing?: ModelPricing;
   notes?: string;
+  capabilities: ModelCapabilities;
   enabled: boolean;
 }
 

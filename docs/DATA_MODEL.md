@@ -2,7 +2,7 @@
 
 ## Scope
 
-This model establishes shared language and relationships. It is not a database schema or API contract. Milestone 0C serializes minimal Project identity in `.forgemind/project.json`; 0E adds approved onboarding evidence in `.forgemind/interview.json`; and 0F adds separate versioned Compendium and Decision documents. The 0G specialist result is transient and adds no project-file schema.
+This model establishes shared language and relationships. It is not a database schema or API contract. Milestone 0C serializes minimal Project identity in `.forgemind/project.json`; 0E adds approved onboarding evidence in `.forgemind/interview.json`; 0F adds separate versioned Compendium and Decision documents; and 0G.3 adds non-authoritative specialist work history in `.forgemind/specialist-runs.json`.
 
 ## Core entities
 
@@ -50,11 +50,15 @@ A reviewable interpretation of the relationship between a specific Intent claim 
 
 Minimal attribution attached to created or changed artifacts. It may contain a stable identifier, display name, and source (for example, local configuration or Git identity). This is provenance, not an MVP permission model. AI-generated drafts should be marked as such while retaining the human who accepted or edited them.
 
+### SpecialistRun
+
+A reviewable record of one explicit specialist request. Format version `1` stores a run ID and timestamp, profile/task/model identities, selected Compendium and approved-Decision IDs, the user-authored scenario, success/failure status, either a normalized bounded result or safe error category/diagnostics, and optional usage/latency/cost metadata. Additive optional fields record `preferredTaskBudget`, `effectiveCompletionBudget`, and `knownModelMaxCompletionTokens` when available; older format-version `1` records without them remain valid. It never stores credentials, authorization headers, absolute workspace paths, raw requests or provider responses, or hidden reasoning. A SpecialistRun is analysis history, not approved Project knowledge.
+
 ## Relationships
 
 - A Project contains many ProjectAreas and gives all other entities their context.
 - An approved InterviewCandidate belongs to one Project and may be explicitly imported into the Compendium. Startup never imports it automatically, and deterministic title-plus-statement matching prevents repeated import duplicates.
-- Specialist role profiles consume explicitly selected subsets of the same Project context; they do not own separate project truth or independent knowledge databases. The 0G AI Behavior Designer output is an unpersisted proposal containing labeled assumptions rather than a durable entity.
+- Specialist role profiles consume explicitly selected subsets of the same Project context; they do not own separate project truth or independent knowledge databases. A SpecialistRun preserves the working proposal and its evidence references without making that proposal authoritative.
 - A ProjectArea groups KnowledgeEntries; one entry may relate to several Systems.
 - A Decision may reference KnowledgeEntries. An approved successor may supersede one approved predecessor; the predecessor remains stored as `SUPERSEDED` history.
 - A Milestone references the Systems, Decisions, and FeatureContracts in its scope.
@@ -77,6 +81,8 @@ Intent is normative: what the team has proposed, directed, locked, deprecated, o
 Brainstorming, AI analysis, alternatives, and rejected ideas are temporary unless a user explicitly promotes selected material. Approved decisions, canon, constraints, milestone scope, and Feature Contracts are durable project knowledge with provenance. Conversation history alone is not team memory.
 
 For the 0E workflow, questions, answers, provider responses, and pending or discarded candidates remain transient. Only edited and explicitly approved candidates are serialized to `.forgemind/interview.json`.
+
+For the specialist workflow, normalized proposals and safe failure metadata may remain durable work history in `.forgemind/specialist-runs.json`. Persistence alone is not approval: history is never imported into the Compendium or Decisions automatically.
 
 ### Current versus superseded decisions
 
@@ -135,6 +141,17 @@ Approval answers whether a person has accepted an artifact; it does not replace 
 - Files contain no absolute workspace path, credentials, provider response metadata, or machine identity.
 - Compendium and Decisions remain distinct: knowledge does not become a Decision automatically, and promoting knowledge creates only a proposed Decision.
 - Interview evidence remains in `.forgemind/interview.json` after import.
+
+## 0G.3 specialist-history invariants
+
+- Preferred/effective run budgets and a configured known model maximum are compatibility metadata, not evidence that an unknown provider limit has been discovered.
+
+- `.forgemind/specialist-runs.json` is a human-readable format-version `1` document tied to portable Project identity.
+- Successful runs contain only normalized bounded output; failed runs contain only a safe category, safe diagnostics, and usage when available.
+- Selected reference IDs and explicit scenario text persist, but absolute paths, credentials, raw provider/request content, and hidden reasoning do not.
+- Specialist history is never treated as approved knowledge and has no automatic promotion path.
+- Omitted empty diagnostic lists in previously written format-version `1` failures deserialize as empty lists; this is backward compatibility, not a schema migration.
+- Invalid history is not discarded during startup. Explicit recovery archives only the history document and creates a valid empty replacement without changing Project, interview, Compendium, or Decision data.
 
 ## Deliberately unresolved
 

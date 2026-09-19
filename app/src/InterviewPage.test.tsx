@@ -28,6 +28,7 @@ const registry = [{
   displayName: "DeepSeek V4.1 Flash",
   family: "DeepSeek V4.1",
   availability: "configured",
+  capabilities: {},
   enabled: true,
 }];
 

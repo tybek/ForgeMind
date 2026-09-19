@@ -3,6 +3,7 @@ pub mod compendium;
 pub mod decisions;
 pub mod interview;
 pub mod model_registry;
+pub mod specialist_history;
 pub mod specialists;
 pub mod usage;
 mod workspace;
@@ -27,8 +28,12 @@ use interview::{
     SaveInterviewRequest,
 };
 use model_registry::{ModelEntry, ModelRegistryError};
+use specialist_history::{
+    SpecialistRunBudgetMetadata, SpecialistRunUsage, SpecialistRunsDocument,
+};
 use specialists::{
-    SpecialistAnalysisRequest, SpecialistAnalysisResult, SpecialistError, SpecialistProfile,
+    SpecialistAnalysisRequest, SpecialistAnalysisResult, SpecialistError, SpecialistHistoryWarning,
+    SpecialistProfile,
 };
 use usage::{TaskCategory, UsageError, UsageSummary};
 
@@ -107,14 +112,59 @@ async fn run_specialist_analysis(
     request: SpecialistAnalysisRequest,
 ) -> Result<SpecialistAnalysisResult, SpecialistError> {
     let prepared = specialists::build_ai_request(&request)?;
-    let response = evaluate_registered(
+    let budget = prepared.budget;
+    let history_budget = SpecialistRunBudgetMetadata::from(budget);
+    let model = model_registry::enabled_model(&request.model_id)
+        .map_err(|error| SpecialistError::new(error.code, &error.message))?;
+    let response = match evaluate_registered(
         prepared.ai_request,
-        Some(request.project_id),
+        Some(request.project_id.clone()),
         Some(specialists::task_category()),
     )
-    .await
-    .map_err(|error| SpecialistError::new(&error.code, &error.message))?;
-    let result = specialists::normalize_result(&response.text)?;
+    .await {
+        Ok(response) => response,
+        Err(error) => {
+            let error = SpecialistError::from_ai_error(error, budget, &request.model_id);
+            let _ = specialist_history::append_failure(
+                &request,
+                &error,
+                SpecialistRunUsage::default(),
+                history_budget,
+            );
+            return Err(error);
+        }
+    };
+    let estimated_cost_usd = usage::estimate_cost(
+        model.pricing.as_ref(),
+        response.input_tokens,
+        response.output_tokens,
+    );
+    let run_usage = SpecialistRunUsage {
+        input_tokens: response.input_tokens,
+        output_tokens: response.output_tokens,
+        total_tokens: response.total_tokens,
+        latency_ms: Some(response.latency_ms),
+        estimated_cost_usd,
+    };
+    let result = match specialists::normalize_result_with_finish_reason(
+        &response.text,
+        response.finish_reason.as_deref(),
+    ) {
+        Ok(result) => result,
+        Err(error) => {
+            let error = error.with_request_context(budget, &request.model_id);
+            let _ = specialist_history::append_failure(&request, &error, run_usage, history_budget);
+            return Err(error);
+        }
+    };
+    let history_warning = specialist_history::append_success(
+        &request,
+        result.clone(),
+        run_usage,
+        history_budget,
+    )
+        .err()
+        .map(|error| SpecialistHistoryWarning { code: error.code, message: error.message });
 
     Ok(SpecialistAnalysisResult {
         profile_id: prepared.profile_id,
@@ -128,7 +178,23 @@ async fn run_specialist_analysis(
         output_tokens: response.output_tokens,
         total_tokens: response.total_tokens,
         finish_reason: response.finish_reason,
+        history_warning,
+        preferred_task_budget: budget.preferred_task_budget,
+        effective_completion_budget: budget.effective_completion_budget,
+        known_model_max_completion_tokens: budget.known_model_max_completion_tokens,
     })
+}
+
+#[tauri::command]
+fn load_specialist_runs(path: String) -> Result<Option<SpecialistRunsDocument>, SpecialistError> {
+    specialist_history::load(Path::new(&path))
+}
+
+#[tauri::command]
+fn archive_and_reset_specialist_history(
+    path: String,
+) -> Result<specialist_history::SpecialistHistoryRecovery, SpecialistError> {
+    specialist_history::archive_and_reset(Path::new(&path))
 }
 
 #[tauri::command]
@@ -265,6 +331,8 @@ pub fn run() {
             list_models,
             list_specialist_profiles,
             run_specialist_analysis,
+            load_specialist_runs,
+            archive_and_reset_specialist_history,
             get_usage_summary,
             run_project_interview_turn,
             load_project_interview,

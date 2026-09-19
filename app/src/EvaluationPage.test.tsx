@@ -23,6 +23,7 @@ const registry = [
     category: "reasoning",
     availability: "configured",
     notes: "Account access required.",
+    capabilities: {},
     enabled: true,
   },
 ];

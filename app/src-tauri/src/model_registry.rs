@@ -10,6 +10,17 @@ pub struct ModelPricing {
     pub output_usd_per_million_tokens: f64,
 }
 
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ModelCapabilities {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub max_completion_tokens: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub supports_reasoning_effort: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub supports_structured_output: Option<bool>,
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ModelEntry {
@@ -26,6 +37,7 @@ pub struct ModelEntry {
     pub pricing: Option<ModelPricing>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub notes: Option<String>,
+    pub capabilities: ModelCapabilities,
     pub enabled: bool,
 }
 
@@ -47,6 +59,11 @@ fn configured_entries() -> Vec<ModelEntry> {
         availability: "configured".to_owned(),
         pricing: None,
         notes: Some("Availability depends on the configured Nebius Token Factory account.".to_owned()),
+        capabilities: ModelCapabilities {
+            max_completion_tokens: None,
+            supports_reasoning_effort: Some(true),
+            supports_structured_output: None,
+        },
         enabled: true,
     }]
 }
@@ -54,7 +71,10 @@ fn configured_entries() -> Vec<ModelEntry> {
 fn validate_entries(entries: Vec<ModelEntry>) -> Result<Vec<ModelEntry>, ModelRegistryError> {
     let mut identifiers = HashSet::new();
     for entry in &entries {
-        if entry.model_id.trim().is_empty() || !identifiers.insert(entry.model_id.clone()) {
+        if entry.model_id.trim().is_empty()
+            || !identifiers.insert(entry.model_id.clone())
+            || entry.capabilities.max_completion_tokens == Some(0)
+        {
             return Err(ModelRegistryError {
                 code: "INVALID_MODEL_REGISTRY",
                 message: "The ForgeMind model registry contains an empty or duplicate model identifier."
@@ -94,6 +114,7 @@ mod tests {
             availability: "configured".to_owned(),
             pricing: None,
             notes: None,
+            capabilities: ModelCapabilities::default(),
             enabled: true,
         }
     }
@@ -115,6 +136,16 @@ mod tests {
     fn model_lookup_returns_the_configured_entry() {
         let model = enabled_model("deepseek-ai/DeepSeek-V4.1-Flash").unwrap();
         assert_eq!(model.display_name, "DeepSeek V4.1 Flash");
+        assert_eq!(model.capabilities.max_completion_tokens, None);
+        assert_eq!(model.capabilities.supports_reasoning_effort, Some(true));
+        assert_eq!(model.capabilities.supports_structured_output, None);
+    }
+
+    #[test]
+    fn invalid_zero_model_limit_is_rejected() {
+        let mut invalid = entry("test/model");
+        invalid.capabilities.max_completion_tokens = Some(0);
+        assert_eq!(validate_entries(vec![invalid]).unwrap_err().code, "INVALID_MODEL_REGISTRY");
     }
 
     #[test]

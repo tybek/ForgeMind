@@ -305,6 +305,7 @@ mod tests {
             availability: "configured".to_owned(),
             pricing,
             notes: None,
+            capabilities: crate::model_registry::ModelCapabilities::default(),
             enabled: true,
         }
     }

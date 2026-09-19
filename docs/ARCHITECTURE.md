@@ -44,7 +44,7 @@ The harness makes no request on startup and performs no polling or automatic ret
 
 ### Model Registry and Usage Metering
 
-The Rust model registry is the authoritative configured-model location. Each entry carries provider and model identity, display metadata, availability, enabled state, optional notes, and optional explicit per-million-token pricing. Duplicate IDs fail registry validation, unknown or disabled IDs fail before a provider request, and no provider discovery or automatic routing occurs.
+The Rust model registry is the authoritative configured-model location. Each entry carries provider and model identity, display metadata, availability, enabled state, optional notes, optional explicit per-million-token pricing, and a small optional capability record for maximum completion tokens, reasoning-effort support, and structured-output support. Missing capability values remain Unknown. Duplicate IDs fail registry validation, unknown or disabled IDs fail before a provider request, and no provider discovery or automatic routing occurs.
 
 Desktop and headless evaluations share one registered-and-metered service. Each attempt creates a minimal `UsageRecord` containing timestamp, session ID, optional portable project ID, provider, model ID, optional task category, provider-reported token counts, latency when available, optional estimated cost, success, and a controlled error category. The schema has no prompt, response, credential, or authorization fields.
 
@@ -70,11 +70,17 @@ Decisions use an independent native domain and `.forgemind/decisions.json`. Ever
 
 ### Shared Project Brain and Specialist Profiles
 
-The 0G `SpecialistProfile` abstraction is a small native configuration containing identity, description, supported tasks, default task, and a centralized system prompt. Exactly one profile exists: AI Behavior Designer. React lists public profile metadata and provides a structured workbench rather than chat.
+The 0G `SpecialistProfile` abstraction is a small native configuration containing identity, description, supported tasks, default task, deterministic task-area guidance, and a centralized system prompt. Exactly one profile exists: AI Behavior Designer. React lists public profile metadata and provides a responsive two-pane structured workbench rather than chat.
 
-Each run supplies selected Compendium and Decision IDs plus a transient scenario. Native code revalidates workspace identity, resolves only those references, excludes deprecated knowledge, accepts only `APPROVED` Decisions as authoritative context, and builds a compact prompt. The request uses an enabled model from the existing registry and the same provider service, with `minimal` reasoning, a bounded 1,600-token completion allowance, no retry, and `ai_behavior` metering. Strict output validation rejects unknown fields, oversized lists, and malformed JSON.
+Each run supplies selected Compendium and Decision IDs plus an explicit scenario. Native code revalidates workspace identity, resolves only those references, excludes deprecated knowledge, accepts only `APPROVED` Decisions as authoritative context, and builds a compact prompt. The request uses an enabled registry model, `minimal` reasoning, temperature `0.2`, no retry, and `ai_behavior` metering. 0G.4 defines task preferences from 3,200 to 5,200 tokens, with 4,600 for `REACTION_MODEL`. 0G.6 clamps the effective default only when the registry has an explicit model maximum and enforces a separate 8,192-token ForgeMind safety ceiling. A per-run UI override passes through the same native resolver and fails locally above either applicable bound.
 
-The normalized result separates assumptions from project facts and retains selected-reference IDs for visible provenance. Results are transient proposals; no specialist database or proposal persistence is present. Additional profiles and multi-perspective review remain future work.
+The 0G.2 structured-output hardening accepts one deterministically extractable JSON object, including whitespace, a single code fence, or brief wrapper text, while rejecting malformed, competing, or non-object JSON. Missing optional lists normalize to empty arrays, and only `open_questions` / `suggested_tests` are accepted as explicit aliases. Unknown fields, wrong types, oversized lists, empty summary, and invalid strings remain errors. Safe diagnostics report categories and field names without raw provider text, prompts, reasoning, or secrets.
+
+The normalized result separates assumptions from project facts and retains selected-reference IDs for visible provenance. Native code appends normalized successes and safe failure categories/diagnostics to portable `.forgemind/specialist-runs.json`, including scenario and usage when available. The versioned file rejects malformed or unsupported data and excludes raw provider content, requests, paths, reasoning, and secrets. This is work history, not Project truth; no automatic Compendium or Decision promotion exists. Additional profiles and multi-perspective review remain future work.
+
+History is an auxiliary boundary. React loads profile metadata, registry models, Compendium, Decisions, and history independently, so one history failure cannot erase otherwise valid state. Native specialist execution also treats history append failure as a safe warning rather than replacing a valid current result. Explicit recovery archives only the history file and initializes an empty format-version `1` document; it never mutates other `.forgemind` domains.
+
+Provider `INVALID_REQUEST` metadata is reduced to safe HTTP status, provider code/type, rejected parameter when supplied, budget/model context, and request-feature flags. Prompts, raw bodies, headers, reasoning, and credentials do not cross into React or history. `OUTPUT_TRUNCATED` guidance can offer an explicit higher-budget retry only when a known model maximum leaves safe headroom; there is no automatic retry.
 
 ### Git Integration Boundary
 
@@ -101,6 +107,10 @@ Future content-production integrations follow the same authority flow: ForgeMind
 ## Replaceability and portability
 
 Core entities contain no Nebius-, Nemotron-, Unity-, Git-host-, database-, or UI-framework-specific fields. Adapters translate external formats at boundaries. Human-readable formats are preferred where practical, and no proprietary binary project format is planned.
+
+## Coding-agent workflow
+
+Repository implementation work follows the operational boundaries in [`../AGENTS.md`](../AGENTS.md). [`CODING_CONTEXT_MAP.md`](CODING_CONTEXT_MAP.md) maps each task type to the smallest relevant source set so this architecture document remains the source of architectural truth rather than being duplicated in agent prompts. Product-to-implementation handoffs should use the compact templates under [`templates/`](templates/).
 
 ## Deliberately deferred
 

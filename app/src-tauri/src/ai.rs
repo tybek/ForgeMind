@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 const NEBIUS_API_KEY: &str = "NEBIUS_API_KEY";
+pub const MAX_COMPLETION_TOKENS: u32 = 8_192;
 const NEBIUS_CHAT_COMPLETIONS_URL: &str =
     "https://api.tokenfactory.nebius.com/v1/chat/completions";
 
@@ -69,6 +70,8 @@ pub struct ProviderDiagnostics {
     pub provider_error_code: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub provider_error_type: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub rejected_parameter: Option<String>,
 }
 
 impl AIError {
@@ -210,11 +213,14 @@ fn validate_request(request: &AIRequest) -> Result<(), AIError> {
     if request.user_prompt.trim().is_empty() {
         return Err(AIError::new("INVALID_REQUEST", "Enter an evaluation prompt."));
     }
-    if request.max_tokens.is_some_and(|value| value == 0 || value > 4096) {
+    if request.max_tokens.is_some_and(|value| value == 0 || value > MAX_COMPLETION_TOKENS) {
         return Err(AIError::new(
             "INVALID_REQUEST",
-            "Maximum output tokens must be between 1 and 4096.",
-        ));
+            "Maximum output tokens exceed ForgeMind's safe request bound.",
+        ).with_diagnostics(ProviderDiagnostics {
+            rejected_parameter: Some("max_completion_tokens".to_owned()),
+            ..ProviderDiagnostics::default()
+        }));
     }
     if request
         .temperature
@@ -274,6 +280,7 @@ fn error_for_provider_response(
     if let Ok(envelope) = serde_json::from_slice::<ProviderErrorEnvelope>(body) {
         diagnostics.provider_error_code = envelope.error.code.and_then(safe_provider_value);
         diagnostics.provider_error_type = envelope.error.kind.and_then(safe_provider_value);
+        diagnostics.rejected_parameter = envelope.error.param.and_then(safe_provider_value);
     }
 
     error_for_status(status).with_diagnostics(diagnostics)
@@ -368,6 +375,7 @@ struct ProviderErrorPayload {
     code: Option<Value>,
     #[serde(rename = "type")]
     kind: Option<Value>,
+    param: Option<Value>,
 }
 
 fn parse_success_response(
@@ -537,6 +545,7 @@ fn response_diagnostics(
         provider_request_id,
         provider_error_code: None,
         provider_error_type: None,
+        rejected_parameter: None,
     }
 }
 
@@ -795,6 +804,7 @@ mod tests {
             "error": {
                 "code": "model_not_found",
                 "type": "invalid_request_error",
+                "param": "max_completion_tokens",
                 "message": "arbitrary provider detail must not be reflected"
             }
         }))
@@ -815,7 +825,25 @@ mod tests {
             Some("invalid_request_error")
         );
         assert_eq!(diagnostics.provider_request_id.as_deref(), Some("request-safe-456"));
+        assert_eq!(diagnostics.rejected_parameter.as_deref(), Some("max_completion_tokens"));
         assert!(!serialized.contains("arbitrary provider detail"));
+    }
+
+    #[test]
+    fn global_completion_budget_bound_is_enforced_without_prompt_exposure() {
+        let mut input = request();
+        input.max_tokens = Some(MAX_COMPLETION_TOKENS + 1);
+        input.user_prompt = "private-project-prompt-marker".to_owned();
+
+        let error = validate_request(&input).unwrap_err();
+        let serialized = serde_json::to_string(&error).unwrap();
+
+        assert_eq!(error.code, "INVALID_REQUEST");
+        assert_eq!(
+            error.diagnostics.unwrap().rejected_parameter.as_deref(),
+            Some("max_completion_tokens")
+        );
+        assert!(!serialized.contains("private-project-prompt-marker"));
     }
 
     #[test]

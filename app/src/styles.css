@@ -797,8 +797,24 @@ button:focus-visible {
   background: #181b20;
 }
 
-.specialist-stack,
 .specialist-form {
+  display: grid;
+  gap: 18px;
+}
+
+.specialist-workbench {
+  display: grid;
+  grid-template-columns: minmax(340px, 0.4fr) minmax(0, 0.6fr);
+  align-items: start;
+  gap: 18px;
+}
+
+.specialist-config-pane,
+.specialist-output-pane {
+  min-width: 0;
+}
+
+.specialist-output-pane {
   display: grid;
   gap: 18px;
 }
@@ -827,7 +843,8 @@ button:focus-visible {
 }
 
 .specialist-form select,
-.specialist-form textarea {
+.specialist-form textarea,
+.specialist-form input[type="number"] {
   width: 100%;
   padding: 10px 12px;
   border: 1px solid #373d47;
@@ -835,6 +852,38 @@ button:focus-visible {
   color: #eef0f5;
   background: #121419;
   font: inherit;
+}
+
+.specialist-advanced-settings {
+  padding: 12px 14px;
+  border: 1px solid #2c313a;
+  border-radius: 7px;
+  background: #14171c;
+}
+
+.specialist-advanced-settings summary {
+  color: #c7ccd5;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.specialist-advanced-settings[open] {
+  display: grid;
+  gap: 10px;
+}
+
+.specialist-advanced-settings label {
+  display: grid;
+  gap: 7px;
+  color: #b8bec9;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.specialist-advanced-settings p,
+.specialist-error-guidance p {
+  margin: 0;
 }
 
 .specialist-context {
@@ -872,6 +921,68 @@ button:focus-visible {
   gap: 3px;
 }
 
+.specialist-decisions details {
+  display: grid;
+  gap: 9px;
+}
+
+.specialist-decisions summary {
+  padding: 8px 0;
+  color: #d5d9e1;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.specialist-context-recommended {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid #3a465b;
+  border-radius: 6px;
+  background: #171d27;
+}
+
+.specialist-context-recommended h3,
+.specialist-context-more-heading {
+  margin: 0;
+  color: #aeb5c0;
+  font-size: 13px;
+}
+
+.specialist-context-more-heading {
+  margin-top: 5px;
+}
+
+.specialist-context-areas {
+  display: grid;
+  gap: 6px;
+}
+
+.specialist-context-area {
+  border: 1px solid #2c313a;
+  border-radius: 6px;
+  background: #111419;
+}
+
+.specialist-context-area summary {
+  padding: 9px 10px;
+  color: #c7ccd5;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.specialist-context-area > div {
+  display: grid;
+  gap: 8px;
+  padding: 0 8px 8px;
+}
+
+.specialist-selected-summary {
+  overflow-wrap: anywhere;
+}
+
 .specialist-context small,
 .specialist-form > label small {
   color: #858c99;
@@ -890,6 +1001,36 @@ button:focus-visible {
 
 .specialist-error p {
   margin: 7px 0 0;
+}
+
+.specialist-running {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.specialist-running h2,
+.specialist-running p {
+  margin: 0;
+}
+
+.specialist-running p {
+  margin-top: 5px;
+  color: #aeb5c0;
+}
+
+.specialist-spinner {
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
+  border: 3px solid #3a414d;
+  border-top-color: #8baeff;
+  border-radius: 50%;
+  animation: specialist-spin 0.8s linear infinite;
+}
+
+@keyframes specialist-spin {
+  to { transform: rotate(360deg); }
 }
 
 .specialist-result {
@@ -924,6 +1065,136 @@ button:focus-visible {
 .specialist-assumptions {
   border-color: #8d7137;
   background: #272317;
+}
+
+.specialist-history h2 {
+  margin: 8px 0 7px;
+}
+
+.specialist-inline-warning,
+.specialist-history-warning {
+  padding: 10px 12px;
+  border: 1px solid #765148;
+  border-radius: 6px;
+  color: #f0c9bd;
+  background: #30231f;
+}
+
+.specialist-history-warning {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.specialist-history-warning p,
+.specialist-recovery-notice {
+  margin: 0;
+}
+
+.specialist-recovery-notice {
+  margin-top: 12px;
+  color: #bdebd0;
+}
+
+.specialist-recovery-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.specialist-recovery-actions p {
+  flex-basis: 100%;
+}
+
+.specialist-history-warning button {
+  justify-self: start;
+  padding: 7px 10px;
+  border: 1px solid #4a5260;
+  border-radius: 5px;
+  color: #e8ebf0;
+  background: #242932;
+  cursor: pointer;
+}
+
+.specialist-history-warning .danger-button {
+  border-color: #94515a;
+  background: #4a292e;
+}
+
+.specialist-history > ul {
+  display: grid;
+  gap: 8px;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.specialist-history-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 12px;
+  width: 100%;
+  padding: 11px 12px;
+  border: 1px solid #303640;
+  border-radius: 7px;
+  color: #dfe3ea;
+  background: #14171c;
+  text-align: left;
+  cursor: pointer;
+}
+
+.specialist-history-item:hover,
+.specialist-history-item-current {
+  border-color: #607eb8;
+  background: #1b2230;
+}
+
+.specialist-history-item > span:first-child {
+  display: grid;
+  min-width: 0;
+}
+
+.specialist-history-item > small {
+  grid-column: 1 / -1;
+  overflow: hidden;
+  color: #9ba3b0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.specialist-history-item small {
+  color: #9299a8;
+}
+
+.specialist-run-status {
+  align-self: start;
+  padding: 3px 6px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.specialist-run-status-succeeded {
+  color: #bdebd0;
+  background: #214331;
+}
+
+.specialist-run-status-failed {
+  color: #ffd1d5;
+  background: #562c32;
+}
+
+@media (max-width: 1100px) {
+  .specialist-workbench {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .specialist-spinner {
+    animation: none;
+  }
 }
 
 .evaluation-card h2 {

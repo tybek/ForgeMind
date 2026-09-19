@@ -24,6 +24,7 @@ vi.mock("./platform/modelRegistry", () => ({
       displayName: "DeepSeek V4.1 Flash",
       family: "DeepSeek V4.1",
       availability: "configured",
+      capabilities: { supportsReasoningEffort: true },
       enabled: true,
     },
   ]),
@@ -86,13 +87,17 @@ vi.mock("./platform/decisions", async (importOriginal) => ({
 }));
 
 vi.mock("./platform/specialists", () => ({
+  archiveAndResetSpecialistHistory: vi.fn(),
   loadSpecialistProfiles: vi.fn().mockResolvedValue([{
     id: "ai_behavior_designer",
     displayName: "AI Behavior Designer",
     description: "Analyze tactical behavior.",
     supportedTaskTypes: ["DESIGN_BEHAVIOR"],
     defaultTaskType: "DESIGN_BEHAVIOR",
+    maxRunCompletionTokens: 8192,
+    taskGuidance: [{ taskType: "DESIGN_BEHAVIOR", preferredCompletionTokens: 3200, recommendedCompendiumAreas: [], preferredDecisionAreas: [] }],
   }]),
+  loadSpecialistRuns: vi.fn().mockResolvedValue(null),
   runSpecialistAnalysis: vi.fn(),
 }));
 
