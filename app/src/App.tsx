@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { EvaluationPage } from "./EvaluationPage";
 import { InterviewPage } from "./InterviewPage";
+import { CompendiumPage } from "./CompendiumPage";
+import { DecisionsPage } from "./DecisionsPage";
+import type { KnowledgeEntry } from "./platform/projectKnowledge";
 import {
   getDevelopmentWorkspacePath,
   initializeWorkspace,
@@ -231,6 +234,17 @@ export function WorkspaceShell({
   onOpen: () => Promise<void>;
 }) {
   const [activeArea, setActiveArea] = useState<WorkspaceView>("Overview");
+  const [promotedKnowledge, setPromotedKnowledge] = useState<KnowledgeEntry | null>(null);
+
+  function openArea(area: WorkspaceView) {
+    setPromotedKnowledge(null);
+    setActiveArea(area);
+  }
+
+  function promoteToDecision(entry: KnowledgeEntry) {
+    setPromotedKnowledge(entry);
+    setActiveArea("Decisions");
+  }
 
   return (
     <div className="workspace-shell">
@@ -256,7 +270,7 @@ export function WorkspaceShell({
               key={area}
               type="button"
               aria-current={activeArea === area ? "page" : undefined}
-              onClick={() => setActiveArea(area)}
+              onClick={() => openArea(area)}
             >
               {area}
             </button>
@@ -267,7 +281,7 @@ export function WorkspaceShell({
           className={activeArea === "Project Interview" ? "nav-item nav-item-active interview-nav" : "nav-item interview-nav"}
           type="button"
           aria-current={activeArea === "Project Interview" ? "page" : undefined}
-          onClick={() => setActiveArea("Project Interview")}
+          onClick={() => openArea("Project Interview")}
         >
           Project Interview
         </button>
@@ -276,7 +290,7 @@ export function WorkspaceShell({
           className={activeArea === "AI Evaluation" ? "nav-item nav-item-active evaluation-nav" : "nav-item evaluation-nav"}
           type="button"
           aria-current={activeArea === "AI Evaluation" ? "page" : undefined}
-          onClick={() => setActiveArea("AI Evaluation")}
+          onClick={() => openArea("AI Evaluation")}
         >
           AI Evaluation
         </button>
@@ -297,7 +311,9 @@ export function WorkspaceShell({
               ? "0E Project Interview"
               : activeArea === "AI Evaluation"
                 ? "0D.1 Model Lab"
-                : "0C Local Workspace"}
+                : activeArea === "Game Design" || activeArea === "Decisions"
+                  ? "0F Project Intent"
+                  : "0C Local Workspace"}
           </span>
         </header>
 
@@ -308,6 +324,10 @@ export function WorkspaceShell({
             <EvaluationPage projectId={workspace.projectId} />
           ) : activeArea === "Overview" ? (
             <Overview workspace={workspace} />
+          ) : activeArea === "Game Design" ? (
+            <CompendiumPage workspace={workspace} onPromote={promoteToDecision} />
+          ) : activeArea === "Decisions" ? (
+            <DecisionsPage workspace={workspace} promotedKnowledge={promotedKnowledge} />
           ) : (
             <Placeholder area={activeArea} />
           )}

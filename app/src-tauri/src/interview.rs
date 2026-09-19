@@ -11,15 +11,16 @@ use uuid::Uuid;
 const INTERVIEW_FORMAT_VERSION: u32 = 1;
 const INTERVIEW_FILE: &str = "interview.json";
 const MAX_CONTEXT_STATEMENTS: usize = 8;
-const MAX_CANDIDATES_PER_TURN: usize = 8;
+const MAX_CANDIDATES_PER_TURN: usize = 3;
+const INTERVIEW_MAX_COMPLETION_TOKENS: u32 = 1_200;
 
 pub const PROJECT_INTERVIEW_SYSTEM_PROMPT: &str = r#"You are ForgeMind's Project Interview facilitator interviewing a game developer.
 Ask one concise, non-leading question at a time. Do not invent project facts. Preserve unknowns and explicit TBD decisions.
-Return only one JSON object matching this shape:
+Return only one compact JSON object matching this shape:
 {"nextSection":"game_vision","nextQuestion":"One concise question or null","candidates":[{"area":"overview","title":"Short title","statement":"Reviewable project fact","status":"DIRECTION","provenance":"USER_STATED"}]}
 Allowed nextSection values: project_identity, game_vision, core_player_experience, core_gameplay_loop, systems, world_narrative, technical_context, production_state, constraints, current_priorities, open_questions. Use null for both nextSection and nextQuestion when the interview can move to review.
 Allowed candidate area values: overview, game_design, narrative, technical, roadmap. Allowed status values: DIRECTION, LOCKED, TBD. Allowed provenance values: USER_STATED, AI_INFERRED, UNRESOLVED.
-Use USER_STATED only for direct statements or faithful summaries, AI_INFERRED for interpretation, and UNRESOLVED for unknowns. Keep candidates compact. Do not include reasoning, markdown, or fields outside the schema."#;
+Use USER_STATED only for direct statements or faithful summaries, AI_INFERRED for interpretation, and UNRESOLVED for unknowns. Extract zero to three compact candidates from the current answer only. Do not repeat known statements or summarize the entire interview. Do not include reasoning, explanations, markdown, or fields outside the schema."#;
 
 #[derive(Clone, Copy, Debug, Deserialize, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -207,7 +208,7 @@ pub fn build_ai_request(request: &InterviewTurnRequest) -> Result<AIRequest, Int
         "currentQuestion": request.current_question.trim(),
         "developerAnswer": request.answer.trim(),
         "knownStatements": request.known_statements,
-        "instruction": "Extract only reviewable candidates supported by the answer, then ask the next most useful single question."
+        "instruction": "Extract 0-3 new candidates supported by this answer, then ask one useful next question."
     });
 
     Ok(AIRequest {
@@ -220,7 +221,7 @@ pub fn build_ai_request(request: &InterviewTurnRequest) -> Result<AIRequest, Int
             )
         })?,
         temperature: Some(0.2),
-        max_tokens: Some(600),
+        max_tokens: Some(INTERVIEW_MAX_COMPLETION_TOKENS),
         reasoning_effort: Some("minimal".to_owned()),
     })
 }
@@ -621,7 +622,69 @@ mod tests {
         assert_eq!(ai_request.system_prompt.as_deref(), Some(PROJECT_INTERVIEW_SYSTEM_PROMPT));
         assert!(ai_request.user_prompt.contains("tactical extraction"));
         assert!(!ai_request.user_prompt.contains("conversationHistory"));
-        assert_eq!(ai_request.max_tokens, Some(600));
+        assert_eq!(ai_request.max_tokens, Some(INTERVIEW_MAX_COMPLETION_TOKENS));
+        assert_eq!(ai_request.reasoning_effort.as_deref(), Some("minimal"));
+    }
+
+    #[test]
+    fn response_candidate_count_is_bounded_to_three() {
+        let candidate = json!({
+            "area": "overview",
+            "title": "Fact",
+            "statement": "A compact stated fact.",
+            "status": "DIRECTION",
+            "provenance": "USER_STATED"
+        });
+        let accepted = json!({
+            "nextSection": "game_vision",
+            "nextQuestion": "What makes the game distinct?",
+            "candidates": [candidate.clone(), candidate.clone(), candidate.clone()]
+        });
+        let rejected = json!({
+            "nextSection": "game_vision",
+            "nextQuestion": "What makes the game distinct?",
+            "candidates": [candidate.clone(), candidate.clone(), candidate.clone(), candidate]
+        });
+
+        assert!(normalize_turn(
+            &accepted.to_string(),
+            "model".to_owned(),
+            0,
+            None,
+            None,
+            None,
+        )
+        .is_ok());
+        assert_eq!(
+            normalize_turn(
+                &rejected.to_string(),
+                "model".to_owned(),
+                0,
+                None,
+                None,
+                None,
+            )
+            .unwrap_err()
+            .code,
+            "INVALID_INTERVIEW_OUTPUT"
+        );
+    }
+
+    #[test]
+    fn compact_response_schema_supports_a_done_turn_without_candidates() {
+        let result = normalize_turn(
+            r#"{"nextSection":null,"nextQuestion":null,"candidates":[]}"#,
+            "model".to_owned(),
+            0,
+            None,
+            None,
+            None,
+        )
+        .unwrap();
+
+        assert_eq!(result.next_section, None);
+        assert_eq!(result.next_question, None);
+        assert!(result.candidates.is_empty());
     }
 
     #[test]

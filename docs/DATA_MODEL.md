@@ -2,7 +2,7 @@
 
 ## Scope
 
-This model establishes shared language and relationships. It is not a database schema or API contract. Milestone 0C serializes minimal Project identity in `.forgemind/project.json`. Milestone 0E adds the deliberately bounded `.forgemind/interview.json` format for approved onboarding candidates; it is not the future Compendium schema.
+This model establishes shared language and relationships. It is not a database schema or API contract. Milestone 0C serializes minimal Project identity in `.forgemind/project.json`; 0E adds approved onboarding evidence in `.forgemind/interview.json`; and 0F adds separate versioned Compendium and Decision documents.
 
 ## Core entities
 
@@ -16,7 +16,7 @@ A stable category used to organize knowledge, such as Overview, Game Design, Nar
 
 ### KnowledgeEntry
 
-An addressable statement or document fragment about the project. An entry has a topic, content, provenance, relevant statuses, relationships, and timestamps. It may express an idea, approved direction, canon fact, technical constraint, unresolved question, or observed implementation fact.
+An addressable statement about current project intent. The 0F schema contains stable `id`, bounded `area`, `title`, `statement`, `status`, `provenance`, `source`, `createdAt`, and `updatedAt` fields. Knowledge status is `DIRECTION`, `LOCKED`, `TBD`, or `DEPRECATED`; provenance is `USER_STATED`, `AI_INFERRED`, `MANUAL`, or the preserved interview value `UNRESOLVED`; source is `project_interview`, `manual_entry`, or `decision`. Entries are stored in `.forgemind/compendium.json`.
 
 ### InterviewCandidate
 
@@ -24,7 +24,7 @@ A small Project Interview proposal awaiting human review. It contains an identif
 
 ### Decision
 
-A durable conclusion made by people after discussion. A Decision records a title, statement, rationale, author, creation date, status, related systems, affected areas, approval state and approving user where relevant, and an optional superseded decision. The active/current decision is the applicable point in that chain; older decisions remain immutable history rather than being rewritten invisibly.
+A durable conclusion made by people after discussion. The 0F schema records stable `id`, `title`, `statement`, required `rationale`, `status`, `area`, simple local `author`, `createdAt`, optional `approvedAt`, optional `supersedesDecisionId`, and `relatedKnowledgeEntryIds`. Status is `PROPOSED`, `APPROVED`, `SUPERSEDED`, or `DEPRECATED`. Decisions are stored separately in `.forgemind/decisions.json`; proposed Decisions are not authoritative until a person explicitly approves them.
 
 ### System
 
@@ -53,10 +53,10 @@ Minimal attribution attached to created or changed artifacts. It may contain a s
 ## Relationships
 
 - A Project contains many ProjectAreas and gives all other entities their context.
-- An approved InterviewCandidate belongs to one Project and may later inform a KnowledgeEntry during 0F; it is not silently promoted into the future Compendium.
+- An approved InterviewCandidate belongs to one Project and may be explicitly imported into the Compendium. Startup never imports it automatically, and deterministic title-plus-statement matching prevents repeated import duplicates.
 - Future specialist role profiles consume relevant subsets of the same Project context; they do not own separate project truth or independent knowledge databases.
 - A ProjectArea groups KnowledgeEntries; one entry may relate to several Systems.
-- A Decision may resolve, lock, deprecate, or supersede KnowledgeEntries and other Decisions.
+- A Decision may reference KnowledgeEntries. An approved successor may supersede one approved predecessor; the predecessor remains stored as `SUPERSEDED` history.
 - A Milestone references the Systems, Decisions, and FeatureContracts in its scope.
 - A FeatureContract cites KnowledgeEntries and Decisions, targets Systems, belongs to a Milestone when applicable, and records the GroundTruthSnapshot used during its creation.
 - A GroundTruthSnapshot may provide implementation evidence for many entries or contracts but does not overwrite design intent.
@@ -90,12 +90,12 @@ Verified evidence is traceable to a repository file, Git record, test result, or
 
 ### Knowledge / design status
 
-- `IDEA` — an uncommitted possibility
 - `DIRECTION` — the current intended path, still open to refinement
-- `LOCKED` — an approved constraint or decision that should not change casually
+- `LOCKED` — an approved constraint or direction that should not change casually
 - `TBD` — deliberately unresolved
-- `DEPRECATED` — no longer intended, retained for history and drift analysis
-- `CONFLICT` — incompatible claims or decisions require human resolution
+- `DEPRECATED` — no longer intended, retained for history and later drift analysis
+
+`CONFLICT` and implementation status do not belong to the 0F Compendium schema; later Alignment/Reality milestones own those concerns.
 
 ### Implementation status
 
@@ -128,6 +128,14 @@ Approval answers whether a person has accepted an artifact; it does not replace 
 - Core entities contain no vendor-specific AI fields.
 - Absence of evidence is not represented as verified absence unless the scanner's coverage supports that conclusion.
 
+## 0F persistence invariants
+
+- `.forgemind/compendium.json` and `.forgemind/decisions.json` are human-readable format-version `1` documents tied to portable Project identity.
+- Both reject unknown fields, unsupported versions, malformed IDs, invalid enum values, and invalid timestamps rather than silently repairing data.
+- Files contain no absolute workspace path, credentials, provider response metadata, or machine identity.
+- Compendium and Decisions remain distinct: knowledge does not become a Decision automatically, and promoting knowledge creates only a proposed Decision.
+- Interview evidence remains in `.forgemind/interview.json` after import.
+
 ## Deliberately unresolved
 
-File formats for entities beyond the minimal Project identity, indexing, merge behavior, broader schema evolution, and any database design will be chosen only when implementation requires them.
+Indexing, merge behavior, schema migration beyond rejecting unsupported versions, audit/version-history UI, and any database design remain deferred.

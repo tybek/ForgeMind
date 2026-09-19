@@ -41,7 +41,7 @@ vi.mock("./platform/usageMetering", async (importOriginal) => {
         inputTokens: 0,
         outputTokens: 0,
         totalTokens: 0,
-        estimatedCostUsd: 0,
+        estimatedCostUsd: null,
       },
       project: {
         requests: 0,
@@ -50,7 +50,7 @@ vi.mock("./platform/usageMetering", async (importOriginal) => {
         inputTokens: 0,
         outputTokens: 0,
         totalTokens: 0,
-        estimatedCostUsd: 0,
+        estimatedCostUsd: null,
       },
       byModel: [],
     }),
@@ -66,6 +66,24 @@ vi.mock("./platform/projectInterview", async (importOriginal) => {
     saveInterview: vi.fn(),
   };
 });
+
+vi.mock("./platform/projectKnowledge", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./platform/projectKnowledge")>()),
+  loadCompendium: vi.fn().mockResolvedValue(null),
+  createKnowledgeEntry: vi.fn(),
+  updateKnowledgeEntry: vi.fn(),
+  deprecateKnowledgeEntry: vi.fn(),
+  importInterviewKnowledge: vi.fn(),
+}));
+
+vi.mock("./platform/decisions", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./platform/decisions")>()),
+  loadDecisions: vi.fn().mockResolvedValue(null),
+  createDecision: vi.fn(),
+  updateDecision: vi.fn(),
+  approveDecision: vi.fn(),
+  deprecateDecision: vi.fn(),
+}));
 
 const selectedPath = "D:\\Games\\SampleGame";
 const workspace: Workspace = {
@@ -190,6 +208,29 @@ describe("ForgeMind local workspace", () => {
 
     expect(screen.getByRole("heading", { name: "AI Evaluation", level: 2 })).toBeInTheDocument();
     expect(await screen.findByText("nebius_token_factory")).toBeInTheDocument();
+    expect(
+      screen.getByRole("navigation", { name: "Workspace areas" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Overview" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Project Interview" }),
+    ).toBeInTheDocument();
+  });
+
+  it("can leave AI Evaluation and open other workspace areas", async () => {
+    const user = userEvent.setup();
+    render(<WorkspaceShell workspace={workspace} onOpen={async () => undefined} />);
+
+    await user.click(screen.getByRole("button", { name: "AI Evaluation" }));
+    expect(await screen.findByText("nebius_token_factory")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Overview" }));
+    expect(screen.getByText(workspace.projectId)).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Project Interview" }));
+    expect(
+      await screen.findByRole("heading", { name: "Project Interview", level: 2 }),
+    ).toBeInTheDocument();
   });
 
   it("opens the Project Interview workflow from the workspace shell", async () => {
@@ -200,6 +241,19 @@ describe("ForgeMind local workspace", () => {
 
     expect(await screen.findByRole("heading", { name: "Project Interview", level: 2 })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Start Interview" })).toBeEnabled();
+  });
+
+  it("opens the 0F Compendium and Decisions inside the existing workspace shell", async () => {
+    const user = userEvent.setup();
+    render(<WorkspaceShell workspace={workspace} onOpen={async () => undefined} />);
+
+    await user.click(screen.getByRole("button", { name: "Game Design" }));
+    expect(await screen.findByRole("heading", { name: "Game Compendium" })).toBeInTheDocument();
+    expect(screen.getByRole("navigation", { name: "Workspace areas" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Decisions" }));
+    expect(await screen.findByRole("heading", { name: "Decisions", level: 2 })).toBeInTheDocument();
+    expect(screen.getByRole("navigation", { name: "Workspace areas" })).toBeInTheDocument();
   });
 
   it("shows invalid metadata honestly without offering initialization", async () => {
@@ -237,7 +291,7 @@ describe("ForgeMind local workspace", () => {
     expect(screen.queryByRole("button", { name: "Initialize Workspace" })).not.toBeInTheDocument();
   });
 
-  it.each(["Game Design", "Narrative", "Unity", "Alignment"])(
+  it.each(["Narrative", "Unity", "Alignment"])(
     "keeps the %s placeholder honest after a valid workspace loads",
     async (area) => {
       const user = userEvent.setup();

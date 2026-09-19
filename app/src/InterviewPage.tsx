@@ -33,11 +33,11 @@ function errorDetails(error: unknown, fallbackCode: string, fallbackMessage: str
 function SavedInterview({ document }: { document: InterviewDocument }) {
   return (
     <section className="interview-card" aria-labelledby="saved-interview-title">
-      <span className="section-label">Durable approved knowledge</span>
-      <h2 id="saved-interview-title">Interview Complete</h2>
+      <span className="section-label">Approved project onboarding result</span>
+      <h2 id="saved-interview-title">Saved Interview Knowledge</h2>
       <p className="scope-note">
-        {document.candidates.length} approved {document.candidates.length === 1 ? "candidate" : "candidates"} saved to
-        .forgemind/interview.json.
+        {document.candidates.length} approved {document.candidates.length === 1 ? "candidate" : "candidates"} loaded from
+        .forgemind/interview.json. Pending and discarded candidates are not part of this saved result.
       </p>
       <div className="saved-candidate-list">
         {document.candidates.map((candidate) => (
@@ -211,11 +211,11 @@ export function InterviewPage({
           </label>
           {existing ? (
             <div className="existing-interview-notice">
-              <strong>Interview-derived knowledge exists</strong>
-              <p>{existing.candidates.length} approved candidates are stored for {workspace.name}.</p>
+              <strong>Saved Interview Knowledge</strong>
+              <p>{existing.candidates.length} approved candidates are available for {workspace.name}.</p>
               <div className="interview-actions">
                 <button className="outline-button" type="button" onClick={() => { setSaved(existing); setPhase("saved"); }}>
-                  Review saved interview
+                  View Saved Interview Knowledge
                 </button>
                 <button className="outline-button" type="button" onClick={() => setPhase("confirm-replace")}>
                   Start replacement interview

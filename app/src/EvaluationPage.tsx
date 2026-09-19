@@ -57,8 +57,8 @@ function presence(value: boolean): string {
   return value ? "Yes" : "No";
 }
 
-function estimatedCost(value: number | undefined): string {
-  return value === undefined ? "Unavailable" : `$${value.toFixed(6)} (Estimated)`;
+function estimatedCost(value: number | null | undefined): string {
+  return typeof value === "number" ? `$${value.toFixed(6)} (Estimated)` : "Unavailable";
 }
 
 function pricing(model: ModelEntry | undefined): string {

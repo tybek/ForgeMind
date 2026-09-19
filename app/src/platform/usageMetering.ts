@@ -23,8 +23,8 @@ export interface UsageTotals {
   inputTokens: number;
   outputTokens: number;
   totalTokens: number;
-  estimatedCostUsd?: number;
-  averageLatencyMs?: number;
+  estimatedCostUsd?: number | null;
+  averageLatencyMs?: number | null;
 }
 
 export interface ModelUsageSummary extends UsageTotals {
@@ -34,7 +34,7 @@ export interface ModelUsageSummary extends UsageTotals {
 
 export interface UsageSummary {
   session: UsageTotals;
-  project?: UsageTotals;
+  project?: UsageTotals | null;
   byModel: ModelUsageSummary[];
 }
 

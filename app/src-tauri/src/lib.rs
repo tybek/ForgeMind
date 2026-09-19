@@ -1,4 +1,6 @@
 pub mod ai;
+pub mod compendium;
+pub mod decisions;
 pub mod interview;
 pub mod model_registry;
 pub mod usage;
@@ -10,6 +12,15 @@ use std::sync::OnceLock;
 use workspace::{WorkspaceError, WorkspaceInspection};
 
 use ai::{AIError, AIRequest, AIResponse};
+use compendium::{
+    CompendiumDocument, CompendiumError, CreateKnowledgeEntryRequest,
+    ImportInterviewRequest, InterviewImportResult, KnowledgeEntryActionRequest,
+    UpdateKnowledgeEntryRequest,
+};
+use decisions::{
+    CreateDecisionRequest, DecisionActionRequest, DecisionError, DecisionsDocument,
+    UpdateDecisionRequest,
+};
 use interview::{
     InterviewDocument, InterviewError, InterviewTurnRequest, InterviewTurnResult,
     SaveInterviewRequest,
@@ -129,6 +140,64 @@ fn save_project_interview(
     interview::save(request)
 }
 
+#[tauri::command]
+fn load_compendium(path: String) -> Result<Option<CompendiumDocument>, CompendiumError> {
+    compendium::load(Path::new(&path))
+}
+
+#[tauri::command]
+fn create_knowledge_entry(
+    request: CreateKnowledgeEntryRequest,
+) -> Result<CompendiumDocument, CompendiumError> {
+    compendium::create_entry(request)
+}
+
+#[tauri::command]
+fn update_knowledge_entry(
+    request: UpdateKnowledgeEntryRequest,
+) -> Result<CompendiumDocument, CompendiumError> {
+    compendium::update_entry(request)
+}
+
+#[tauri::command]
+fn deprecate_knowledge_entry(
+    request: KnowledgeEntryActionRequest,
+) -> Result<CompendiumDocument, CompendiumError> {
+    compendium::deprecate_entry(request)
+}
+
+#[tauri::command]
+fn import_interview_to_compendium(
+    request: ImportInterviewRequest,
+) -> Result<InterviewImportResult, CompendiumError> {
+    compendium::import_interview(request)
+}
+
+#[tauri::command]
+fn load_decisions(path: String) -> Result<Option<DecisionsDocument>, DecisionError> {
+    decisions::load(Path::new(&path))
+}
+
+#[tauri::command]
+fn create_decision(request: CreateDecisionRequest) -> Result<DecisionsDocument, DecisionError> {
+    decisions::create(request)
+}
+
+#[tauri::command]
+fn update_decision(request: UpdateDecisionRequest) -> Result<DecisionsDocument, DecisionError> {
+    decisions::update(request)
+}
+
+#[tauri::command]
+fn approve_decision(request: DecisionActionRequest) -> Result<DecisionsDocument, DecisionError> {
+    decisions::approve(request)
+}
+
+#[tauri::command]
+fn deprecate_decision(request: DecisionActionRequest) -> Result<DecisionsDocument, DecisionError> {
+    decisions::deprecate(request)
+}
+
 fn session_id() -> &'static str {
     SESSION_ID.get_or_init(|| uuid::Uuid::new_v4().to_string())
 }
@@ -160,6 +229,16 @@ pub fn run() {
             run_project_interview_turn,
             load_project_interview,
             save_project_interview,
+            load_compendium,
+            create_knowledge_entry,
+            update_knowledge_entry,
+            deprecate_knowledge_entry,
+            import_interview_to_compendium,
+            load_decisions,
+            create_decision,
+            update_decision,
+            approve_decision,
+            deprecate_decision,
             development_workspace_path
         ])
         .run(tauri::generate_context!())

@@ -148,6 +148,22 @@ describe("Project Interview", () => {
     expect(screen.getByLabelText("Your answer")).toHaveValue("Preserve this answer.");
   });
 
+  it("preserves the answer and never retries automatically after OUTPUT_TRUNCATED", async () => {
+    vi.mocked(runInterviewTurn).mockRejectedValue({
+      code: "OUTPUT_TRUNCATED",
+      message: "Nebius Token Factory reached the output-token limit before returning readable response text.",
+    });
+    const user = await startInterview();
+    const answer = "It is a single-player turn-based tactical extraction game with raids and limited Action Points.";
+    await user.type(screen.getByLabelText("Your answer"), answer);
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("OUTPUT_TRUNCATED");
+    expect(screen.getByLabelText("Your answer")).toHaveValue(answer);
+    expect(screen.getByRole("button", { name: "Next" })).toBeEnabled();
+    expect(runInterviewTurn).toHaveBeenCalledOnce();
+  });
+
   it("renders candidate review with visible provenance and status", async () => {
     await reachReview();
     expect(screen.getByRole("heading", { name: "Candidate Review" })).toBeInTheDocument();
@@ -195,7 +211,9 @@ describe("Project Interview", () => {
       ]),
       false,
     );
-    expect(await screen.findByRole("heading", { name: "Interview Complete" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: "Saved Interview Knowledge" }),
+    ).toBeInTheDocument();
     expect(screen.getByText("A tactical extraction game.")).toBeInTheDocument();
     expect(screen.queryByText("The target platform is not decided.")).not.toBeInTheDocument();
   });
@@ -231,18 +249,23 @@ describe("Project Interview", () => {
     vi.mocked(loadInterview).mockResolvedValue(savedDocument);
     const user = userEvent.setup();
     render(<InterviewPage workspace={workspace} />);
-    await screen.findByText("Interview-derived knowledge exists");
-    await user.click(screen.getByRole("button", { name: "Review saved interview" }));
+    await screen.findByText("Saved Interview Knowledge");
+    await user.click(
+      screen.getByRole("button", { name: "View Saved Interview Knowledge" }),
+    );
 
-    expect(screen.getByRole("heading", { name: "Interview Complete" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Saved Interview Knowledge" }),
+    ).toBeInTheDocument();
     expect(screen.getByText("A tactical extraction game.")).toBeInTheDocument();
+    expect(screen.queryByText("The target platform is not decided.")).not.toBeInTheDocument();
   });
 
   it("requires explicit confirmation before a replacement interview", async () => {
     vi.mocked(loadInterview).mockResolvedValue(savedDocument);
     const user = userEvent.setup();
     render(<InterviewPage workspace={workspace} />);
-    await screen.findByText("Interview-derived knowledge exists");
+    await screen.findByText("Saved Interview Knowledge");
     await user.click(screen.getByRole("button", { name: "Start replacement interview" }));
     expect(screen.getByRole("heading", { name: "Replace saved interview knowledge?" })).toBeInTheDocument();
     expect(runInterviewTurn).not.toHaveBeenCalled();

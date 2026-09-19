@@ -124,6 +124,42 @@ describe("AI evaluation and usage", () => {
     expect(within(project).getByText("Unavailable")).toBeInTheDocument();
   });
 
+  it("renders native null usage values without taking down the evaluation view", async () => {
+    vi.mocked(loadUsageSummary).mockResolvedValueOnce({
+      session: {
+        requests: 1,
+        successfulRequests: 1,
+        failedRequests: 0,
+        inputTokens: 12,
+        outputTokens: 4,
+        totalTokens: 16,
+        estimatedCostUsd: null,
+        averageLatencyMs: null,
+      },
+      project: null,
+      byModel: [
+        {
+          provider: "nebius_token_factory",
+          modelId: "deepseek-ai/DeepSeek-V4.1-Flash",
+          requests: 1,
+          successfulRequests: 1,
+          failedRequests: 0,
+          inputTokens: 12,
+          outputTokens: 4,
+          totalTokens: 16,
+          estimatedCostUsd: null,
+          averageLatencyMs: null,
+        },
+      ],
+    });
+
+    await renderConfiguredPage();
+
+    expect(screen.getByRole("heading", { name: "AI Evaluation" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Usage by model")).toBeInTheDocument();
+    expect(screen.getAllByText("Unavailable").length).toBeGreaterThan(0);
+  });
+
   it("calls the provider only after explicit submission with registry and context values", async () => {
     vi.mocked(runEvaluation).mockResolvedValue(response);
     const user = await renderConfiguredPage();

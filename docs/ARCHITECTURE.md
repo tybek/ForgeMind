@@ -2,13 +2,13 @@
 
 ## Current state
 
-Milestones 0D and 0D.1 add a replaceable AI-provider boundary, bounded Nebius Token Factory evaluation harness, centralized model registry, and local usage accounting to the 0C local Tauri workspace. The 0E Project Interview implementation is complete offline and awaits user-driven live validation. Project Compendium generation, Decision History, specialist agents, Alignment logic, Git integration, and the Unity Bridge are **NOT IMPLEMENTED**.
+Milestones through 0F and the 0F.1 Compendium/Decision UX density polish are complete. ForgeMind now has its first durable Intent layer. Specialist agents, Alignment logic, Git integration, Unity GroundTruth, and Feature Contracts are **NOT IMPLEMENTED**.
 
 ## Architectural stance
 
 ForgeMind is intended as a desktop-first orchestration and interpretation layer over a local game repository. The repository remains authoritative for durable project files; Git provides durable history; Unity supplies evidence about Reality. ForgeMind owns neither the underlying game project nor its development tools.
 
-The current desktop shell uses Tauri 2 with React and TypeScript. The UI receives no generic filesystem or network access: it invokes narrow workspace, model-registry, aggregate-usage, and evaluation commands. The native layer reads or creates `.forgemind/project.json` under the explicitly selected directory and separately owns provider credentials, outbound inference HTTP, and ForgeMind's application-global usage history.
+The current desktop shell uses Tauri 2 with React and TypeScript. The UI receives no generic filesystem or network access: it invokes narrow workspace, model-registry, aggregate-usage, evaluation, interview, Compendium, and Decision commands. The native layer owns validation and file access under `.forgemind`, provider credentials, outbound inference HTTP, and ForgeMind's application-global usage history.
 
 The boundaries below describe responsibilities, not services, deployable processes, or a production-scale architecture.
 
@@ -54,11 +54,19 @@ Records use append-only JSON Lines in ForgeMind's per-user application data (`%L
 
 The React interview flow owns only transient interaction state: current section and question, the user's unsaved answer, and pending review decisions. Starting an interview is deterministic and makes no provider request. Each explicit **Next** action calls the native `run_project_interview_turn` boundary once.
 
-The native prompt builder supplies the dedicated, testable interview system prompt plus compact JSON context containing the current section, current question, current answer, and at most eight prior candidate statements. It selects a model through the existing registry and invokes the same metered provider service with task category `project_interview`. There is no background call, automatic retry, routing, RAG, or full-conversation resend.
+The native prompt builder supplies the dedicated, testable interview system prompt plus compact JSON context containing the current section, current question, current answer, and at most eight prior candidate statements. It selects a model through the existing registry and invokes the same metered provider service with task category `project_interview`. Each turn retains `minimal` reasoning and a bounded 1,200-token completion allowance because provider reasoning tokens share that budget. There is no background call, automatic retry, routing, RAG, or full-conversation resend.
 
-Provider text is parsed as a strict, bounded JSON turn. Unknown fields, invalid enums, excessive candidates, malformed question transitions, and invalid lengths are rejected before reaching React or persistence. Accepted candidates receive ForgeMind-owned identifiers and preserve `USER_STATED`, `AI_INFERRED`, or `UNRESOLVED` provenance plus the small `DIRECTION`, `LOCKED`, or `TBD` vocabulary.
+Provider text is parsed as a strict, bounded JSON turn containing only the next section, one concise next question, and zero to three candidates. Unknown fields, invalid enums, a fourth candidate, malformed question transitions, and invalid lengths are rejected before reaching React or persistence. Accepted candidates receive ForgeMind-owned identifiers and preserve `USER_STATED`, `AI_INFERRED`, or `UNRESOLVED` provenance plus the small `DIRECTION`, `LOCKED`, or `TBD` vocabulary.
 
 Persistence is a separate explicit command. The native layer revalidates the selected workspace, filters reviewed candidates to `APPROVE`, and writes versioned human-readable `.forgemind/interview.json`. The file contains portable project ID, approval time, model ID, and approved candidates only—never workspace paths, prompts, answers, raw provider output, reasoning, credentials, or headers. Existing data is opened read-only unless the user explicitly confirms a replacement flow.
+
+### Game Compendium and Decisions
+
+The Game Compendium is current project knowledge, not interview history or Decision history. React loads and mutates it only through narrow native commands. Rust validates the workspace identity and versioned schema before writing human-readable `.forgemind/compendium.json`. Entries use a bounded section vocabulary, the `DIRECTION` / `LOCKED` / `TBD` / `DEPRECATED` status set, explicit provenance/source, stable UUIDs, and timestamps.
+
+Interview import is an explicit command. It reuses the validated interview loader, preserves the supported candidate status and provenance, maps the bounded interview areas into Compendium sections, retains `.forgemind/interview.json`, and skips exact title-plus-statement duplicates. Startup never imports or mutates knowledge.
+
+Decisions use an independent native domain and `.forgemind/decisions.json`. Every Decision requires a non-empty rationale and begins `PROPOSED`; only a separate approval command makes it `APPROVED`. Knowledge promotion pre-populates a proposed Decision and explicit relationship but does not modify the source entry. A proposed successor may reference one active approved predecessor. Approving it atomically marks the predecessor `SUPERSEDED` and retains both records. The 0F author is the explicit local label `Local User`; accounts, permissions, and version-history UI are deferred.
 
 ### Shared Project Brain and Specialist Profiles
 
@@ -93,7 +101,7 @@ Core entities contain no Nebius-, Nemotron-, Unity-, Git-host-, database-, or UI
 ## Deliberately deferred
 
 - supported operating systems and distribution strategy beyond the currently validated Windows development build;
-- file formats and validation for entities beyond the minimal 0C Project identity;
+- file formats and validation for entities beyond Project identity, interview evidence, Compendium knowledge, and Decisions;
 - schema migration beyond rejecting unsupported project metadata versions;
 - provider/model discovery, automatic routing, benchmark history, comparison runs, provider billing, human scoring, and retrieval beyond the bounded evaluation harness;
 - Alignment implementation approach and final status vocabulary;
