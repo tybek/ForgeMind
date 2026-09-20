@@ -90,6 +90,20 @@ pub struct BehaviorDesignerResult {
     pub suggested_tests: Vec<String>,
 }
 
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct SpecialistNormalizationNotice {
+    pub field: String,
+    pub returned_items: usize,
+    pub retained_items: usize,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct NormalizedSpecialistResult {
+    pub result: BehaviorDesignerResult,
+    pub normalization_notices: Vec<SpecialistNormalizationNotice>,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SpecialistAnalysisResult {
@@ -98,6 +112,8 @@ pub struct SpecialistAnalysisResult {
     pub selected_knowledge_entry_ids: Vec<String>,
     pub selected_decision_ids: Vec<String>,
     pub result: BehaviorDesignerResult,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub normalization_notices: Vec<SpecialistNormalizationNotice>,
     pub model: String,
     pub latency_ms: u64,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -464,6 +480,13 @@ pub fn normalize_result_with_finish_reason(
     text: &str,
     finish_reason: Option<&str>,
 ) -> Result<BehaviorDesignerResult, SpecialistError> {
+    normalize_result_with_notices(text, finish_reason).map(|normalized| normalized.result)
+}
+
+pub fn normalize_result_with_notices(
+    text: &str,
+    finish_reason: Option<&str>,
+) -> Result<NormalizedSpecialistResult, SpecialistError> {
     let (candidate, extraction_succeeded) = match extract_single_json_object(text) {
         Ok(candidate) => (candidate, true),
         Err(ExtractionError::MultipleObjects) => {
@@ -524,20 +547,52 @@ pub fn normalize_result_with_finish_reason(
         },
     ))?;
     validate_output_text("summary", &raw.summary, MAX_SUMMARY_CHARS, finish_reason)?;
-    validate_output_list("assumptions", &raw.assumptions, MAX_LIST_ITEMS, finish_reason)?;
-    validate_output_list("recommendations", &raw.recommendations, MAX_LIST_ITEMS, finish_reason)?;
-    validate_output_list("risks", &raw.risks, MAX_LIST_ITEMS, finish_reason)?;
-    validate_output_list("exploits", &raw.exploits, MAX_LIST_ITEMS, finish_reason)?;
-    validate_output_list("openQuestions", &raw.open_questions, MAX_LIST_ITEMS, finish_reason)?;
-    validate_output_list("suggestedTests", &raw.suggested_tests, MAX_TESTS, finish_reason)?;
-    Ok(BehaviorDesignerResult {
-        summary: raw.summary.trim().to_owned(),
-        assumptions: trim_list(raw.assumptions),
-        recommendations: trim_list(raw.recommendations),
-        risks: trim_list(raw.risks),
-        exploits: trim_list(raw.exploits),
-        open_questions: trim_list(raw.open_questions),
-        suggested_tests: trim_list(raw.suggested_tests),
+    let (assumptions, assumptions_notice) =
+        normalize_output_list("assumptions", raw.assumptions, MAX_LIST_ITEMS, finish_reason)?;
+    let (recommendations, recommendations_notice) = normalize_output_list(
+        "recommendations",
+        raw.recommendations,
+        MAX_LIST_ITEMS,
+        finish_reason,
+    )?;
+    let (risks, risks_notice) =
+        normalize_output_list("risks", raw.risks, MAX_LIST_ITEMS, finish_reason)?;
+    let (exploits, exploits_notice) =
+        normalize_output_list("exploits", raw.exploits, MAX_LIST_ITEMS, finish_reason)?;
+    let (open_questions, open_questions_notice) = normalize_output_list(
+        "openQuestions",
+        raw.open_questions,
+        MAX_LIST_ITEMS,
+        finish_reason,
+    )?;
+    let (suggested_tests, suggested_tests_notice) = normalize_output_list(
+        "suggestedTests",
+        raw.suggested_tests,
+        MAX_TESTS,
+        finish_reason,
+    )?;
+    let normalization_notices = [
+        assumptions_notice,
+        recommendations_notice,
+        risks_notice,
+        exploits_notice,
+        open_questions_notice,
+        suggested_tests_notice,
+    ]
+    .into_iter()
+    .flatten()
+    .collect();
+    Ok(NormalizedSpecialistResult {
+        result: BehaviorDesignerResult {
+            summary: raw.summary.trim().to_owned(),
+            assumptions,
+            recommendations,
+            risks,
+            exploits,
+            open_questions,
+            suggested_tests,
+        },
+        normalization_notices,
     })
 }
 
@@ -696,15 +751,12 @@ fn validate_output_text(field: &str, value: &str, maximum: usize, finish_reason:
     Ok(())
 }
 
-fn validate_output_list(field: &str, items: &[String], maximum: usize, finish_reason: Option<&str>) -> Result<(), SpecialistError> {
-    if items.len() > maximum {
-        return Err(schema_error(finish_reason, SpecialistDiagnostics {
-            readable_text_present: Some(true),
-            json_extraction_succeeded: Some(true),
-            list_bound_exceeded: Some(field.to_owned()),
-            ..diagnostics_for_finish_reason(finish_reason)
-        }));
-    }
+fn normalize_output_list(
+    field: &str,
+    mut items: Vec<String>,
+    maximum: usize,
+    finish_reason: Option<&str>,
+) -> Result<(Vec<String>, Option<SpecialistNormalizationNotice>), SpecialistError> {
     if items.iter().any(|item| item.trim().is_empty() || item.trim().chars().count() > MAX_ITEM_CHARS) {
         return Err(schema_error(finish_reason, SpecialistDiagnostics {
             readable_text_present: Some(true),
@@ -713,7 +765,38 @@ fn validate_output_list(field: &str, items: &[String], maximum: usize, finish_re
             ..diagnostics_for_finish_reason(finish_reason)
         }));
     }
-    Ok(())
+    let returned_items = items.len();
+    items.truncate(maximum);
+    let notice = (returned_items > maximum).then(|| SpecialistNormalizationNotice {
+        field: field.to_owned(),
+        returned_items,
+        retained_items: maximum,
+    });
+    Ok((trim_list(items), notice))
+}
+
+pub fn valid_normalization_notices(
+    result: &BehaviorDesignerResult,
+    notices: &[SpecialistNormalizationNotice],
+) -> bool {
+    let mut fields = HashSet::new();
+    notices.iter().all(|notice| {
+        let expected = match notice.field.as_str() {
+            "assumptions" => Some((MAX_LIST_ITEMS, result.assumptions.len())),
+            "recommendations" => Some((MAX_LIST_ITEMS, result.recommendations.len())),
+            "risks" => Some((MAX_LIST_ITEMS, result.risks.len())),
+            "exploits" => Some((MAX_LIST_ITEMS, result.exploits.len())),
+            "openQuestions" => Some((MAX_LIST_ITEMS, result.open_questions.len())),
+            "suggestedTests" => Some((MAX_TESTS, result.suggested_tests.len())),
+            _ => None,
+        };
+        expected.is_some_and(|(maximum, actual)| {
+            fields.insert(notice.field.as_str())
+                && notice.returned_items > maximum
+                && notice.retained_items == maximum
+                && actual == maximum
+        })
+    })
 }
 
 fn diagnostics_for_finish_reason(finish_reason: Option<&str>) -> SpecialistDiagnostics {
@@ -872,12 +955,45 @@ mod tests {
     }
 
     #[test]
-    fn oversized_list_is_rejected() {
+    fn overlong_recommendations_retain_the_first_five_in_order() {
         let mut value: serde_json::Value = serde_json::from_str(&valid_output()).unwrap();
         value["recommendations"] = json!(["1", "2", "3", "4", "5", "6"]);
-        let error = normalize_result(&value.to_string()).unwrap_err();
-        assert_eq!(error.code, "INVALID_SPECIALIST_SCHEMA");
-        assert_eq!(error.diagnostics.unwrap().list_bound_exceeded.as_deref(), Some("recommendations"));
+        let normalized = normalize_result_with_notices(&value.to_string(), None).unwrap();
+        assert_eq!(
+            normalized.result.recommendations,
+            ["1", "2", "3", "4", "5"]
+        );
+        assert_eq!(
+            normalized.normalization_notices,
+            vec![SpecialistNormalizationNotice {
+                field: "recommendations".to_owned(),
+                returned_items: 6,
+                retained_items: 5,
+            }]
+        );
+    }
+
+    #[test]
+    fn multiple_overlong_lists_normalize_independently() {
+        let mut value: serde_json::Value = serde_json::from_str(&valid_output()).unwrap();
+        value["assumptions"] = json!(["a1", "a2", "a3", "a4", "a5", "a6"]);
+        value["suggestedTests"] = json!(["t1", "t2", "t3", "t4", "t5", "t6", "t7", "t8", "t9"]);
+        let normalized = normalize_result_with_notices(&value.to_string(), None).unwrap();
+        assert_eq!(normalized.result.assumptions, ["a1", "a2", "a3", "a4", "a5"]);
+        assert_eq!(normalized.result.suggested_tests, ["t1", "t2", "t3", "t4", "t5", "t6", "t7", "t8"]);
+        assert_eq!(normalized.normalization_notices, vec![
+            SpecialistNormalizationNotice { field: "assumptions".to_owned(), returned_items: 6, retained_items: 5 },
+            SpecialistNormalizationNotice { field: "suggestedTests".to_owned(), returned_items: 9, retained_items: 8 },
+        ]);
+    }
+
+    #[test]
+    fn exact_bound_list_is_unchanged_without_a_notice() {
+        let mut value: serde_json::Value = serde_json::from_str(&valid_output()).unwrap();
+        value["recommendations"] = json!(["1", "2", "3", "4", "5"]);
+        let normalized = normalize_result_with_notices(&value.to_string(), None).unwrap();
+        assert_eq!(normalized.result.recommendations, ["1", "2", "3", "4", "5"]);
+        assert!(normalized.normalization_notices.is_empty());
     }
 
     #[test]

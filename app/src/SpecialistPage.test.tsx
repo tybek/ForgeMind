@@ -41,6 +41,10 @@ const model = {
   provider: "nebius_token_factory", modelId: "test/model", displayName: "Registry Test Model", family: "test",
   availability: "configured", enabled: true, capabilities: {}, pricing: { inputUsdPerMillionTokens: 1, outputUsdPerMillionTokens: 2 },
 };
+const nemotronModel = {
+  provider: "nebius_token_factory", modelId: "nvidia/nemotron-3-super-120b-a12b", displayName: "NVIDIA Nemotron 3 Super 120B", family: "Nemotron 3 Super",
+  availability: "configured", enabled: true, capabilities: {},
+};
 const knowledge = {
   id: "knowledge-1", area: "systems" as const, title: "Imperfect information", statement: "Enemies know only perceived facts.",
   status: "LOCKED" as const, provenance: "MANUAL" as const, source: "manual_entry" as const,
@@ -62,6 +66,7 @@ const analysis = {
     suggestedTests: ["Verify sound alone does not acquire a target."],
   },
   model: model.modelId, latencyMs: 42, inputTokens: 100, outputTokens: 50, totalTokens: 150,
+  normalizationNotices: [],
   preferredTaskBudget: 4600, effectiveCompletionBudget: 4600,
 };
 const successfulRun: SpecialistRun = {
@@ -76,6 +81,26 @@ const failedRun: SpecialistRun = {
   safeError: { code: "OUTPUT_TRUNCATED", diagnostics: { finishReason: "length", readableTextPresent: true, jsonExtractionSucceeded: false } },
   usage: { latencyMs: 17000, inputTokens: 700, outputTokens: 3400, totalTokens: 4100 },
   preferredTaskBudget: 4600, effectiveCompletionBudget: 4600,
+};
+const comparisonRun: SpecialistRun = {
+  ...successfulRun,
+  id: "run-comparison",
+  createdAt: "2026-09-20T12:00:00Z",
+  modelId: nemotronModel.modelId,
+  result: {
+    ...analysis.result,
+    summary: "The guard should verify the sound before escalating.",
+    recommendations: ["Pause, orient, then investigate."],
+    risks: ["A fixed pause may become predictable."],
+    exploits: ["Repeated distractions may stall the guard."],
+    suggestedTests: ["Verify escalation requires corroborating evidence."],
+  },
+  usage: { latencyMs: 24000, inputTokens: 760, outputTokens: 1800, totalTokens: 2560, estimatedCostUsd: 0.123456 },
+  effectiveCompletionBudget: 4200,
+};
+const normalizedRun: SpecialistRun = {
+  ...comparisonRun,
+  normalizationNotices: [{ field: "recommendations", returnedItems: 7, retainedItems: 5 }],
 };
 const writeClipboardText = vi.fn<(text: string) => Promise<void>>();
 
@@ -115,6 +140,83 @@ describe("AI Behavior Designer production workbench", () => {
   it("renders configuration, compact history, and selected detail as the wide workbench columns", async () => { vi.mocked(loadSpecialistRuns).mockResolvedValue({ formatVersion: 1, projectId: workspace.projectId, updatedAt: successfulRun.createdAt, runs: [successfulRun] }); const { container } = render(<SpecialistPage workspace={workspace} />); await screen.findByRole("heading", { name: "AI Behavior Designer" }); expect(container.querySelector('[data-workbench-column="configuration"]')).toBeInTheDocument(); expect(container.querySelector('[data-workbench-column="analysis-history"]')).toBeInTheDocument(); expect(container.querySelectorAll('[data-workbench-column="selected-run-detail"]')).not.toHaveLength(0); });
   it("allows every supported task type to be selected", async () => { const user = await renderPage(); await user.selectOptions(screen.getByLabelText("Task Type"), "BEHAVIOR_CONTRACT"); expect(screen.getByLabelText("Task Type")).toHaveValue("BEHAVIOR_CONTRACT"); });
   it("uses enabled models from the registry", async () => { await renderPage(); expect(screen.getByLabelText("Model")).toHaveValue(model.modelId); expect(screen.getByRole("option", { name: model.displayName })).toBeInTheDocument(); });
+  it("keeps DeepSeek and Nemotron selectable from the registry", async () => { vi.mocked(loadModelRegistry).mockResolvedValue([{ ...model, modelId: "deepseek-ai/DeepSeek-V4.1-Flash", displayName: "DeepSeek V4.1 Flash" }, nemotronModel]); await renderPage(); const selector = screen.getByLabelText("Model"); expect(within(selector).getByRole("option", { name: "DeepSeek V4.1 Flash" })).toBeInTheDocument(); expect(within(selector).getByRole("option", { name: "NVIDIA Nemotron 3 Super 120B" })).toBeInTheDocument(); });
+  it("preserves exact stored inputs and makes only one explicit comparison request", async () => { vi.mocked(loadModelRegistry).mockResolvedValue([model, nemotronModel]); vi.mocked(loadSpecialistRuns).mockResolvedValue({ formatVersion: 1, projectId: workspace.projectId, updatedAt: successfulRun.createdAt, runs: [successfulRun] }); const user = await renderPage(); expect(runSpecialistAnalysis).not.toHaveBeenCalled(); await user.selectOptions(screen.getByLabelText("Another enabled model"), nemotronModel.modelId); expect(runSpecialistAnalysis).not.toHaveBeenCalled(); await user.click(screen.getByRole("button", { name: "Run with another model" })); await waitFor(() => expect(runSpecialistAnalysis).toHaveBeenCalledTimes(1)); expect(runSpecialistAnalysis).toHaveBeenCalledWith({ rootPath: workspace.path, projectId: workspace.projectId, profileId: successfulRun.specialistProfileId, taskType: successfulRun.taskType, modelId: nemotronModel.modelId, knowledgeEntryIds: successfulRun.selectedKnowledgeEntryIds, decisionIds: successfulRun.selectedDecisionIds, maxCompletionTokens: 4600, scenario: successfulRun.scenario }); await waitFor(() => expect(loadSpecialistRuns).toHaveBeenCalledTimes(2)); });
+  it("keeps the source run detail and result visible during a cross-model run", async () => {
+    vi.mocked(loadModelRegistry).mockResolvedValue([model, nemotronModel]);
+    vi.mocked(loadSpecialistRuns).mockResolvedValue({ formatVersion: 1, projectId: workspace.projectId, updatedAt: successfulRun.createdAt, runs: [successfulRun] });
+    vi.mocked(runSpecialistAnalysis).mockReturnValue(new Promise(() => {}));
+    const user = await renderPage();
+    await user.selectOptions(screen.getByLabelText("Another enabled model"), nemotronModel.modelId);
+    await user.click(screen.getByRole("button", { name: "Run with another model" }));
+    expect(screen.getByLabelText("Selected historical run")).toHaveTextContent(successfulRun.scenario);
+    expect(screen.getByRole("heading", { name: "Analysis Result" }).closest("section")).toHaveTextContent(analysis.result.summary);
+  });
+  it("renders cross-model spinner and elapsed feedback at the triggering action", async () => {
+    vi.mocked(loadModelRegistry).mockResolvedValue([model, nemotronModel]);
+    vi.mocked(loadSpecialistRuns).mockResolvedValue({ formatVersion: 1, projectId: workspace.projectId, updatedAt: successfulRun.createdAt, runs: [successfulRun] });
+    vi.mocked(runSpecialistAnalysis).mockReturnValue(new Promise(() => {}));
+    const user = await renderPage();
+    await user.selectOptions(screen.getByLabelText("Another enabled model"), nemotronModel.modelId);
+    await user.click(screen.getByRole("button", { name: "Run with another model" }));
+    const action = screen.getByLabelText("Run comparison", { selector: "div" });
+    const status = within(action).getByRole("status");
+    expect(status).toHaveTextContent(`Running with ${nemotronModel.displayName}… 0s`);
+    expect(status.querySelector(".specialist-spinner")).toBeInTheDocument();
+    expect(screen.queryByText(/Running Analysis/)).not.toBeInTheDocument();
+  });
+  it("blocks duplicate cross-model execution while the first request is running", async () => {
+    vi.mocked(loadModelRegistry).mockResolvedValue([model, nemotronModel]);
+    vi.mocked(loadSpecialistRuns).mockResolvedValue({ formatVersion: 1, projectId: workspace.projectId, updatedAt: successfulRun.createdAt, runs: [successfulRun] });
+    vi.mocked(runSpecialistAnalysis).mockReturnValue(new Promise(() => {}));
+    const user = await renderPage();
+    await user.selectOptions(screen.getByLabelText("Another enabled model"), nemotronModel.modelId);
+    const button = screen.getByRole("button", { name: "Run with another model" });
+    await user.click(button);
+    expect(button).toBeDisabled();
+    fireEvent.click(button);
+    expect(runSpecialistAnalysis).toHaveBeenCalledTimes(1);
+  });
+  it("refreshes history and comparison after cross-model success", async () => {
+    vi.mocked(loadModelRegistry).mockResolvedValue([model, nemotronModel]);
+    vi.mocked(loadSpecialistRuns)
+      .mockResolvedValueOnce({ formatVersion: 1, projectId: workspace.projectId, updatedAt: successfulRun.createdAt, runs: [successfulRun] })
+      .mockResolvedValueOnce({ formatVersion: 1, projectId: workspace.projectId, updatedAt: comparisonRun.createdAt, runs: [successfulRun, comparisonRun] });
+    const user = await renderPage();
+    await user.selectOptions(screen.getByLabelText("Another enabled model"), nemotronModel.modelId);
+    await user.click(screen.getByRole("button", { name: "Run with another model" }));
+    await waitFor(() => expect(loadSpecialistRuns).toHaveBeenCalledTimes(2));
+    expect(screen.getByRole("button", { name: new RegExp(`${comparisonRun.taskType}.*SUCCEEDED.*${nemotronModel.modelId}`, "s") })).toHaveAttribute("aria-current", "true");
+    const comparison = await screen.findByRole("heading", { name: "Run comparison" });
+    expect(within(comparison.closest("section")!).getAllByRole("article")).toHaveLength(2);
+  });
+  it("preserves the source detail and shows a safe local failure while refreshing history", async () => {
+    const crossModelFailure: SpecialistRun = {
+      ...failedRun,
+      id: "run-cross-model-failure",
+      modelId: nemotronModel.modelId,
+      selectedKnowledgeEntryIds: successfulRun.selectedKnowledgeEntryIds,
+      selectedDecisionIds: successfulRun.selectedDecisionIds,
+      scenario: successfulRun.scenario,
+    };
+    vi.mocked(loadModelRegistry).mockResolvedValue([model, nemotronModel]);
+    vi.mocked(loadSpecialistRuns)
+      .mockResolvedValueOnce({ formatVersion: 1, projectId: workspace.projectId, updatedAt: successfulRun.createdAt, runs: [successfulRun] })
+      .mockResolvedValueOnce({ formatVersion: 1, projectId: workspace.projectId, updatedAt: crossModelFailure.createdAt, runs: [successfulRun, crossModelFailure] });
+    vi.mocked(runSpecialistAnalysis).mockRejectedValue({ code: "OUTPUT_TRUNCATED", message: "The model response was incomplete.", diagnostics: { finishReason: "length" } });
+    const user = await renderPage();
+    await user.selectOptions(screen.getByLabelText("Another enabled model"), nemotronModel.modelId);
+    await user.click(screen.getByRole("button", { name: "Run with another model" }));
+    const sourceRow = screen.getByRole("button", { name: new RegExp(`${successfulRun.taskType}.*SUCCEEDED`, "s") });
+    await waitFor(() => expect(sourceRow).toHaveAttribute("aria-current", "true"));
+    expect(screen.getByLabelText("Selected historical run")).toHaveTextContent(successfulRun.scenario);
+    expect(screen.getByRole("heading", { name: "Analysis Result" }).closest("section")).toHaveTextContent(analysis.result.summary);
+    const action = screen.getByLabelText("Run comparison", { selector: "div" });
+    expect(within(action).getByRole("alert")).toHaveTextContent("OUTPUT_TRUNCATED");
+    expect(screen.getByRole("button", { name: new RegExp(`${crossModelFailure.taskType}.*FAILED`, "s") })).toBeInTheDocument();
+  });
+  it("renders matching successful runs side by side as human evaluation with model-specific metrics", async () => { vi.mocked(loadModelRegistry).mockResolvedValue([model, nemotronModel]); vi.mocked(loadSpecialistRuns).mockResolvedValue({ formatVersion: 1, projectId: workspace.projectId, updatedAt: comparisonRun.createdAt, runs: [successfulRun, comparisonRun] }); await renderPage(); const comparison = screen.getByRole("heading", { name: "Run comparison" }).closest("section")!; expect(comparison).toHaveTextContent("Human evaluation"); expect(comparison).toHaveTextContent("not an authoritative benchmark"); expect(comparison).toHaveTextContent("does not score or select a winner"); expect(within(comparison).getAllByRole("article")).toHaveLength(2); const deepSeekMetrics = within(comparison).getByLabelText(`Metrics for ${model.modelId}`); const nemotronMetrics = within(comparison).getByLabelText(`Metrics for ${nemotronModel.modelId}`); expect(deepSeekMetrics).toHaveTextContent("19517 ms"); expect(deepSeekMetrics).toHaveTextContent("2905"); expect(deepSeekMetrics).toHaveTextContent("Unavailable"); expect(deepSeekMetrics).toHaveTextContent("4600"); expect(nemotronMetrics).toHaveTextContent("24000 ms"); expect(nemotronMetrics).toHaveTextContent("2560"); expect(nemotronMetrics).toHaveTextContent("$0.123456 (Estimated)"); expect(nemotronMetrics).toHaveTextContent("4200"); expect(runSpecialistAnalysis).not.toHaveBeenCalled(); });
+  it("shows normalization metadata on a persisted result and in comparison", async () => { vi.mocked(loadModelRegistry).mockResolvedValue([model, nemotronModel]); vi.mocked(loadSpecialistRuns).mockResolvedValue({ formatVersion: 1, projectId: workspace.projectId, updatedAt: normalizedRun.createdAt, runs: [successfulRun, normalizedRun] }); await renderPage(); const comparison = screen.getByRole("heading", { name: "Run comparison" }).closest("section")!; const normalizedComparison = within(comparison).getByLabelText(`Comparison run ${nemotronModel.modelId}`); expect(within(normalizedComparison).getByLabelText("Output normalization")).toHaveTextContent("recommendations: 7 returned → 5 retained"); const detail = screen.getByRole("heading", { name: "Analysis Result" }).closest("section")!; expect(within(detail).getByLabelText("Output normalization")).toHaveTextContent("recommendations: 7 returned → 5 retained"); });
   it("keeps Advanced Run Settings collapsed by default", async () => { await renderPage(); expect(screen.getByText("Advanced Run Settings").closest("details")).not.toHaveAttribute("open"); });
   it("shows the effective budget and unknown model limit when advanced settings are expanded", async () => { const user = await renderPage(); await user.click(screen.getByText("Advanced Run Settings")); expect(screen.getByText(/Preferred for DESIGN_BEHAVIOR: 3200/)).toHaveTextContent("Model limit: Unknown"); expect(screen.getByText(/Preferred for DESIGN_BEHAVIOR: 3200/)).toHaveTextContent("Effective for this run: 3200"); });
   it("shows a known model limit and clamps a larger task preference", async () => { vi.mocked(loadModelRegistry).mockResolvedValue([{ ...model, capabilities: { maxCompletionTokens: 4096 } }]); const user = await renderPage(); await user.selectOptions(screen.getByLabelText("Task Type"), "REACTION_MODEL"); await user.click(screen.getByText("Advanced Run Settings")); expect(screen.getByText(/Preferred for REACTION_MODEL: 4600/)).toHaveTextContent("Model limit: 4096"); expect(screen.getByLabelText("Max completion tokens")).toHaveValue(4096); });
@@ -164,6 +266,23 @@ describe("AI Behavior Designer production workbench", () => {
   it("opens a large reviewed flow and allows editing every knowledge field before promotion", async () => { vi.mocked(loadSpecialistRuns).mockResolvedValue({ formatVersion: 1, projectId: workspace.projectId, updatedAt: "2026-09-19T12:00:00Z", runs: [successfulRun] }); const user = await renderPage(); await user.click(screen.getByRole("checkbox", { name: analysis.result.recommendations[0] })); expect(screen.getByText("1 selected")).toBeInTheDocument(); await user.click(screen.getByRole("button", { name: "Add to Project Knowledge" })); expect(promoteSpecialistFinding).not.toHaveBeenCalled(); const form = screen.getByRole("form", { name: "Add findings to Project Knowledge" }); expect(screen.getByRole("dialog")).toBeInTheDocument(); await user.selectOptions(within(form).getByLabelText("Area"), "technical"); await user.selectOptions(within(form).getByLabelText("Status"), "LOCKED"); await user.clear(within(form).getByLabelText("Title")); await user.type(within(form).getByLabelText("Title"), "Edited title"); await user.clear(within(form).getByLabelText("Statement")); await user.type(within(form).getByLabelText("Statement"), "Edited statement"); expect(form).toHaveTextContent("AI_INFERRED"); expect(form).toHaveTextContent("specialist_analysis"); await user.click(within(form).getByRole("button", { name: "Add 1 to Project Knowledge" })); await waitFor(() => expect(promoteSpecialistFinding).toHaveBeenCalledWith(workspace.path, workspace.projectId, expect.objectContaining({ specialistRunId: successfulRun.id, sourceFinding: analysis.result.recommendations[0], area: "technical", title: "Edited title", statement: "Edited statement", status: "LOCKED" }))); expect(screen.getByRole("status")).toHaveTextContent("Game Compendium and Game Wiki"); });
   it("surfaces native exact duplicate protection without creating a Decision or changing history", async () => { vi.mocked(loadSpecialistRuns).mockResolvedValue({ formatVersion: 1, projectId: workspace.projectId, updatedAt: "2026-09-19T12:00:00Z", runs: [successfulRun] }); vi.mocked(promoteSpecialistFinding).mockRejectedValue({ code: "DUPLICATE_KNOWLEDGE_ENTRY", message: "Already exists." }); const user = await renderPage(); await user.click(screen.getByRole("checkbox", { name: analysis.result.recommendations[0] })); await user.click(screen.getByRole("button", { name: "Add to Project Knowledge" })); await user.click(screen.getByRole("button", { name: "Add 1 to Project Knowledge" })); expect(await screen.findByRole("alert")).toHaveTextContent("DUPLICATE_KNOWLEDGE_ENTRY"); expect(loadSpecialistRuns).toHaveBeenCalledTimes(1); });
   it("promotes multiple selected findings through one reviewed flow", async () => { vi.mocked(loadSpecialistRuns).mockResolvedValue({ formatVersion: 1, projectId: workspace.projectId, updatedAt: successfulRun.createdAt, runs: [successfulRun] }); const user = await renderPage(); await user.click(screen.getByRole("checkbox", { name: analysis.result.recommendations[0] })); await user.click(screen.getByRole("checkbox", { name: analysis.result.risks[0] })); expect(screen.getByText("2 selected")).toBeInTheDocument(); await user.click(screen.getByRole("button", { name: "Add to Project Knowledge" })); const dialog = screen.getByRole("dialog"); expect(within(dialog).getByText("Add 2 findings to Project Knowledge")).toBeInTheDocument(); expect(within(dialog).getByLabelText("Finding 1: Recommendation")).toBeInTheDocument(); expect(within(dialog).getByLabelText("Finding 2: Risk")).toBeInTheDocument(); await user.click(within(dialog).getByRole("button", { name: "Add 2 to Project Knowledge" })); await waitFor(() => expect(promoteSpecialistFinding).toHaveBeenCalledTimes(2)); expect(vi.mocked(promoteSpecialistFinding).mock.calls.map((call) => call[2].sourceFinding)).toEqual([analysis.result.recommendations[0], analysis.result.risks[0]]); expect(screen.getByRole("status")).toHaveTextContent("2 findings added"); });
+  it("deselects only findings without altering Project Context or Approved Decisions", async () => {
+    vi.mocked(loadSpecialistRuns).mockResolvedValue({ formatVersion: 1, projectId: workspace.projectId, updatedAt: successfulRun.createdAt, runs: [successfulRun] });
+    const user = await renderPage();
+    const projectContext = screen.getByRole("checkbox", { name: /Fixed update/ });
+    const approvedDecision = screen.getByRole("checkbox", { name: /No omniscience/ });
+    const finding = screen.getByRole("checkbox", { name: analysis.result.recommendations[0] });
+    await user.click(projectContext);
+    await user.click(approvedDecision);
+    await user.click(finding);
+    const actions = screen.getByLabelText("Finding selection");
+    const deselect = within(actions).getByRole("button", { name: "Deselect all" });
+    await user.click(deselect);
+    expect(finding).not.toBeChecked();
+    expect(projectContext).toBeChecked();
+    expect(approvedDecision).toBeChecked();
+    expect(deselect).toBeDisabled();
+  });
   it("warns on normalized-title matches and offers Cancel, Edit existing, or Save anyway", async () => { vi.mocked(loadSpecialistRuns).mockResolvedValue({ formatVersion: 1, projectId: workspace.projectId, updatedAt: successfulRun.createdAt, runs: [successfulRun] }); const onEditKnowledge = vi.fn(); const user = await renderPage(onEditKnowledge); await user.click(screen.getByRole("checkbox", { name: analysis.result.recommendations[0] })); await user.click(screen.getByRole("button", { name: "Add to Project Knowledge" })); const dialog = screen.getByRole("dialog"); const title = within(dialog).getByLabelText("Title"); await user.clear(title); await user.type(title, "  imperfect   INFORMATION  "); const warning = within(dialog).getByRole("alert"); expect(warning).toHaveTextContent("Potential Duplicate"); expect(warning).toHaveTextContent(knowledge.title); expect(within(warning).getByRole("button", { name: "Cancel" })).toBeInTheDocument(); await user.click(within(warning).getByRole("button", { name: "Edit existing" })); expect(onEditKnowledge).toHaveBeenCalledWith(knowledge.id); await user.click(within(dialog).getByRole("button", { name: "Save anyway" })); await waitFor(() => expect(promoteSpecialistFinding).toHaveBeenCalledTimes(1)); });
   it("blocks an exact reviewed duplicate before the native call", async () => { vi.mocked(loadSpecialistRuns).mockResolvedValue({ formatVersion: 1, projectId: workspace.projectId, updatedAt: successfulRun.createdAt, runs: [successfulRun] }); const user = await renderPage(); await user.click(screen.getByRole("checkbox", { name: analysis.result.recommendations[0] })); await user.click(screen.getByRole("button", { name: "Add to Project Knowledge" })); const dialog = screen.getByRole("dialog"); await user.clear(within(dialog).getByLabelText("Title")); await user.type(within(dialog).getByLabelText("Title"), knowledge.title); await user.clear(within(dialog).getByLabelText("Statement")); await user.type(within(dialog).getByLabelText("Statement"), knowledge.statement); expect(within(dialog).getByRole("alert")).toHaveTextContent("Exact duplicate blocked"); expect(within(dialog).getByRole("button", { name: /Add 1 to Project Knowledge|Save anyway/ })).toBeDisabled(); expect(promoteSpecialistFinding).not.toHaveBeenCalled(); });
   it("copies only the exact persisted scenario and shows feedback locally without adding layout content", async () => { vi.mocked(loadSpecialistRuns).mockResolvedValue({ formatVersion: 1, projectId: workspace.projectId, updatedAt: "2026-09-19T12:00:00Z", runs: [successfulRun] }); const user = await renderPage(); const clipboardWrite = vi.spyOn(navigator.clipboard, "writeText"); const copy = screen.getByRole("button", { name: "Copy Scenario" }); await user.click(copy); expect(clipboardWrite).toHaveBeenCalledWith(successfulRun.scenario); const control = copy.closest<HTMLElement>(".specialist-copy-control")!; expect(within(control).getByRole("status")).toHaveTextContent("Copied"); expect(screen.getAllByRole("status")).toHaveLength(1); });

@@ -1126,6 +1126,102 @@ button:focus-visible {
   gap: 14px;
 }
 
+.specialist-compare-action {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 8px 10px;
+  padding: 12px 14px;
+  border: 1px solid #34445f;
+  border-radius: 7px;
+  background: #18202d;
+}
+
+.specialist-compare-action label,
+.specialist-comparison-heading label {
+  display: grid;
+  gap: 5px;
+  color: #b8bec9;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.specialist-compare-action small {
+  grid-column: 1 / -1;
+  color: #9299a8;
+  line-height: 1.4;
+}
+
+.specialist-cross-model-status,
+.specialist-cross-model-error {
+  grid-column: 1 / -1;
+}
+
+.specialist-comparison {
+  display: grid;
+  gap: 16px;
+}
+
+.specialist-comparison-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.specialist-comparison-heading h2,
+.specialist-comparison-heading p {
+  margin: 0;
+}
+
+.specialist-comparison-heading p {
+  margin-top: 6px;
+}
+
+.specialist-comparison-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.specialist-comparison-run {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid #2c313a;
+  border-radius: 7px;
+  background: #14171c;
+}
+
+.specialist-comparison-run h3,
+.specialist-comparison-run h4,
+.specialist-comparison-run p,
+.specialist-comparison-run ul {
+  margin: 0;
+}
+
+.specialist-comparison-run h3 {
+  overflow-wrap: anywhere;
+  color: #dbe5ff;
+  font-size: 15px;
+}
+
+.specialist-comparison-run h4 {
+  margin-bottom: 5px;
+  color: #b8bec9;
+  font-size: 12px;
+}
+
+.specialist-comparison-run p,
+.specialist-comparison-run li {
+  color: #c4c9d2;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 .specialist-current-run-scenario {
   display: grid;
   gap: 10px;
@@ -1278,6 +1374,13 @@ button:focus-visible {
   border: 1px solid #40567e;
   border-radius: 7px;
   background: #1b2435;
+}
+
+.specialist-promotion-controls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 .specialist-saved-context {
@@ -2072,6 +2175,10 @@ button:focus-visible {
   .specialist-output-pane > .specialist-history {
     grid-column: 1;
     grid-row: auto;
+  }
+
+  .specialist-comparison-grid {
+    grid-template-columns: 1fr;
   }
 }
 

@@ -39,6 +39,12 @@ export interface BehaviorDesignerResult {
   suggestedTests: string[];
 }
 
+export interface SpecialistNormalizationNotice {
+  field: string;
+  returnedItems: number;
+  retainedItems: number;
+}
+
 export interface SpecialistAnalysisRequest {
   rootPath: string;
   projectId: string;
@@ -57,6 +63,7 @@ export interface SpecialistAnalysisResult {
   selectedKnowledgeEntryIds: string[];
   selectedDecisionIds: string[];
   result: BehaviorDesignerResult;
+  normalizationNotices: SpecialistNormalizationNotice[];
   model: string;
   latencyMs: number;
   inputTokens?: number;
@@ -126,6 +133,7 @@ export interface SpecialistRun {
   scenario: string;
   status: "SUCCEEDED" | "FAILED";
   result?: BehaviorDesignerResult;
+  normalizationNotices?: SpecialistNormalizationNotice[];
   safeError?: SpecialistSafeError;
   usage: SpecialistRunUsage;
   preferredTaskBudget?: number;

@@ -21,6 +21,7 @@ import {
   type SpecialistDiagnostics,
   type SpecialistError,
   type SpecialistProfile,
+  type SpecialistNormalizationNotice,
   type SpecialistRun,
   type SpecialistRunUsage,
   type SpecialistTaskType,
@@ -34,6 +35,7 @@ interface SpecialistWorkspace {
 
 interface ResultView {
   result: BehaviorDesignerResult;
+  normalizationNotices: SpecialistNormalizationNotice[];
   model: string;
   taskType: SpecialistTaskType;
   selectedKnowledgeEntryIds: string[];
@@ -68,6 +70,11 @@ interface CopyFeedback {
   succeeded: boolean;
 }
 
+interface CrossModelRun {
+  sourceRunId: string;
+  modelName: string;
+}
+
 function errorDetails(error: unknown): SpecialistError {
   if (typeof error === "object" && error !== null) {
     const message = "message" in error && typeof error.message === "string"
@@ -98,6 +105,7 @@ function currentResultView(result: SpecialistAnalysisResult, model: ModelEntry |
   }
   return {
     result: result.result,
+    normalizationNotices: result.normalizationNotices ?? [],
     model: result.model,
     taskType: result.taskType,
     selectedKnowledgeEntryIds: result.selectedKnowledgeEntryIds,
@@ -120,6 +128,7 @@ function historyResultView(run: SpecialistRun): ResultView | null {
   if (run.status !== "SUCCEEDED" || !run.result) return null;
   return {
     result: run.result,
+    normalizationNotices: run.normalizationNotices ?? [],
     model: run.modelId,
     taskType: run.taskType,
     selectedKnowledgeEntryIds: run.selectedKnowledgeEntryIds,
@@ -131,6 +140,16 @@ function historyResultView(run: SpecialistRun): ResultView | null {
     scenario: run.scenario,
     timestamp: run.createdAt,
   };
+}
+
+function hasExactComparisonInputs(left: SpecialistRun, right: SpecialistRun): boolean {
+  return left.specialistProfileId === right.specialistProfileId
+    && left.taskType === right.taskType
+    && left.scenario === right.scenario
+    && left.selectedKnowledgeEntryIds.length === right.selectedKnowledgeEntryIds.length
+    && left.selectedKnowledgeEntryIds.every((id, index) => id === right.selectedKnowledgeEntryIds[index])
+    && left.selectedDecisionIds.length === right.selectedDecisionIds.length
+    && left.selectedDecisionIds.every((id, index) => id === right.selectedDecisionIds[index]);
 }
 
 function ResultList({
@@ -165,6 +184,52 @@ function ResultList({
         );
       })}</ul> : <p>None provided.</p>}
     </section>
+  );
+}
+
+function ComparisonRun({ run }: { run: SpecialistRun }) {
+  if (!run.result) return null;
+  const sections: Array<[string, string[]]> = [
+    ["Recommendations", run.result.recommendations],
+    ["Risks", run.result.risks],
+    ["Exploits", run.result.exploits],
+    ["Suggested tests", run.result.suggestedTests],
+  ];
+  return (
+    <article className="specialist-comparison-run" aria-label={`Comparison run ${run.modelId}`}>
+      <h3>{run.modelId}</h3>
+      <NormalizationNotice notices={run.normalizationNotices ?? []} />
+      <section>
+        <h4>Summary</h4>
+        <p>{run.result.summary}</p>
+      </section>
+      {sections.map(([title, items]) => (
+        <section key={title}>
+          <h4>{title}</h4>
+          {items.length > 0 ? <ul>{items.map((item, index) => <li key={`${title}-${index}`}>{item}</li>)}</ul> : <p>None provided.</p>}
+        </section>
+      ))}
+      <dl className="result-metadata" aria-label={`Metrics for ${run.modelId}`}>
+        <div><dt>Latency</dt><dd>{run.usage.latencyMs === undefined ? "Not provided" : `${run.usage.latencyMs} ms`}</dd></div>
+        <div><dt>Input tokens</dt><dd>{usage(run.usage.inputTokens)}</dd></div>
+        <div><dt>Output tokens</dt><dd>{usage(run.usage.outputTokens)}</dd></div>
+        <div><dt>Total tokens</dt><dd>{usage(run.usage.totalTokens)}</dd></div>
+        <div><dt>Estimated cost</dt><dd>{estimatedCost(run.usage.estimatedCostUsd)}</dd></div>
+        <div><dt>Effective completion budget</dt><dd>{run.effectiveCompletionBudget ?? "Unavailable"}</dd></div>
+      </dl>
+    </article>
+  );
+}
+
+function NormalizationNotice({ notices }: { notices: SpecialistNormalizationNotice[] }) {
+  if (notices.length === 0) return null;
+  return (
+    <aside className="knowledge-notice" role="status" aria-label="Output normalization">
+      <strong>Normalized bounded output</strong>
+      <ul>{notices.map((notice) => (
+        <li key={notice.field}>{notice.field}: {notice.returnedItems} returned → {notice.retainedItems} retained</li>
+      ))}</ul>
+    </aside>
   );
 }
 
@@ -276,6 +341,8 @@ export function SpecialistPage({
   const [decisions, setDecisions] = useState<Decision[]>([]);
   const [history, setHistory] = useState<SpecialistRun[]>([]);
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
+  const [comparisonRunId, setComparisonRunId] = useState<string | null>(null);
+  const [comparisonModelId, setComparisonModelId] = useState("");
   const [taskType, setTaskType] = useState<SpecialistTaskType | "">("");
   const [modelId, setModelId] = useState("");
   const [selectedKnowledge, setSelectedKnowledge] = useState<string[]>([]);
@@ -290,6 +357,8 @@ export function SpecialistPage({
   const [isDecisionsLoading, setIsDecisionsLoading] = useState(true);
   const [isHistoryLoading, setIsHistoryLoading] = useState(true);
   const [isRunning, setIsRunning] = useState(false);
+  const [crossModelRun, setCrossModelRun] = useState<CrossModelRun | null>(null);
+  const [crossModelError, setCrossModelError] = useState<SpecialistError | null>(null);
   const [isRecoveringHistory, setIsRecoveringHistory] = useState(false);
   const [confirmHistoryRecovery, setConfirmHistoryRecovery] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
@@ -355,6 +424,16 @@ export function SpecialistPage({
     });
   }, [decisions, guidance]);
   const selectedRun = history.find((run) => run.id === selectedRunId) ?? null;
+  const comparisonModels = selectedRun
+    ? models.filter((model) => model.modelId !== selectedRun.modelId)
+    : [];
+  const comparableRuns = selectedRun?.status === "SUCCEEDED"
+    ? history.filter((run) => run.id !== selectedRun.id
+      && run.status === "SUCCEEDED"
+      && run.modelId !== selectedRun.modelId
+      && hasExactComparisonInputs(selectedRun, run))
+    : [];
+  const comparisonRun = comparableRuns.find((run) => run.id === comparisonRunId) ?? comparableRuns[0] ?? null;
   const displayedResult = selectedRun ? historyResultView(selectedRun) : result ? currentResultView(result, selectedModel, resultScenario) : null;
   const selectableFindings = useMemo<SelectableFinding[]>(() => {
     if (!selectedRun?.result) return [];
@@ -455,6 +534,9 @@ export function SpecialistPage({
     setSelectedFindingIds([]);
     setPromotionDrafts([]);
     setPromotionError(null);
+    setCrossModelError(null);
+    setComparisonModelId("");
+    setComparisonRunId(null);
   }, [selectedRunId]);
 
   useEffect(() => {
@@ -474,6 +556,8 @@ export function SpecialistPage({
     if (isRunning || !profile || !taskType || !selectedModel || !Number.isInteger(completionBudget)
       || completionBudget < 1 || completionBudget > allowedBudgetMax) return;
     setIsRunning(true);
+    setCrossModelRun(null);
+    setCrossModelError(null);
     setError(null);
     setResult(null);
     setResultScenario("");
@@ -506,6 +590,53 @@ export function SpecialistPage({
       setError(errorDetails(runError));
       await refreshHistory(true);
     } finally {
+      setIsRunning(false);
+    }
+  }
+
+  async function runWithAnotherModel() {
+    if (isRunning || !selectedRun || selectedRun.status !== "SUCCEEDED" || !selectedRun.result) return;
+    const targetModel = models.find((model) => model.modelId === comparisonModelId && model.modelId !== selectedRun.modelId);
+    const taskGuidance = profile?.taskGuidance.find((item) => item.taskType === selectedRun.taskType);
+    if (!targetModel || !taskGuidance) return;
+    const completionBudget = Math.min(
+      taskGuidance.preferredCompletionTokens,
+      targetModel.capabilities.maxCompletionTokens ?? taskGuidance.preferredCompletionTokens,
+      profile?.maxRunCompletionTokens ?? 8192,
+    );
+    const sourceRunId = selectedRun.id;
+    setIsRunning(true);
+    setCrossModelRun({ sourceRunId, modelName: targetModel.displayName });
+    setCrossModelError(null);
+    setError(null);
+    setCopyFeedback(null);
+    setPromotionNotice(null);
+    setHistoryRecoveryNotice(null);
+    try {
+      const nextResult = await runSpecialistAnalysis({
+        rootPath: workspace.path,
+        projectId: workspace.projectId,
+        profileId: selectedRun.specialistProfileId,
+        taskType: selectedRun.taskType,
+        modelId: targetModel.modelId,
+        knowledgeEntryIds: [...selectedRun.selectedKnowledgeEntryIds],
+        decisionIds: [...selectedRun.selectedDecisionIds],
+        maxCompletionTokens: completionBudget,
+        scenario: selectedRun.scenario,
+      });
+      setResult(nextResult);
+      setResultScenario(selectedRun.scenario);
+      if (nextResult.historyWarning) {
+        setHistoryError(nextResult.historyWarning);
+      } else {
+        await refreshHistory(true);
+        setComparisonRunId(sourceRunId);
+      }
+    } catch (runError) {
+      setCrossModelError(errorDetails(runError));
+      await refreshHistory(false);
+    } finally {
+      setCrossModelRun(null);
       setIsRunning(false);
     }
   }
@@ -794,13 +925,13 @@ export function SpecialistPage({
           </label>
           <div className="specialist-run-action">
             <button className="primary-button" type="submit" disabled={isRunning || !profile || !taskType || !selectedModel || scenario.trim().length === 0 || Boolean(budgetError)}>Run Analysis</button>
-            {isRunning ? <span className="specialist-running-state" role="status"><span className="specialist-spinner specialist-spinner-small" aria-hidden="true" />Running Analysis… {elapsedSeconds}s</span> : null}
+            {isRunning && !crossModelRun ? <span className="specialist-running-state" role="status"><span className="specialist-spinner specialist-spinner-small" aria-hidden="true" />Running Analysis… {elapsedSeconds}s</span> : null}
           </div>
         </form>
       </section>
 
       <section className="specialist-output-pane" data-layout-share="60" aria-label="Specialist output and history">
-        {!isRunning && selectedRun ? (
+        {selectedRun ? (
           <section className="specialist-card specialist-run-detail" data-workbench-column="selected-run-detail" aria-label="Selected historical run">
             <div className="specialist-run-detail-heading">
               <span className="section-label">Saved {selectedRun.status.toLowerCase()} run · non-authoritative history</span>
@@ -816,6 +947,32 @@ export function SpecialistPage({
               <div><dt>Timestamp</dt><dd>{new Date(selectedRun.createdAt).toLocaleString()}</dd></div>
               <div><dt>Model</dt><dd>{selectedRun.modelId}</dd></div>
             </dl>
+            {selectedRun.status === "SUCCEEDED" ? (
+              <div className="specialist-compare-action" aria-label="Run comparison">
+                <label>
+                  Another enabled model
+                  <select value={comparisonModelId} disabled={Boolean(crossModelRun)} onChange={(event) => setComparisonModelId(event.target.value)}>
+                    <option value="">Choose a model</option>
+                    {comparisonModels.map((model) => <option key={model.modelId} value={model.modelId}>{model.displayName}</option>)}
+                  </select>
+                </label>
+                <button type="button" disabled={comparisonModelId.length === 0 || isRunning} onClick={() => void runWithAnotherModel()}>Run with another model</button>
+                {crossModelRun?.sourceRunId === selectedRun.id ? (
+                  <span className="specialist-running-state specialist-cross-model-status" role="status">
+                    <span className="specialist-spinner specialist-spinner-small" aria-hidden="true" />
+                    Running with {crossModelRun.modelName}… {elapsedSeconds}s
+                  </span>
+                ) : null}
+                <small>Explicitly creates one normal Analysis History run with this exact task, scenario, and selected context.</small>
+                {crossModelError ? (
+                  <section className="specialist-error specialist-cross-model-error" role="alert">
+                    <strong>{crossModelError.code}</strong>
+                    <p>{crossModelError.message}</p>
+                    <Diagnostics diagnostics={crossModelError.diagnostics} />
+                  </section>
+                ) : null}
+              </div>
+            ) : null}
             <section className="specialist-saved-context" aria-label="Selected Project Context">
               <h3>Selected Project Context</h3>
               {selectedRun.selectedKnowledgeEntryIds.length > 0 ? <ul>{selectedRun.selectedKnowledgeEntryIds.map((id) => <li key={id}>{knowledge.find((entry) => entry.id === id)?.title ?? id}</li>)}</ul> : <p>None selected.</p>}
@@ -825,6 +982,30 @@ export function SpecialistPage({
               {selectedRun.selectedDecisionIds.length > 0 ? <ul>{selectedRun.selectedDecisionIds.map((id) => <li key={id}>{decisions.find((decision) => decision.id === id)?.title ?? id}</li>)}</ul> : <p>None selected.</p>}
             </section>
             <ScenarioPanel scenario={selectedRun.scenario} feedbackKey={`scenario-${selectedRun.id}`} feedback={copyFeedback} onCopy={(text, key) => void copyText(text, key)} />
+          </section>
+        ) : null}
+
+        {selectedRun && comparisonRun ? (
+          <section className="specialist-card specialist-comparison" aria-labelledby="specialist-comparison-title">
+            <span className="section-label">Human evaluation · not an authoritative benchmark</span>
+            <div className="specialist-comparison-heading">
+              <div>
+                <h2 id="specialist-comparison-title">Run comparison</h2>
+                <p className="scope-note">Side-by-side review only. ForgeMind does not score or select a winner.</p>
+              </div>
+              {comparableRuns.length > 1 ? (
+                <label>
+                  Compare with
+                  <select value={comparisonRun.id} onChange={(event) => setComparisonRunId(event.target.value)}>
+                    {comparableRuns.map((run) => <option key={run.id} value={run.id}>{run.modelId} · {new Date(run.createdAt).toLocaleString()}</option>)}
+                  </select>
+                </label>
+              ) : null}
+            </div>
+            <div className="specialist-comparison-grid">
+              <ComparisonRun run={selectedRun} />
+              <ComparisonRun run={comparisonRun} />
+            </div>
           </section>
         ) : null}
 
@@ -867,7 +1048,7 @@ export function SpecialistPage({
           </section>
         ) : null}
 
-        {!isRunning && selectedRun?.status === "FAILED" ? (
+        {selectedRun?.status === "FAILED" ? (
           <section className="specialist-error" role="alert">
             <h2>Analysis failed</h2>
             <strong>{selectedRun.safeError?.code ?? "SPECIALIST_ANALYSIS_FAILED"}</strong>
@@ -875,7 +1056,7 @@ export function SpecialistPage({
           </section>
         ) : null}
 
-        {!isRunning && displayedResult ? (
+        {displayedResult ? (
           <section className="specialist-card specialist-result" data-workbench-column="selected-run-detail" aria-labelledby="specialist-result-title">
             <span className="section-label">AI-generated proposal · non-authoritative</span>
             <div className="specialist-result-heading">
@@ -890,6 +1071,7 @@ export function SpecialistPage({
                 </label>
               ) : <p>{displayedResult.result.summary}</p>}
             </div>
+            <NormalizationNotice notices={displayedResult.normalizationNotices} />
             <ResultList title="Assumptions — not project facts" items={displayedResult.result.assumptions} className="specialist-assumptions" findingPrefix="Assumption" selectedFindingIds={selectedFindingIds} onToggleFinding={selectedRun ? toggleFinding : undefined} />
             <ResultList title="Recommendations" items={displayedResult.result.recommendations} findingPrefix="Recommendation" selectedFindingIds={selectedFindingIds} onToggleFinding={selectedRun ? toggleFinding : undefined} />
             <ResultList title="Risks" items={displayedResult.result.risks} findingPrefix="Risk" selectedFindingIds={selectedFindingIds} onToggleFinding={selectedRun ? toggleFinding : undefined} />
@@ -900,7 +1082,10 @@ export function SpecialistPage({
             {selectedRun ? (
               <div className="specialist-promotion-action" aria-label="Finding selection">
                 <strong>{selectedFindingIds.length} selected</strong>
-                <button className="primary-button" type="button" disabled={selectedFindingIds.length === 0} onClick={() => beginPromotionReview(selectableFindings)}>Add to Project Knowledge</button>
+                <div className="specialist-promotion-controls">
+                  <button type="button" disabled={selectedFindingIds.length === 0} onClick={() => setSelectedFindingIds([])}>Deselect all</button>
+                  <button className="primary-button" type="button" disabled={selectedFindingIds.length === 0} onClick={() => beginPromotionReview(selectableFindings)}>Add to Project Knowledge</button>
+                </div>
               </div>
             ) : null}
 

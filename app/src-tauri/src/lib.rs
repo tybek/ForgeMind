@@ -147,7 +147,7 @@ async fn run_specialist_analysis(
         latency_ms: Some(response.latency_ms),
         estimated_cost_usd,
     };
-    let result = match specialists::normalize_result_with_finish_reason(
+    let normalized = match specialists::normalize_result_with_notices(
         &response.text,
         response.finish_reason.as_deref(),
     ) {
@@ -158,9 +158,10 @@ async fn run_specialist_analysis(
             return Err(error);
         }
     };
-    let history_warning = specialist_history::append_success(
+    let history_warning = specialist_history::append_success_with_normalization(
         &request,
-        result.clone(),
+        normalized.result.clone(),
+        normalized.normalization_notices.clone(),
         run_usage,
         history_budget,
     )
@@ -172,7 +173,8 @@ async fn run_specialist_analysis(
         task_type: prepared.task_type,
         selected_knowledge_entry_ids: prepared.selected_knowledge_entry_ids,
         selected_decision_ids: prepared.selected_decision_ids,
-        result,
+        result: normalized.result,
+        normalization_notices: normalized.normalization_notices,
         model: response.model,
         latency_ms: response.latency_ms,
         input_tokens: response.input_tokens,

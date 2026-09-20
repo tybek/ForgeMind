@@ -1,6 +1,7 @@
 use crate::specialists::{
-    normalize_result, BehaviorDesignerResult, SpecialistAnalysisRequest, SpecialistDiagnostics,
-    SpecialistBudgetResolution, SpecialistError, SpecialistTaskType, AI_BEHAVIOR_DESIGNER_ID,
+    normalize_result, valid_normalization_notices, BehaviorDesignerResult,
+    SpecialistAnalysisRequest, SpecialistDiagnostics, SpecialistBudgetResolution, SpecialistError,
+    SpecialistNormalizationNotice, SpecialistTaskType, AI_BEHAVIOR_DESIGNER_ID,
 };
 use crate::workspace::{self, WorkspaceInspection};
 use chrono::{DateTime, SecondsFormat, Utc};
@@ -85,6 +86,8 @@ pub struct SpecialistRun {
     pub status: SpecialistRunStatus,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub result: Option<BehaviorDesignerResult>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub normalization_notices: Vec<SpecialistNormalizationNotice>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub safe_error: Option<SpecialistSafeError>,
     pub usage: SpecialistRunUsage,
@@ -139,7 +142,25 @@ pub fn append_success(
     usage: SpecialistRunUsage,
     budget: SpecialistRunBudgetMetadata,
 ) -> Result<SpecialistRun, SpecialistError> {
-    append(request, SpecialistRunStatus::Succeeded, Some(result), None, usage, budget)
+    append_success_with_normalization(request, result, Vec::new(), usage, budget)
+}
+
+pub fn append_success_with_normalization(
+    request: &SpecialistAnalysisRequest,
+    result: BehaviorDesignerResult,
+    normalization_notices: Vec<SpecialistNormalizationNotice>,
+    usage: SpecialistRunUsage,
+    budget: SpecialistRunBudgetMetadata,
+) -> Result<SpecialistRun, SpecialistError> {
+    append(
+        request,
+        SpecialistRunStatus::Succeeded,
+        Some(result),
+        normalization_notices,
+        None,
+        usage,
+        budget,
+    )
 }
 
 pub fn append_failure(
@@ -152,6 +173,7 @@ pub fn append_failure(
         request,
         SpecialistRunStatus::Failed,
         None,
+        Vec::new(),
         Some(SpecialistSafeError { code: error.code.clone(), diagnostics: error.diagnostics.clone() }),
         usage,
         budget,
@@ -162,6 +184,7 @@ fn append(
     request: &SpecialistAnalysisRequest,
     status: SpecialistRunStatus,
     result: Option<BehaviorDesignerResult>,
+    normalization_notices: Vec<SpecialistNormalizationNotice>,
     safe_error: Option<SpecialistSafeError>,
     usage: SpecialistRunUsage,
     budget: SpecialistRunBudgetMetadata,
@@ -181,6 +204,7 @@ fn append(
         scenario: request.scenario.trim().to_owned(),
         status,
         result,
+        normalization_notices,
         safe_error,
         usage,
         preferred_task_budget: budget.preferred_task_budget,
@@ -262,8 +286,10 @@ fn valid_run_payload(run: &SpecialistRun) -> bool {
                     .ok()
                     .and_then(|value| normalize_result(&value).ok())
                     .as_ref() == Some(result)
+                    && valid_normalization_notices(result, &run.normalization_notices)
             }),
         SpecialistRunStatus::Failed => run.result.is_none()
+            && run.normalization_notices.is_empty()
             && run.safe_error.as_ref().is_some_and(|error| {
                 valid_text(&error.code, 1, 80)
                     && error.diagnostics.as_ref().map_or(true, valid_diagnostics)
@@ -393,6 +419,57 @@ mod tests {
         assert_eq!(loaded.runs[0].preferred_task_budget, Some(4_600));
         assert_eq!(loaded.runs[0].effective_completion_budget, Some(4_600));
         assert_eq!(loaded.runs[0].known_model_max_completion_tokens, None);
+    }
+
+    #[test]
+    fn normalization_notices_persist_with_the_bounded_result() {
+        let (directory, project_id) = workspace();
+        let notice = SpecialistNormalizationNotice {
+            field: "recommendations".to_owned(),
+            returned_items: 7,
+            retained_items: 5,
+        };
+        let mut normalized_result = result();
+        normalized_result.recommendations = vec!["1", "2", "3", "4", "5"]
+            .into_iter()
+            .map(str::to_owned)
+            .collect();
+        append_success_with_normalization(
+            &request(directory.path(), &project_id),
+            normalized_result,
+            vec![notice.clone()],
+            usage(),
+            budget(),
+        )
+        .unwrap();
+        let loaded = load(directory.path()).unwrap().unwrap();
+        assert_eq!(loaded.runs[0].normalization_notices, vec![notice]);
+        assert_eq!(
+            loaded.runs[0].result.as_ref().unwrap().recommendations,
+            ["1", "2", "3", "4", "5"]
+        );
+    }
+
+    #[test]
+    fn inconsistent_normalization_metadata_is_rejected() {
+        let (directory, project_id) = workspace();
+        append_success(
+            &request(directory.path(), &project_id),
+            result(),
+            usage(),
+            budget(),
+        )
+        .unwrap();
+        let path = history_path(directory.path());
+        let mut document: serde_json::Value =
+            serde_json::from_str(&fs::read_to_string(&path).unwrap()).unwrap();
+        document["runs"][0]["normalizationNotices"] = serde_json::json!([{
+            "field": "recommendations",
+            "returnedItems": 7,
+            "retainedItems": 5
+        }]);
+        fs::write(path, serde_json::to_vec_pretty(&document).unwrap()).unwrap();
+        assert_eq!(load(directory.path()).unwrap_err().code, "INVALID_SPECIALIST_HISTORY");
     }
 
     #[test]

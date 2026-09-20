@@ -49,23 +49,38 @@ pub struct ModelRegistryError {
 }
 
 fn configured_entries() -> Vec<ModelEntry> {
-    vec![ModelEntry {
-        provider: NEBIUS_PROVIDER_ID.to_owned(),
-        model_id: "deepseek-ai/DeepSeek-V4.1-Flash".to_owned(),
-        display_name: "DeepSeek V4.1 Flash".to_owned(),
-        family: "DeepSeek V4.1".to_owned(),
-        vendor: Some("DeepSeek".to_owned()),
-        category: Some("reasoning".to_owned()),
-        availability: "configured".to_owned(),
-        pricing: None,
-        notes: Some("Availability depends on the configured Nebius Token Factory account.".to_owned()),
-        capabilities: ModelCapabilities {
-            max_completion_tokens: None,
-            supports_reasoning_effort: Some(true),
-            supports_structured_output: None,
+    vec![
+        ModelEntry {
+            provider: NEBIUS_PROVIDER_ID.to_owned(),
+            model_id: "deepseek-ai/DeepSeek-V4.1-Flash".to_owned(),
+            display_name: "DeepSeek V4.1 Flash".to_owned(),
+            family: "DeepSeek V4.1".to_owned(),
+            vendor: Some("DeepSeek".to_owned()),
+            category: Some("reasoning".to_owned()),
+            availability: "configured".to_owned(),
+            pricing: None,
+            notes: Some("Availability depends on the configured Nebius Token Factory account.".to_owned()),
+            capabilities: ModelCapabilities {
+                max_completion_tokens: None,
+                supports_reasoning_effort: Some(true),
+                supports_structured_output: None,
+            },
+            enabled: true,
         },
-        enabled: true,
-    }]
+        ModelEntry {
+            provider: NEBIUS_PROVIDER_ID.to_owned(),
+            model_id: "nvidia/nemotron-3-super-120b-a12b".to_owned(),
+            display_name: "NVIDIA Nemotron 3 Super 120B".to_owned(),
+            family: "Nemotron 3 Super".to_owned(),
+            vendor: Some("NVIDIA".to_owned()),
+            category: None,
+            availability: "configured".to_owned(),
+            pricing: None,
+            notes: Some("Availability depends on the configured Nebius Token Factory account.".to_owned()),
+            capabilities: ModelCapabilities::default(),
+            enabled: true,
+        },
+    ]
 }
 
 fn validate_entries(entries: Vec<ModelEntry>) -> Result<Vec<ModelEntry>, ModelRegistryError> {
@@ -122,7 +137,7 @@ mod tests {
     #[test]
     fn configured_registry_loads_enabled_models() {
         let models = models().unwrap();
-        assert!(!models.is_empty());
+        assert_eq!(models.len(), 2);
         assert!(models.iter().all(|model| model.enabled));
     }
 
@@ -139,6 +154,15 @@ mod tests {
         assert_eq!(model.capabilities.max_completion_tokens, None);
         assert_eq!(model.capabilities.supports_reasoning_effort, Some(true));
         assert_eq!(model.capabilities.supports_structured_output, None);
+    }
+
+    #[test]
+    fn nemotron_is_enabled_without_invented_pricing_or_capabilities() {
+        let model = enabled_model("nvidia/nemotron-3-super-120b-a12b").unwrap();
+        assert_eq!(model.display_name, "NVIDIA Nemotron 3 Super 120B");
+        assert_eq!(model.provider, NEBIUS_PROVIDER_ID);
+        assert_eq!(model.pricing, None);
+        assert_eq!(model.capabilities, ModelCapabilities::default());
     }
 
     #[test]
