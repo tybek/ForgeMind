@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import App, { WorkspaceShell, type Workspace } from "./App";
+import { loadCompendium } from "./platform/projectKnowledge";
 import {
   getDevelopmentWorkspacePath,
   initializeWorkspace,
@@ -131,7 +132,7 @@ const validInspection = {
 
 const requiredAreas = [
   "Overview",
-  "Repository",
+  "Repository / Git Reality",
   "Game Wiki",
   "Game Design",
   "Narrative",
@@ -146,6 +147,7 @@ describe("ForgeMind local workspace", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(getDevelopmentWorkspacePath).mockResolvedValue(null);
+    vi.mocked(loadCompendium).mockResolvedValue(null);
   });
 
   it("renders the welcome screen with the Open Project action", () => {
@@ -301,10 +303,26 @@ describe("ForgeMind local workspace", () => {
     expect(screen.getByRole("navigation", { name: "Wiki areas" })).toBeInTheDocument();
   });
 
+  it("navigates Wiki Knowledge editing to the existing Compendium editor", async () => {
+    vi.mocked(loadCompendium).mockResolvedValue({
+      formatVersion: 1, projectId: workspace.projectId, updatedAt: "2026-09-20T10:00:00Z",
+      entries: [{ id: "knowledge-1", area: "systems", title: "Perception model", statement: "Enemies use perceived facts.", status: "DIRECTION", provenance: "MANUAL", source: "manual_entry", createdAt: "2026-09-20T10:00:00Z", updatedAt: "2026-09-20T10:00:00Z" }],
+    });
+    const user = userEvent.setup();
+    render(<WorkspaceShell workspace={workspace} onOpen={async () => undefined} />);
+    await user.click(screen.getByRole("button", { name: "Game Wiki" }));
+    await user.click(await screen.findByRole("button", { name: /Systems/ }));
+    await user.click(screen.getByText("Perception model"));
+    await user.click(screen.getByRole("button", { name: "Edit in Compendium" }));
+    expect(await screen.findByRole("heading", { name: "Game Compendium" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Edit Knowledge" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Title")).toHaveValue("Perception model");
+  });
+
   it("opens the read-only Repository Reality workspace page", async () => {
     const user = userEvent.setup();
     render(<WorkspaceShell workspace={workspace} onOpen={async () => undefined} />);
-    await user.click(screen.getByRole("button", { name: "Repository" }));
+    await user.click(screen.getByRole("button", { name: "Repository / Git Reality" }));
     expect(await screen.findByRole("heading", { name: "Git / Repository", level: 2 })).toBeInTheDocument();
     expect(screen.getByText("The active ForgeMind workspace is not inside a Git repository.")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /commit|push|pull|fetch|checkout/i })).not.toBeInTheDocument();

@@ -13,6 +13,8 @@ interface WikiWorkspace {
   path: string;
 }
 
+type WikiTypeFilter = "ALL" | "KNOWLEDGE" | "DECISIONS" | "AI_ANALYSIS";
+
 function messageFromError(error: unknown): string {
   if (typeof error === "object" && error !== null && "message" in error && typeof error.message === "string") {
     return error.message;
@@ -20,10 +22,8 @@ function messageFromError(error: unknown): string {
   return "This project knowledge source could not be loaded.";
 }
 
-function decisionType(decision: Decision): string {
-  return decision.status === "APPROVED"
-    ? "Approved Decision"
-    : `${decision.status[0]}${decision.status.slice(1).toLowerCase()} Decision`;
+function displayEnum(value: string): string {
+  return value.toLowerCase().split("_").map((part) => `${part[0]?.toUpperCase() ?? ""}${part.slice(1)}`).join(" ");
 }
 
 function relevantAnalysisAreas(
@@ -44,8 +44,16 @@ function relevantAnalysisAreas(
   return areas;
 }
 
-export function WikiPage({ workspace }: { workspace: WikiWorkspace }) {
+export function WikiPage({
+  workspace,
+  onEditKnowledge,
+}: {
+  workspace: WikiWorkspace;
+  onEditKnowledge?: (entryId: string) => void;
+}) {
   const [activeArea, setActiveArea] = useState<KnowledgeArea>("overview");
+  const [query, setQuery] = useState("");
+  const [typeFilter, setTypeFilter] = useState<WikiTypeFilter>("ALL");
   const [knowledge, setKnowledge] = useState<KnowledgeEntry[]>([]);
   const [decisions, setDecisions] = useState<Decision[]>([]);
   const [runs, setRuns] = useState<SpecialistRun[]>([]);
@@ -91,9 +99,18 @@ export function WikiPage({ workspace }: { workspace: WikiWorkspace }) {
     () => new Map(runs.map((run) => [run.id, relevantAnalysisAreas(run, knowledgeById, decisionsById)])),
     [runs, knowledgeById, decisionsById],
   );
-  const areaKnowledge = knowledge.filter((entry) => entry.area === activeArea);
-  const areaDecisions = decisions.filter((decision) => decision.area === activeArea);
-  const areaRuns = runs.filter((run) => analysisAreas.get(run.id)?.has(activeArea));
+  const normalizedQuery = query.trim().toLocaleLowerCase();
+  const matchesQuery = (...values: string[]) => normalizedQuery.length === 0
+    || values.some((value) => value.toLocaleLowerCase().includes(normalizedQuery));
+  const areaKnowledge = knowledge.filter((entry) => entry.area === activeArea
+    && (typeFilter === "ALL" || typeFilter === "KNOWLEDGE")
+    && matchesQuery(entry.title, entry.statement, entry.status, entry.provenance, entry.source));
+  const areaDecisions = decisions.filter((decision) => decision.area === activeArea
+    && (typeFilter === "ALL" || typeFilter === "DECISIONS")
+    && matchesQuery(decision.title, decision.statement, decision.rationale, decision.status));
+  const areaRuns = runs.filter((run) => analysisAreas.get(run.id)?.has(activeArea)
+    && (typeFilter === "ALL" || typeFilter === "AI_ANALYSIS")
+    && matchesQuery(run.result!.summary, run.scenario, run.taskType, ...run.result!.recommendations));
   const activeLabel = KNOWLEDGE_AREAS.find(([area]) => area === activeArea)?.[1] ?? activeArea;
 
   function countForArea(area: KnowledgeArea): number {
@@ -124,6 +141,22 @@ export function WikiPage({ workspace }: { workspace: WikiWorkspace }) {
         ))}
       </nav>
 
+      <section className="wiki-controls" aria-label="Wiki search and filters">
+        <label>
+          Search
+          <input type="search" value={query} placeholder="Search titles, statements, and analysis" onChange={(event) => setQuery(event.target.value)} />
+        </label>
+        <label>
+          Type
+          <select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value as WikiTypeFilter)}>
+            <option value="ALL">All</option>
+            <option value="KNOWLEDGE">Knowledge</option>
+            <option value="DECISIONS">Decisions</option>
+            <option value="AI_ANALYSIS">AI Analysis</option>
+          </select>
+        </label>
+      </section>
+
       {errors.length > 0 ? <div className="wiki-source-warning" role="alert">{errors.map((error) => <p key={error}>{error}</p>)}</div> : null}
       {loading ? <p aria-live="polite">Loading Game Wiki...</p> : (
         <section className="wiki-area" aria-labelledby="wiki-area-title">
@@ -148,24 +181,42 @@ export function WikiPage({ workspace }: { workspace: WikiWorkspace }) {
             <div className="wiki-rows">
               {areaKnowledge.map((entry) => (
                 <details className="wiki-row" key={`knowledge-${entry.id}`}>
-                  <summary><span className="wiki-type wiki-type-knowledge">Knowledge</span><strong>{entry.title}</strong><small>{entry.status}</small></summary>
-                  <div className="wiki-row-detail"><p>{entry.statement}</p><p>Authority: Compendium · Provenance: {entry.provenance} · Source: {entry.source}</p></div>
+                  <summary>
+                    <span className="wiki-tags"><span className="wiki-type wiki-type-knowledge">Knowledge</span><span className="wiki-type">{displayEnum(entry.status)}</span></span>
+                    <strong>{entry.title}</strong>
+                  </summary>
+                  <div className="wiki-row-detail">
+                    <p>{entry.statement}</p>
+                    <dl className="wiki-metadata">
+                      <div><dt>Authority</dt><dd>Game Compendium</dd></div>
+                      <div><dt>Provenance</dt><dd>{displayEnum(entry.provenance)}</dd></div>
+                      <div><dt>Source</dt><dd>{displayEnum(entry.source)}</dd></div>
+                    </dl>
+                    {onEditKnowledge ? <button className="outline-button compact-action" type="button" onClick={() => onEditKnowledge(entry.id)}>Edit in Compendium</button> : null}
+                  </div>
                 </details>
               ))}
               {areaDecisions.map((decision) => (
                 <details className="wiki-row" key={`decision-${decision.id}`}>
-                  <summary><span className={`wiki-type wiki-type-decision wiki-type-${decision.status.toLowerCase()}`}>{decisionType(decision)}</span><strong>{decision.title}</strong></summary>
-                  <div className="wiki-row-detail"><p>{decision.statement}</p><p>Rationale: {decision.rationale}</p><p>Authority: Decision record · Status: {decision.status}</p></div>
+                  <summary>
+                    <span className="wiki-tags"><span className="wiki-type wiki-type-decision">Decision</span><span className={`wiki-type wiki-type-${decision.status.toLowerCase()}`}>{displayEnum(decision.status)}</span></span>
+                    <strong>{decision.title}</strong>
+                  </summary>
+                  <div className="wiki-row-detail">
+                    <p>{decision.statement}</p><p>Rationale: {decision.rationale}</p>
+                    <dl className="wiki-metadata"><div><dt>Authority</dt><dd>Decision record</dd></div><div><dt>State</dt><dd>{displayEnum(decision.status)}</dd></div></dl>
+                  </div>
                 </details>
               ))}
               {areaRuns.map((run) => (
                 <details className="wiki-row" key={`analysis-${run.id}`}>
-                  <summary><span className="wiki-type wiki-type-analysis">AI Analysis</span><strong>{run.result!.summary}</strong><small>{run.taskType}</small></summary>
+                  <summary><span className="wiki-tags"><span className="wiki-type wiki-type-analysis">AI Analysis</span><span className="wiki-type">{displayEnum(run.taskType)}</span></span><strong>{run.result!.summary}</strong></summary>
                   <div className="wiki-row-detail">
                     <p className="wiki-analysis-warning">AI working analysis — not approved project knowledge</p>
                     <p>Scenario: {run.scenario}</p>
                     {run.result!.recommendations.length > 0 ? <><h4>Recommendations</h4><ul>{run.result!.recommendations.map((item) => <li key={item}>{item}</li>)}</ul></> : null}
-                    <p>Stored in Specialist Analysis History. This view does not approve or rewrite it.</p>
+                    <dl className="wiki-metadata"><div><dt>Authority</dt><dd>Non-authoritative analysis</dd></div><div><dt>Source</dt><dd>Specialist Analysis History</dd></div></dl>
+                    <p>This aggregation view does not approve or rewrite it.</p>
                   </div>
                 </details>
               ))}

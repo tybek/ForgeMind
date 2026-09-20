@@ -18,7 +18,7 @@ import {
 
 const workspaceAreas = [
   "Overview",
-  "Repository",
+  "Repository / Git Reality",
   "Game Wiki",
   "Game Design",
   "Narrative",
@@ -221,7 +221,7 @@ function Overview({ workspace }: { workspace: Workspace }) {
   );
 }
 
-function Placeholder({ area }: { area: Exclude<WorkspaceArea, "Overview" | "Repository" | "Game Wiki"> }) {
+function Placeholder({ area }: { area: Exclude<WorkspaceArea, "Overview" | "Repository / Git Reality" | "Game Wiki"> }) {
   return (
     <section className="placeholder-card">
       <span className="section-label">Planned workspace area</span>
@@ -240,15 +240,22 @@ export function WorkspaceShell({
 }) {
   const [activeArea, setActiveArea] = useState<WorkspaceView>("Overview");
   const [promotedKnowledge, setPromotedKnowledge] = useState<KnowledgeEntry | null>(null);
+  const [knowledgeEditTarget, setKnowledgeEditTarget] = useState<string | null>(null);
 
   function openArea(area: WorkspaceView) {
     setPromotedKnowledge(null);
+    setKnowledgeEditTarget(null);
     setActiveArea(area);
   }
 
   function promoteToDecision(entry: KnowledgeEntry) {
     setPromotedKnowledge(entry);
     setActiveArea("Decisions");
+  }
+
+  function editKnowledgeAtSource(entryId: string) {
+    setKnowledgeEditTarget(entryId);
+    setActiveArea("Game Design");
   }
 
   return (
@@ -327,7 +334,7 @@ export function WorkspaceShell({
                 ? "0G Specialist Profile"
               : activeArea === "Game Wiki"
                 ? "0G.8 Unified Knowledge"
-              : activeArea === "Repository"
+              : activeArea === "Repository / Git Reality"
                 ? "0H Git Reality"
               : activeArea === "AI Evaluation"
                 ? "0D.1 Model Lab"
@@ -341,17 +348,17 @@ export function WorkspaceShell({
           {activeArea === "Project Interview" ? (
             <InterviewPage workspace={workspace} />
           ) : activeArea === "AI Behavior Designer" ? (
-            <SpecialistPage workspace={workspace} />
+            <SpecialistPage workspace={workspace} onEditKnowledge={editKnowledgeAtSource} />
           ) : activeArea === "AI Evaluation" ? (
             <EvaluationPage projectId={workspace.projectId} />
           ) : activeArea === "Overview" ? (
             <Overview workspace={workspace} />
-          ) : activeArea === "Repository" ? (
+          ) : activeArea === "Repository / Git Reality" ? (
             <RepositoryPage workspace={workspace} />
           ) : activeArea === "Game Wiki" ? (
-            <WikiPage workspace={workspace} />
+            <WikiPage workspace={workspace} onEditKnowledge={editKnowledgeAtSource} />
           ) : activeArea === "Game Design" ? (
-            <CompendiumPage workspace={workspace} onPromote={promoteToDecision} />
+            <CompendiumPage workspace={workspace} onPromote={promoteToDecision} editEntryId={knowledgeEditTarget} />
           ) : activeArea === "Decisions" ? (
             <DecisionsPage workspace={workspace} promotedKnowledge={promotedKnowledge} />
           ) : (

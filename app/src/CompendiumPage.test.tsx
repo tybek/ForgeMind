@@ -92,6 +92,15 @@ describe("Game Compendium", () => {
     expect(within(row).getByRole("button", { name: "Expand" })).toHaveAttribute("aria-expanded", "false");
   });
 
+  it("opens the existing inline editor when source navigation targets a Knowledge entry", async () => {
+    vi.mocked(loadCompendium).mockResolvedValue(document());
+    render(<CompendiumPage workspace={workspace} onPromote={vi.fn()} editEntryId={entry.id} />);
+    const editor = await screen.findByRole("heading", { name: "Edit Knowledge" });
+    const form = editor.closest("form")!;
+    expect(within(form).getByLabelText("Title")).toHaveValue(entry.title);
+    expect(within(form).getByLabelText("Statement")).toHaveValue(entry.statement);
+  });
+
   it("collapses long statements to the preview presentation by default", async () => {
     vi.mocked(loadCompendium).mockResolvedValue(document([longEntry]));
     await renderPage();

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatSpecialistResultMarkdown } from "./specialistMarkdown";
+import { formatSpecialistDiagnosticsMarkdown, formatSpecialistResultMarkdown } from "./specialistMarkdown";
 
 describe("specialist Markdown export", () => {
   it("formats every normalized result section, selected context, and safe run metadata", () => {
@@ -45,5 +45,33 @@ describe("specialist Markdown export", () => {
     expect(markdown).not.toContain("secret chain of thought");
     expect(markdown).not.toContain("raw response");
     expect(markdown).not.toContain("secret credential");
+  });
+
+  it("formats failed runs from only scenario, metadata, context, and safe stored diagnostics", () => {
+    const markdown = formatSpecialistDiagnosticsMarkdown({
+      taskType: "REACTION_MODEL",
+      scenario: "A guard hears one gunshot.",
+      model: "test/model",
+      timestamp: "2026-09-19T12:00:00Z",
+      errorCode: "OUTPUT_TRUNCATED",
+      diagnostics: { finishReason: "length", httpStatus: 400, missingFields: ["summary"] },
+      compendiumReferences: ["Imperfect information"],
+      decisionReferences: ["No omniscience"],
+      usage: { latencyMs: 42, totalTokens: 150 },
+      effectiveCompletionBudget: 4600,
+      rawProviderResponse: "unsafe body",
+      hiddenReasoning: "unsafe reasoning",
+      apiKey: "unsafe credential",
+    } as Parameters<typeof formatSpecialistDiagnosticsMarkdown>[0] & Record<string, unknown>);
+
+    expect(markdown).toContain("# AI Behavior Designer Diagnostics - REACTION_MODEL");
+    expect(markdown).toContain("- Error code: OUTPUT_TRUNCATED");
+    expect(markdown).toContain("- Finish reason: length");
+    expect(markdown).toContain("- HTTP status: 400");
+    expect(markdown).toContain("- Compendium: Imperfect information");
+    expect(markdown).toContain("- Approved Decision: No omniscience");
+    expect(markdown).not.toContain("unsafe body");
+    expect(markdown).not.toContain("unsafe reasoning");
+    expect(markdown).not.toContain("unsafe credential");
   });
 });

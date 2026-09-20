@@ -35,9 +35,9 @@ const run = {
   usage: {},
 };
 
-async function renderWiki() {
+async function renderWiki(onEditKnowledge?: (entryId: string) => void) {
   const user = userEvent.setup();
-  render(<WikiPage workspace={workspace} />);
+  render(<WikiPage workspace={workspace} onEditKnowledge={onEditKnowledge} />);
   await screen.findByRole("heading", { name: "Game Wiki" });
   await screen.findByText("No project knowledge is associated with this area yet.");
   await user.click(screen.getByRole("button", { name: /Systems/ }));
@@ -63,19 +63,26 @@ describe("Game Wiki", () => {
 
   it("renders aggregated Compendium knowledge under its existing Area", async () => {
     await renderWiki();
-    expect(screen.getByText("Perception model")).toBeInTheDocument();
-    expect(screen.getByText("Knowledge")).toBeInTheDocument();
+    const row = screen.getByText("Perception model").closest("details")!;
+    expect(within(row).getByText("Knowledge")).toBeInTheDocument();
+    expect(within(row).getByText("Locked")).toBeInTheDocument();
   });
 
   it("shows approved and proposed Decisions with distinct authority labels", async () => {
     await renderWiki();
-    expect(screen.getByText("Approved Decision")).toBeInTheDocument();
-    expect(screen.getByText("Proposed Decision")).toBeInTheDocument();
+    const approvedRow = screen.getByText("No omniscience").closest("details")!;
+    const proposedRow = screen.getByText("Shared alerts").closest("details")!;
+    expect(within(approvedRow.querySelector("summary")!).getByText("Decision")).toBeInTheDocument();
+    expect(within(approvedRow.querySelector("summary")!).getByText("Approved")).toBeInTheDocument();
+    expect(within(proposedRow.querySelector("summary")!).getByText("Decision")).toBeInTheDocument();
+    expect(within(proposedRow.querySelector("summary")!).getByText("Proposed")).toBeInTheDocument();
   });
 
   it("keeps specialist analysis visibly non-authoritative", async () => {
     const user = await renderWiki();
-    const row = screen.getByText("AI Analysis").closest("details")!;
+    const row = screen.getByText("Investigate under uncertainty.").closest("details")!;
+    expect(within(row).getByText("AI Analysis")).toBeInTheDocument();
+    expect(within(row).getByText("Reaction Model")).toBeInTheDocument();
     await user.click(within(row).getByText("Investigate under uncertainty."));
     expect(within(row).getByText("AI working analysis — not approved project knowledge")).toBeInTheDocument();
   });
@@ -114,5 +121,25 @@ describe("Game Wiki", () => {
     await renderWiki();
     expect(screen.getByText("Perception model")).toBeInTheDocument();
     expect(screen.getByRole("alert")).toHaveTextContent("Specialist History: History is invalid.");
+  });
+
+  it("searches by keyword and filters the aggregation by source type", async () => {
+    const user = await renderWiki();
+    await user.type(screen.getByRole("searchbox", { name: "Search" }), "orient");
+    expect(screen.getByText("Investigate under uncertainty.")).toBeInTheDocument();
+    expect(screen.queryByText("Perception model")).not.toBeInTheDocument();
+    await user.clear(screen.getByRole("searchbox", { name: "Search" }));
+    await user.selectOptions(screen.getByRole("combobox", { name: "Type" }), "DECISIONS");
+    expect(screen.getByText("No omniscience")).toBeInTheDocument();
+    expect(screen.queryByText("Perception model")).not.toBeInTheDocument();
+    expect(screen.queryByText("Investigate under uncertainty.")).not.toBeInTheDocument();
+  });
+
+  it("routes Knowledge editing back to the existing Compendium source", async () => {
+    const onEditKnowledge = vi.fn();
+    const user = await renderWiki(onEditKnowledge);
+    await user.click(screen.getByText("Perception model"));
+    await user.click(screen.getByRole("button", { name: "Edit in Compendium" }));
+    expect(onEditKnowledge).toHaveBeenCalledWith(knowledge.id);
   });
 });

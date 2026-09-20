@@ -83,9 +83,11 @@ function KnowledgeEditor({
 export function CompendiumPage({
   workspace,
   onPromote,
+  editEntryId,
 }: {
   workspace: Workspace;
   onPromote: (entry: KnowledgeEntry) => void;
+  editEntryId?: string | null;
 }) {
   const [document, setDocument] = useState<CompendiumDocument | null>(null);
   const [interviewAvailable, setInterviewAvailable] = useState(false);
@@ -99,6 +101,7 @@ export function CompendiumPage({
   const [expandedIds, setExpandedIds] = useState<string[]>([]);
   const [areaFilter, setAreaFilter] = useState<KnowledgeArea | "all">("all");
   const [statusFilter, setStatusFilter] = useState<KnowledgeStatus | "all">("all");
+  const [openedSourceTarget, setOpenedSourceTarget] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -140,6 +143,16 @@ export function CompendiumPage({
     setExpandedIds((current) => current.includes(entry.id) ? current : [...current, entry.id]);
     setError(null);
   }
+
+  useEffect(() => {
+    if (loading || !editEntryId || openedSourceTarget === editEntryId) return;
+    const entry = document?.entries.find((candidate) => candidate.id === editEntryId);
+    if (!entry) return;
+    setAreaFilter("all");
+    setStatusFilter("all");
+    openEdit(entry);
+    setOpenedSourceTarget(editEntryId);
+  }, [document, editEntryId, loading, openedSourceTarget]);
 
   function cancelEditor() {
     if (editingId !== null) {

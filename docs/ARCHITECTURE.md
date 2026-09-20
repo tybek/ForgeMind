@@ -2,7 +2,7 @@
 
 ## Current state
 
-Milestones through 0G.7 are complete, including user-driven validation of the bounded AI Behavior Designer specialist profile. 0G.8 Game Wiki and 0H Git Reality Snapshot are implemented with automated validation complete and short user-driven smokes pending. Additional specialists, autonomous agents, Git write workflows, Alignment logic, Unity GroundTruth, and Feature Contracts are **NOT IMPLEMENTED**.
+Milestones through 0G.7 are complete, including user-driven validation of the bounded AI Behavior Designer specialist profile. 0G.8 Game Wiki, 0G.9 Specialist + Wiki UX Production Polish, and 0H Git Reality Snapshot are implemented with automated validation complete and short user-driven smokes pending. Additional specialists, autonomous agents, Git write workflows, Alignment logic, Unity GroundTruth, and Feature Contracts are **NOT IMPLEMENTED**.
 
 ## Architectural stance
 
@@ -66,7 +66,7 @@ The Game Compendium is current project knowledge, not interview history or Decis
 
 Interview import is an explicit command. It reuses the validated interview loader, preserves the supported candidate status and provenance, maps the bounded interview areas into Compendium sections, retains `.forgemind/interview.json`, and skips exact title-plus-statement duplicates. Startup never imports or mutates knowledge.
 
-Game Wiki is a React aggregation over the existing Compendium, Decisions, and Specialist Analysis History boundaries. It groups references by the established Compendium Area vocabulary and does not add a file, schema, or competing source of truth. Compendium knowledge, approved and non-approved Decision states, and AI analysis retain distinct authority labels. The optional 0H Technical/Production card reads the transient Repository Reality boundary separately and never inserts changed files into Wiki rows or project knowledge.
+Game Wiki is a React aggregation over the existing Compendium, Decisions, and Specialist Analysis History boundaries. It groups references by the established Compendium Area vocabulary and does not add a file, schema, or competing source of truth. Compendium knowledge, approved and non-approved Decision states, and AI analysis retain distinct type plus state/subtype tags and compact authority/provenance/source metadata. Keyword search and the All/Knowledge/Decisions/AI Analysis filter operate only over already loaded aggregate data; there is no semantic retrieval or RAG boundary. Knowledge edits route to the existing Compendium editor rather than adding Wiki persistence. The optional 0H Technical/Production card reads the transient Repository Reality boundary separately and never inserts changed files into Wiki rows or project knowledge.
 
 A stored successful specialist finding can enter project knowledge only through the explicit native promotion command. The user edits Area, title, statement, and status and confirms before persistence; Rust verifies the finding against the unchanged stored run, applies the existing exact title-plus-statement duplicate rule, and writes one Compendium entry with `AI_INFERRED` provenance and `specialist_analysis` source. The command never creates a Decision or mutates Specialist Analysis History.
 
