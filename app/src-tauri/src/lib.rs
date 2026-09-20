@@ -7,6 +7,7 @@ pub mod model_registry;
 pub mod specialist_history;
 pub mod specialists;
 pub mod usage;
+pub mod unity_groundtruth;
 mod workspace;
 
 use std::path::Path;
@@ -338,6 +339,16 @@ fn inspect_repository_reality(path: String) -> git_reality::RepositoryRealityRes
     }
 }
 
+#[tauri::command]
+fn inspect_unity_groundtruth(path: String) -> unity_groundtruth::UnityGroundTruthResult {
+    match workspace::inspect(Path::new(&path)) {
+        Ok(WorkspaceInspection::Valid { project, .. }) => {
+            unity_groundtruth::inspect(Path::new(&path), &project.project_id)
+        }
+        _ => unity_groundtruth::inspection_failed(),
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -346,6 +357,7 @@ pub fn run() {
             inspect_workspace,
             initialize_workspace,
             inspect_repository_reality,
+            inspect_unity_groundtruth,
             run_ai_evaluation,
             list_models,
             list_specialist_profiles,

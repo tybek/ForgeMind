@@ -8,6 +8,7 @@ import {
 } from "./platform/projectKnowledge";
 import { loadSpecialistRuns, type SpecialistRun } from "./platform/specialists";
 import { inspectRepositoryReality, type RepositorySnapshot } from "./platform/repositoryReality";
+import { inspectUnityGroundTruth, type UnityGroundTruthResult } from "./platform/unityGroundTruth";
 
 interface WikiWorkspace {
   path: string;
@@ -58,6 +59,7 @@ export function WikiPage({
   const [decisions, setDecisions] = useState<Decision[]>([]);
   const [runs, setRuns] = useState<SpecialistRun[]>([]);
   const [repository, setRepository] = useState<RepositorySnapshot | null>(null);
+  const [unityReality, setUnityReality] = useState<UnityGroundTruthResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [errors, setErrors] = useState<string[]>([]);
 
@@ -68,13 +70,15 @@ export function WikiPage({
     setDecisions([]);
     setRuns([]);
     setRepository(null);
+    setUnityReality(null);
     setErrors([]);
     void Promise.allSettled([
       loadCompendium(workspace.path),
       loadDecisions(workspace.path),
       loadSpecialistRuns(workspace.path),
       inspectRepositoryReality(workspace.path),
-    ]).then(([compendiumResult, decisionsResult, runsResult, repositoryResult]) => {
+      inspectUnityGroundTruth(workspace.path),
+    ]).then(([compendiumResult, decisionsResult, runsResult, repositoryResult, unityResult]) => {
       if (!active) return;
       const nextErrors: string[] = [];
       if (compendiumResult.status === "fulfilled") setKnowledge(compendiumResult.value?.entries ?? []);
@@ -87,6 +91,8 @@ export function WikiPage({
       if (repositoryResult.status === "fulfilled" && repositoryResult.value.status === "DETECTED") {
         setRepository(repositoryResult.value.repository ?? null);
       }
+      if (unityResult.status === "fulfilled") setUnityReality(unityResult.value);
+      else nextErrors.push(`Unity GroundTruth: ${messageFromError(unityResult.reason)}`);
       setErrors(nextErrors);
       setLoading(false);
     });
@@ -173,6 +179,17 @@ export function WikiPage({
                 <div><dt>HEAD</dt><dd><code>{repository.head.shortHash}</code> — {repository.head.subject}</dd></div>
               </dl>
               <p>Implementation Evidence only; this does not establish project intent or feature completion.</p>
+            </aside>
+          ) : null}
+          {activeArea === "technical" && unityReality ? (
+            <aside className="wiki-repository-reality" aria-label="Unity Reality summary">
+              <span className="wiki-type wiki-type-reality">Unity Reality</span>
+              <dl>
+                <div><dt>Project</dt><dd>{unityReality.status === "DETECTED" ? "Detected" : unityReality.status === "NOT_DETECTED" ? "Not detected" : "Inspection failed"}</dd></div>
+                <div><dt>Unity version</dt><dd>{unityReality.projectVersion.version ?? "Unavailable"}</dd></div>
+                <div><dt>Manifest</dt><dd>{unityReality.manifest.status === "AVAILABLE" ? "Available" : unityReality.manifest.status === "INVALID_OR_UNSUPPORTED" ? "Invalid / unsupported" : "Not generated"}</dd></div>
+              </dl>
+              <p>{unityReality.status === "DETECTED" ? `VERIFIED FROM UNITY — project evidence only; manifest ${unityReality.manifest.status === "AVAILABLE" ? "available" : unityReality.manifest.status === "INVALID_OR_UNSUPPORTED" ? "invalid / unsupported" : "not generated"}.` : "Unity evidence is unavailable; no implementation fact is inferred."}</p>
             </aside>
           ) : null}
           {areaKnowledge.length === 0 && areaDecisions.length === 0 && areaRuns.length === 0 ? (

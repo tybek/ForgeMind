@@ -9,6 +9,7 @@ import {
   inspectWorkspace,
   selectWorkspaceDirectory,
 } from "./platform/workspaceDirectory";
+import { inspectUnityGroundTruth } from "./platform/unityGroundTruth";
 
 vi.mock("./platform/workspaceDirectory", () => ({
   getDevelopmentWorkspacePath: vi.fn(),
@@ -107,6 +108,16 @@ vi.mock("./platform/repositoryReality", () => ({
   inspectRepositoryReality: vi.fn().mockResolvedValue({
     status: "NOT_REPOSITORY",
     message: "The active ForgeMind workspace is not inside a Git repository.",
+  }),
+}));
+
+vi.mock("./platform/unityGroundTruth", () => ({
+  inspectUnityGroundTruth: vi.fn().mockResolvedValue({
+    status: "NOT_DETECTED",
+    evidence: { assets: false, packages: false, projectSettings: false },
+    projectVersion: { status: "MISSING" },
+    manifest: { status: "NOT_GENERATED" },
+    message: "The active workspace is not a Unity project. ForgeMind remains usable.",
   }),
 }));
 
@@ -221,7 +232,7 @@ describe("ForgeMind local workspace", () => {
     }
 
     expect(screen.getByText("Evaluation and local usage")).toBeInTheDocument();
-    expect(screen.getByText("Not scanned")).toBeInTheDocument();
+    expect(screen.getByText("GroundTruth page")).toBeInTheDocument();
     expect(screen.getByText("Repository Reality page")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Alignment" }));
@@ -331,6 +342,16 @@ describe("ForgeMind local workspace", () => {
     expect(screen.getByText(workspace.projectId)).toBeInTheDocument();
   });
 
+  it("opens the Unity GroundTruth workspace page through the narrow inspection boundary", async () => {
+    const user = userEvent.setup();
+    render(<WorkspaceShell workspace={workspace} onOpen={async () => undefined} />);
+    await user.click(screen.getByRole("button", { name: "Unity" }));
+    expect(await screen.findByRole("heading", { name: "Unity GroundTruth", level: 2 })).toBeInTheDocument();
+    expect(screen.getByText("Not detected")).toBeInTheDocument();
+    expect(inspectUnityGroundTruth).toHaveBeenCalledWith(workspace.path);
+    expect(screen.getByText("0I.1 Unity GroundTruth")).toBeInTheDocument();
+  });
+
   it("shows invalid metadata honestly without offering initialization", async () => {
     vi.mocked(selectWorkspaceDirectory).mockResolvedValue(selectedPath);
     vi.mocked(inspectWorkspace).mockResolvedValue({
@@ -366,7 +387,7 @@ describe("ForgeMind local workspace", () => {
     expect(screen.queryByRole("button", { name: "Initialize Workspace" })).not.toBeInTheDocument();
   });
 
-  it.each(["Narrative", "Unity", "Alignment"])(
+  it.each(["Narrative", "Alignment"])(
     "keeps the %s placeholder honest after a valid workspace loads",
     async (area) => {
       const user = userEvent.setup();

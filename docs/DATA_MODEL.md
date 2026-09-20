@@ -153,6 +153,15 @@ Approval answers whether a person has accepted an artifact; it does not replace 
 - Omitted empty diagnostic lists in previously written format-version `1` failures deserialize as empty lists; this is backward compatibility, not a schema migration.
 - Invalid history is not discarded during startup. Explicit recovery archives only the history document and creates a valid empty replacement without changing Project, interview, Compendium, or Decision data.
 
+## 0I.1 Unity GroundTruth invariants
+
+- `.forgemind/unity-groundtruth.json` is a human-readable format-version `1` evidence document tied to portable Project identity. ForgeMind reads and validates it but does not generate it in 0I.1.
+- The manifest records export time, Unity version, source tool identity, explicit coverage/errors, and bounded observation metadata. Raw serialized values, source contents, credentials, authorization data, absolute machine paths, and arbitrary exception text are excluded.
+- Scene, asset, script, prefab, ScriptableObject, and Input Action paths are project-relative. Observation identities and hierarchy references are portable and may not traverse outside the project.
+- The frontend receives detection state and a safe aggregate summary, not raw observations or arbitrary filesystem access.
+- `VERIFIED FROM UNITY` identifies validated implementation evidence. `DOCUMENTED` remains Intent, and `AI INFERENCE` remains interpretation; 0I.1 does not compare or merge them.
+- Missing, corrupt, not-generated, invalid, unsupported, or uncovered evidence is unverified. It is not silently converted into verified absence.
+
 ## Deliberately unresolved
 
 Indexing, merge behavior, schema migration beyond rejecting unsupported versions, audit/version-history UI, and any database design remain deferred.

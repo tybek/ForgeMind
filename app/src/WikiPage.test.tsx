@@ -6,6 +6,7 @@ import { loadDecisions } from "./platform/decisions";
 import { loadCompendium } from "./platform/projectKnowledge";
 import { loadSpecialistRuns } from "./platform/specialists";
 import { inspectRepositoryReality } from "./platform/repositoryReality";
+import { inspectUnityGroundTruth } from "./platform/unityGroundTruth";
 
 vi.mock("./platform/projectKnowledge", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./platform/projectKnowledge")>()),
@@ -14,6 +15,7 @@ vi.mock("./platform/projectKnowledge", async (importOriginal) => ({
 vi.mock("./platform/decisions", () => ({ loadDecisions: vi.fn() }));
 vi.mock("./platform/specialists", () => ({ loadSpecialistRuns: vi.fn() }));
 vi.mock("./platform/repositoryReality", () => ({ inspectRepositoryReality: vi.fn() }));
+vi.mock("./platform/unityGroundTruth", () => ({ inspectUnityGroundTruth: vi.fn() }));
 
 const workspace = { path: "D:\\Games\\Sample" };
 const knowledge = {
@@ -59,6 +61,16 @@ describe("Game Wiki", () => {
         diffStat: { filesChanged: 1, insertions: 2, deletions: 0 }, recentCommits: [],
       },
     });
+    vi.mocked(inspectUnityGroundTruth).mockResolvedValue({
+      status: "DETECTED",
+      evidence: { assets: true, packages: true, projectSettings: true },
+      projectVersion: { status: "AVAILABLE", version: "6000.3.23f1" },
+      manifest: { status: "AVAILABLE", summary: {
+        formatVersion: 1, generatedAt: "2026-09-20T12:00:00Z", unityVersion: "6000.3.23f1",
+        coverageCategories: ["SCENES"], coverageErrorCount: 0,
+        observationCounts: { scenes: 2, gameObjects: 0, components: 0, serializedFields: 0, prefabReferences: 0, scriptableObjects: 0, tags: 0, layers: 0, inputActions: 0, tests: 0 },
+      } },
+    });
   });
 
   it("renders aggregated Compendium knowledge under its existing Area", async () => {
@@ -103,6 +115,18 @@ describe("Game Wiki", () => {
     expect(within(summary).getByText("2 changed, 1 untracked")).toBeInTheDocument();
     expect(within(summary).getByText("HEAD").parentElement).toHaveTextContent("aaaaaaa — Add Game Wiki");
     expect(within(summary).queryByText("notes.txt")).not.toBeInTheDocument();
+  });
+
+  it("shows a compact verified Unity Reality summary only under Technical", async () => {
+    const user = await renderWiki();
+    await user.click(screen.getByRole("button", { name: /Technical/ }));
+    const summary = screen.getByLabelText("Unity Reality summary");
+    expect(within(summary).getByText("Detected")).toBeInTheDocument();
+    expect(within(summary).getByText("6000.3.23f1")).toBeInTheDocument();
+    expect(within(summary).getByText("Available")).toBeInTheDocument();
+    expect(within(summary).getByText(/VERIFIED FROM UNITY/)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /Production/ }));
+    expect(screen.queryByLabelText("Unity Reality summary")).not.toBeInTheDocument();
   });
 
   it("expands and collapses compact knowledge rows", async () => {

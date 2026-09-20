@@ -2,7 +2,7 @@
 
 ## Current state
 
-Milestones through 0G.7 are complete, including user-driven validation of the bounded AI Behavior Designer specialist profile. 0G.8 Game Wiki, 0G.9 Specialist + Wiki UX Production Polish, and 0H Git Reality Snapshot are implemented with automated validation complete and short user-driven smokes pending. Additional specialists, autonomous agents, Git write workflows, Alignment logic, Unity GroundTruth, and Feature Contracts are **NOT IMPLEMENTED**.
+Milestones through 0G.7 are complete, including user-driven validation of the bounded AI Behavior Designer specialist profile. 0G.8 Game Wiki, 0G.9 Specialist + Wiki UX Production Polish, 0H Git Reality Snapshot, and the 0I.1 Unity GroundTruth foundation are implemented with automated validation complete and short user-driven smokes pending. A Unity-side exporter, broader Unity observation coverage, additional specialists, autonomous agents, Git write workflows, Alignment logic, and Feature Contracts are **NOT IMPLEMENTED**.
 
 ## Architectural stance
 
@@ -100,7 +100,11 @@ This boundary exposes status and metadata only. It does not persist the snapshot
 
 ### Unity GroundTruth Boundary
 
-A separate bridge/package observes supported Unity project facts and emits a versioned, time-stamped GroundTruthSnapshot with source, coverage, and error metadata. Unity is evidence for Reality, not the owner of design knowledge. The ForgeMind core consumes the snapshot without depending directly on Unity APIs.
+0I.1 implements a read-only `inspect_unity_groundtruth` command. Rust first validates the active ForgeMind workspace, detects the canonical `Assets/`, `Packages/`, and `ProjectSettings/` directories, parses `ProjectSettings/ProjectVersion.txt`, and optionally loads `.forgemind/unity-groundtruth.json`. React cannot choose another file or access the filesystem directly.
+
+The format-version `1` manifest is tied to portable Project identity and records export time, Unity version, source tool metadata, explicit category coverage/errors, and bounded observations for scenes, GameObjects, components, serialized-field metadata, prefab references, ScriptableObjects, tags/layers, Input Actions, and tests. All paths and identifiers are project-relative; raw serialized values, source contents, credentials, machine paths, and arbitrary exporter errors are excluded. The frontend receives only a normalized summary, not raw observations.
+
+A future separate bridge/package will emit the contract. 0I.1 does not run Unity or implement exporters. Unity is evidence for Reality, not the owner of design knowledge. Not generated, invalid, unsupported, missing, and non-Unity states remain safe unavailable-evidence states; they do not become inferred absence. See [Unity GroundTruth Contract](UNITY_GROUNDTRUTH.md).
 
 ## Authority and information flow
 

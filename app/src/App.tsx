@@ -6,6 +6,7 @@ import { DecisionsPage } from "./DecisionsPage";
 import { SpecialistPage } from "./SpecialistPage";
 import { WikiPage } from "./WikiPage";
 import { RepositoryPage } from "./RepositoryPage";
+import { UnityGroundTruthPage } from "./UnityGroundTruthPage";
 import type { KnowledgeEntry } from "./platform/projectKnowledge";
 import {
   getDevelopmentWorkspacePath,
@@ -181,7 +182,7 @@ function Overview({ workspace }: { workspace: Workspace }) {
   const statuses = [
     ["Workspace", "Local workspace"],
     ["AI", "Evaluation and local usage"],
-    ["Unity", "Not scanned"],
+    ["Unity", "GroundTruth page"],
     ["Git", "Repository Reality page"],
   ];
   const details = [
@@ -221,7 +222,7 @@ function Overview({ workspace }: { workspace: Workspace }) {
   );
 }
 
-function Placeholder({ area }: { area: Exclude<WorkspaceArea, "Overview" | "Repository / Git Reality" | "Game Wiki"> }) {
+function Placeholder({ area }: { area: Exclude<WorkspaceArea, "Overview" | "Repository / Git Reality" | "Game Wiki" | "Unity"> }) {
   return (
     <section className="placeholder-card">
       <span className="section-label">Planned workspace area</span>
@@ -336,6 +337,8 @@ export function WorkspaceShell({
                 ? "0G.8 Unified Knowledge"
               : activeArea === "Repository / Git Reality"
                 ? "0H Git Reality"
+              : activeArea === "Unity"
+                ? "0I.1 Unity GroundTruth"
               : activeArea === "AI Evaluation"
                 ? "0D.1 Model Lab"
                 : activeArea === "Game Design" || activeArea === "Decisions"
@@ -355,6 +358,8 @@ export function WorkspaceShell({
             <Overview workspace={workspace} />
           ) : activeArea === "Repository / Git Reality" ? (
             <RepositoryPage workspace={workspace} />
+          ) : activeArea === "Unity" ? (
+            <UnityGroundTruthPage workspace={workspace} />
           ) : activeArea === "Game Wiki" ? (
             <WikiPage workspace={workspace} onEditKnowledge={editKnowledgeAtSource} />
           ) : activeArea === "Game Design" ? (
