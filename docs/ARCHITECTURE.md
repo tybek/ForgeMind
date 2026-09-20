@@ -2,7 +2,7 @@
 
 ## Current state
 
-Milestones through 0G.7 are complete, including user-driven validation of the bounded AI Behavior Designer specialist profile. 0G.8 Game Wiki, 0G.9 Specialist + Wiki UX Production Polish, 0H Git Reality Snapshot, and the 0I.1 Unity GroundTruth foundation are implemented with automated validation complete and short user-driven smokes pending. A Unity-side exporter, broader Unity observation coverage, additional specialists, autonomous agents, Git write workflows, Alignment logic, and Feature Contracts are **NOT IMPLEMENTED**.
+Milestones through 0G.7 are complete, including user-driven validation of the bounded AI Behavior Designer specialist profile. 0G.8 Game Wiki, 0G.9 Specialist + Wiki UX Production Polish, 0H Git Reality Snapshot, and 0I.1–0I.2 Unity GroundTruth are implemented with automated validation complete and user-driven smokes pending. Broader Unity observation coverage beyond the format-version `1` exporter, additional specialists, autonomous agents, Git write workflows, Alignment logic, and Feature Contracts are **NOT IMPLEMENTED**.
 
 ## Architectural stance
 
@@ -104,7 +104,9 @@ This boundary exposes status and metadata only. It does not persist the snapshot
 
 The format-version `1` manifest is tied to portable Project identity and records export time, Unity version, source tool metadata, explicit category coverage/errors, and bounded observations for scenes, GameObjects, components, serialized-field metadata, prefab references, ScriptableObjects, tags/layers, Input Actions, and tests. All paths and identifiers are project-relative; raw serialized values, source contents, credentials, machine paths, and arbitrary exporter errors are excluded. The frontend receives only a normalized summary, not raw observations.
 
-A future separate bridge/package will emit the contract. 0I.1 does not run Unity or implement exporters. Unity is evidence for Reality, not the owner of design knowledge. Not generated, invalid, unsupported, missing, and non-Unity states remain safe unavailable-evidence states; they do not become inferred absence. See [Unity GroundTruth Contract](UNITY_GROUNDTRUTH.md).
+0I.2 adds a separate editor-only UPM package under `unity/com.forgemind.unity-groundtruth`. Its explicit Unity menu action reads `.forgemind/project.json`, inspects enabled Build Settings scenes additively plus safe Editor asset/settings/assembly metadata, and writes only `.forgemind/unity-groundtruth.json`. ForgeMind never starts or automates Unity. The exporter does not save scenes or mutate prefabs, ScriptableObjects, settings, assets, source, or packages.
+
+The exporter uses stable ordering and portable hashed identities, omits raw serialized values, executes no tests or runtime simulation, and reports partial/unavailable categories with allowlisted coverage codes. Unity is evidence for Reality, not the owner of design knowledge. Component or asset presence never establishes that Intent is implemented. Not generated, invalid, unsupported, missing, partially covered, and non-Unity states remain safe unavailable evidence; they do not become inferred absence. See [Unity GroundTruth Contract](UNITY_GROUNDTRUTH.md).
 
 ## Authority and information flow
 

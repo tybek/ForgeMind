@@ -188,6 +188,7 @@ export function WikiPage({
                 <div><dt>Project</dt><dd>{unityReality.status === "DETECTED" ? "Detected" : unityReality.status === "NOT_DETECTED" ? "Not detected" : "Inspection failed"}</dd></div>
                 <div><dt>Unity version</dt><dd>{unityReality.projectVersion.version ?? "Unavailable"}</dd></div>
                 <div><dt>Manifest</dt><dd>{unityReality.manifest.status === "AVAILABLE" ? "Available" : unityReality.manifest.status === "INVALID_OR_UNSUPPORTED" ? "Invalid / unsupported" : "Not generated"}</dd></div>
+                {unityReality.manifest.summary ? <div><dt>Snapshot</dt><dd>{`${unityReality.manifest.summary.observationCounts.scenes} scenes, ${unityReality.manifest.summary.observationCounts.gameObjects} GameObjects, ${unityReality.manifest.summary.observationCounts.components} components, ${unityReality.manifest.summary.observationCounts.scriptableObjects} ScriptableObjects`}</dd></div> : null}
               </dl>
               <p>{unityReality.status === "DETECTED" ? `VERIFIED FROM UNITY — project evidence only; manifest ${unityReality.manifest.status === "AVAILABLE" ? "available" : unityReality.manifest.status === "INVALID_OR_UNSUPPORTED" ? "invalid / unsupported" : "not generated"}.` : "Unity evidence is unavailable; no implementation fact is inferred."}</p>
             </aside>

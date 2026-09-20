@@ -1,7 +1,7 @@
 # Unity Bridge boundary
 
-This directory is reserved for the future, separately bounded ForgeMind Unity Bridge/package.
+Milestone 0I.2 adds the first separately bounded Unity Editor package at [`com.forgemind.unity-groundtruth`](com.forgemind.unity-groundtruth/README.md).
 
-Milestone 0I.1 implements the ForgeMind-side project detection, manifest contract, validation, and read-only UI. No Unity package or exporter is implemented yet. The future package should emit the project-owned `.forgemind/unity-groundtruth.json` contract without granting ForgeMind live Unity control.
+The package exposes **Tools > ForgeMind > Export GroundTruth** and emits the existing project-owned `.forgemind/unity-groundtruth.json` contract. It does not grant ForgeMind live Unity control, run tests, execute the game, or modify project content. ForgeMind remains a read-only consumer of the exported evidence.
 
 See [Unity GroundTruth Contract](../docs/UNITY_GROUNDTRUTH.md) and [Architecture](../docs/ARCHITECTURE.md).

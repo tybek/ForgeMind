@@ -349,7 +349,7 @@ describe("ForgeMind local workspace", () => {
     expect(await screen.findByRole("heading", { name: "Unity GroundTruth", level: 2 })).toBeInTheDocument();
     expect(screen.getByText("Not detected")).toBeInTheDocument();
     expect(inspectUnityGroundTruth).toHaveBeenCalledWith(workspace.path);
-    expect(screen.getByText("0I.1 Unity GroundTruth")).toBeInTheDocument();
+    expect(screen.getByText("0I.2 Unity GroundTruth")).toBeInTheDocument();
   });
 
   it("shows invalid metadata honestly without offering initialization", async () => {

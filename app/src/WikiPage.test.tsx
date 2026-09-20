@@ -68,7 +68,7 @@ describe("Game Wiki", () => {
       manifest: { status: "AVAILABLE", summary: {
         formatVersion: 1, generatedAt: "2026-09-20T12:00:00Z", unityVersion: "6000.3.23f1",
         coverageCategories: ["SCENES"], coverageErrorCount: 0,
-        observationCounts: { scenes: 2, gameObjects: 0, components: 0, serializedFields: 0, prefabReferences: 0, scriptableObjects: 0, tags: 0, layers: 0, inputActions: 0, tests: 0 },
+        observationCounts: { scenes: 2, gameObjects: 10, components: 14, serializedFields: 8, prefabReferences: 3, scriptableObjects: 2, tags: 4, layers: 2, inputActions: 6, tests: 12 },
       } },
     });
   });
@@ -124,6 +124,7 @@ describe("Game Wiki", () => {
     expect(within(summary).getByText("Detected")).toBeInTheDocument();
     expect(within(summary).getByText("6000.3.23f1")).toBeInTheDocument();
     expect(within(summary).getByText("Available")).toBeInTheDocument();
+    expect(within(summary).getByText("2 scenes, 10 GameObjects, 14 components, 2 ScriptableObjects")).toBeInTheDocument();
     expect(within(summary).getByText(/VERIFIED FROM UNITY/)).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: /Production/ }));
     expect(screen.queryByLabelText("Unity Reality summary")).not.toBeInTheDocument();

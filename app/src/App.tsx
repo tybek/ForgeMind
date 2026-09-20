@@ -338,7 +338,7 @@ export function WorkspaceShell({
               : activeArea === "Repository / Git Reality"
                 ? "0H Git Reality"
               : activeArea === "Unity"
-                ? "0I.1 Unity GroundTruth"
+                ? "0I.2 Unity GroundTruth"
               : activeArea === "AI Evaluation"
                 ? "0D.1 Model Lab"
                 : activeArea === "Game Design" || activeArea === "Decisions"
