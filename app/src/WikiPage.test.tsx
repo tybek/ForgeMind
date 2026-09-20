@@ -5,6 +5,7 @@ import { WikiPage } from "./WikiPage";
 import { loadDecisions } from "./platform/decisions";
 import { loadCompendium } from "./platform/projectKnowledge";
 import { loadSpecialistRuns } from "./platform/specialists";
+import { inspectRepositoryReality } from "./platform/repositoryReality";
 
 vi.mock("./platform/projectKnowledge", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./platform/projectKnowledge")>()),
@@ -12,6 +13,7 @@ vi.mock("./platform/projectKnowledge", async (importOriginal) => ({
 }));
 vi.mock("./platform/decisions", () => ({ loadDecisions: vi.fn() }));
 vi.mock("./platform/specialists", () => ({ loadSpecialistRuns: vi.fn() }));
+vi.mock("./platform/repositoryReality", () => ({ inspectRepositoryReality: vi.fn() }));
 
 const workspace = { path: "D:\\Games\\Sample" };
 const knowledge = {
@@ -48,6 +50,15 @@ describe("Game Wiki", () => {
     vi.mocked(loadCompendium).mockResolvedValue({ formatVersion: 1, projectId: "project", updatedAt: "2026-09-20T10:00:00Z", entries: [knowledge] });
     vi.mocked(loadDecisions).mockResolvedValue({ formatVersion: 1, projectId: "project", updatedAt: "2026-09-20T10:00:00Z", decisions: [approved, proposed] });
     vi.mocked(loadSpecialistRuns).mockResolvedValue({ formatVersion: 1, projectId: "project", updatedAt: "2026-09-20T11:00:00Z", runs: [run] });
+    vi.mocked(inspectRepositoryReality).mockResolvedValue({
+      status: "DETECTED",
+      repository: {
+        branch: "main", detachedHead: false, workingTree: "DIRTY", totalChangedFiles: 2, changedFilesTruncated: false,
+        head: { hash: "a".repeat(40), shortHash: "aaaaaaa", subject: "Add Game Wiki", author: "Dev", timestamp: "2026-09-20T10:00:00Z" },
+        changedFiles: [{ path: "notes.txt", status: "UNTRACKED", staged: false, unstaged: true, untracked: true }],
+        diffStat: { filesChanged: 1, insertions: 2, deletions: 0 }, recentCommits: [],
+      },
+    });
   });
 
   it("renders aggregated Compendium knowledge under its existing Area", async () => {
@@ -75,6 +86,16 @@ describe("Game Wiki", () => {
     await user.click(screen.getByRole("button", { name: /Technical/ }));
     expect(screen.getByRole("heading", { name: "Technical" })).toBeInTheDocument();
     expect(screen.queryByText("Perception model")).not.toBeInTheDocument();
+  });
+
+  it("shows only a compact Repository Reality summary under Technical", async () => {
+    const user = await renderWiki();
+    await user.click(screen.getByRole("button", { name: /Technical/ }));
+    const summary = screen.getByLabelText("Repository Reality summary");
+    expect(within(summary).getByText("main")).toBeInTheDocument();
+    expect(within(summary).getByText("2 changed, 1 untracked")).toBeInTheDocument();
+    expect(within(summary).getByText("HEAD").parentElement).toHaveTextContent("aaaaaaa — Add Game Wiki");
+    expect(within(summary).queryByText("notes.txt")).not.toBeInTheDocument();
   });
 
   it("expands and collapses compact knowledge rows", async () => {

@@ -7,6 +7,7 @@ import {
   type KnowledgeEntry,
 } from "./platform/projectKnowledge";
 import { loadSpecialistRuns, type SpecialistRun } from "./platform/specialists";
+import { inspectRepositoryReality, type RepositorySnapshot } from "./platform/repositoryReality";
 
 interface WikiWorkspace {
   path: string;
@@ -48,6 +49,7 @@ export function WikiPage({ workspace }: { workspace: WikiWorkspace }) {
   const [knowledge, setKnowledge] = useState<KnowledgeEntry[]>([]);
   const [decisions, setDecisions] = useState<Decision[]>([]);
   const [runs, setRuns] = useState<SpecialistRun[]>([]);
+  const [repository, setRepository] = useState<RepositorySnapshot | null>(null);
   const [loading, setLoading] = useState(true);
   const [errors, setErrors] = useState<string[]>([]);
 
@@ -57,12 +59,14 @@ export function WikiPage({ workspace }: { workspace: WikiWorkspace }) {
     setKnowledge([]);
     setDecisions([]);
     setRuns([]);
+    setRepository(null);
     setErrors([]);
     void Promise.allSettled([
       loadCompendium(workspace.path),
       loadDecisions(workspace.path),
       loadSpecialistRuns(workspace.path),
-    ]).then(([compendiumResult, decisionsResult, runsResult]) => {
+      inspectRepositoryReality(workspace.path),
+    ]).then(([compendiumResult, decisionsResult, runsResult, repositoryResult]) => {
       if (!active) return;
       const nextErrors: string[] = [];
       if (compendiumResult.status === "fulfilled") setKnowledge(compendiumResult.value?.entries ?? []);
@@ -72,6 +76,9 @@ export function WikiPage({ workspace }: { workspace: WikiWorkspace }) {
       if (runsResult.status === "fulfilled") {
         setRuns((runsResult.value?.runs ?? []).filter((run) => run.status === "SUCCEEDED" && run.result));
       } else nextErrors.push(`Specialist History: ${messageFromError(runsResult.reason)}`);
+      if (repositoryResult.status === "fulfilled" && repositoryResult.value.status === "DETECTED") {
+        setRepository(repositoryResult.value.repository ?? null);
+      }
       setErrors(nextErrors);
       setLoading(false);
     });
@@ -124,6 +131,17 @@ export function WikiPage({ workspace }: { workspace: WikiWorkspace }) {
             <h3 id="wiki-area-title">{activeLabel}</h3>
             <span>{areaKnowledge.length + areaDecisions.length + areaRuns.length} entries</span>
           </div>
+          {(activeArea === "technical" || activeArea === "production") && repository ? (
+            <aside className="wiki-repository-reality" aria-label="Repository Reality summary">
+              <span className="wiki-type wiki-type-reality">Repository Reality</span>
+              <dl>
+                <div><dt>Branch</dt><dd>{repository.detachedHead ? "Detached HEAD" : repository.branch}</dd></div>
+                <div><dt>Working tree</dt><dd>{repository.workingTree === "CLEAN" ? "Clean" : `${repository.totalChangedFiles} changed, ${repository.changedFiles.filter((file) => file.untracked).length} untracked`}</dd></div>
+                <div><dt>HEAD</dt><dd><code>{repository.head.shortHash}</code> — {repository.head.subject}</dd></div>
+              </dl>
+              <p>Implementation Evidence only; this does not establish project intent or feature completion.</p>
+            </aside>
+          ) : null}
           {areaKnowledge.length === 0 && areaDecisions.length === 0 && areaRuns.length === 0 ? (
             <p className="wiki-empty">No project knowledge is associated with this area yet.</p>
           ) : (

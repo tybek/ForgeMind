@@ -2,13 +2,13 @@
 
 ## Current state
 
-Milestones through 0G.7 are complete, including user-driven validation of the bounded AI Behavior Designer specialist profile. 0G.8 Game Wiki is implemented with automated validation complete and a short user-driven visual and persistence smoke pending. Additional specialists, autonomous agents, Alignment logic, Git integration, Unity GroundTruth, and Feature Contracts are **NOT IMPLEMENTED**. 0H has not started.
+Milestones through 0G.7 are complete, including user-driven validation of the bounded AI Behavior Designer specialist profile. 0G.8 Game Wiki and 0H Git Reality Snapshot are implemented with automated validation complete and short user-driven smokes pending. Additional specialists, autonomous agents, Git write workflows, Alignment logic, Unity GroundTruth, and Feature Contracts are **NOT IMPLEMENTED**.
 
 ## Architectural stance
 
 ForgeMind is intended as a desktop-first orchestration and interpretation layer over a local game repository. The repository remains authoritative for durable project files; Git provides durable history; Unity supplies evidence about Reality. ForgeMind owns neither the underlying game project nor its development tools.
 
-The current desktop shell uses Tauri 2 with React and TypeScript. The UI receives no generic filesystem or network access: it invokes narrow workspace, model-registry, aggregate-usage, evaluation, interview, Compendium, Decision, and specialist commands. The native layer owns validation and file access under `.forgemind`, provider credentials, outbound inference HTTP, and ForgeMind's application-global usage history.
+The current desktop shell uses Tauri 2 with React and TypeScript. The UI receives no generic filesystem, shell, or network access: it invokes narrow workspace, Repository Reality, model-registry, aggregate-usage, evaluation, interview, Compendium, Decision, and specialist commands. The native layer owns validation and file access under `.forgemind`, fixed-argument Git inspection for the active workspace, provider credentials, outbound inference HTTP, and ForgeMind's application-global usage history.
 
 The boundaries below describe responsibilities, not services, deployable processes, or a production-scale architecture.
 
@@ -66,7 +66,7 @@ The Game Compendium is current project knowledge, not interview history or Decis
 
 Interview import is an explicit command. It reuses the validated interview loader, preserves the supported candidate status and provenance, maps the bounded interview areas into Compendium sections, retains `.forgemind/interview.json`, and skips exact title-plus-statement duplicates. Startup never imports or mutates knowledge.
 
-Game Wiki is a React aggregation over the existing Compendium, Decisions, and Specialist Analysis History boundaries. It groups references by the established Compendium Area vocabulary and does not add a file, schema, or competing source of truth. Compendium knowledge, approved and non-approved Decision states, and AI analysis retain distinct authority labels.
+Game Wiki is a React aggregation over the existing Compendium, Decisions, and Specialist Analysis History boundaries. It groups references by the established Compendium Area vocabulary and does not add a file, schema, or competing source of truth. Compendium knowledge, approved and non-approved Decision states, and AI analysis retain distinct authority labels. The optional 0H Technical/Production card reads the transient Repository Reality boundary separately and never inserts changed files into Wiki rows or project knowledge.
 
 A stored successful specialist finding can enter project knowledge only through the explicit native promotion command. The user edits Area, title, statement, and status and confirms before persistence; Rust verifies the finding against the unchanged stored run, applies the existing exact title-plus-statement duplicate rule, and writes one Compendium entry with `AI_INFERRED` provenance and `specialist_analysis` source. The command never creates a Decision or mutates Specialist Analysis History.
 
@@ -88,7 +88,11 @@ Provider `INVALID_REQUEST` metadata is reduced to safe HTTP status, provider cod
 
 ### Git Integration Boundary
 
-Exposes repository status, diffs, history, and narrowly scoped user-approved actions. Git remains durable history and the initial team synchronization mechanism. ForgeMind must not hide or replace the repository's actual state.
+0H implements a read-only `inspect_repository_reality` command. Rust validates that the supplied path is an initialized ForgeMind workspace, invokes only the system `git` executable with centrally defined inspection arguments, and returns normalized repository evidence. React cannot supply a Git subcommand or arbitrary arguments.
+
+The transient snapshot contains no repository root or other absolute path. Changed-file and rename paths are validated repository-relative values; process stderr and command output are never forwarded on failure. Recent history is capped at 10 commits, changed-file presentation is capped with an explicit truncation flag, and tracked diff statistics exclude untracked contents. Git unavailable, non-repository, and inspection-failure states are safe data states that do not invalidate the workspace.
+
+This boundary exposes status and metadata only. It does not persist the snapshot, display source diffs, or provide commit, push, pull, fetch, merge, rebase, checkout, branch, stash, remote-authentication, hosted-review, or generic shell operations. Git remains durable history, and the snapshot is Implementation Evidence rather than proof of implemented intent.
 
 ### Unity GroundTruth Boundary
 

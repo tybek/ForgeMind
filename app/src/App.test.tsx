@@ -102,6 +102,13 @@ vi.mock("./platform/specialists", () => ({
   runSpecialistAnalysis: vi.fn(),
 }));
 
+vi.mock("./platform/repositoryReality", () => ({
+  inspectRepositoryReality: vi.fn().mockResolvedValue({
+    status: "NOT_REPOSITORY",
+    message: "The active ForgeMind workspace is not inside a Git repository.",
+  }),
+}));
+
 const selectedPath = "D:\\Games\\SampleGame";
 const workspace: Workspace = {
   formatVersion: 1,
@@ -124,6 +131,7 @@ const validInspection = {
 
 const requiredAreas = [
   "Overview",
+  "Repository",
   "Game Wiki",
   "Game Design",
   "Narrative",
@@ -212,7 +220,7 @@ describe("ForgeMind local workspace", () => {
 
     expect(screen.getByText("Evaluation and local usage")).toBeInTheDocument();
     expect(screen.getByText("Not scanned")).toBeInTheDocument();
-    expect(screen.getByText("Not integrated")).toBeInTheDocument();
+    expect(screen.getByText("Repository Reality page")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Alignment" }));
     expect(screen.getByText("Alignment workspace is not implemented yet.")).toBeInTheDocument();
@@ -291,6 +299,18 @@ describe("ForgeMind local workspace", () => {
     await user.click(screen.getByRole("button", { name: "Game Wiki" }));
     expect(await screen.findByRole("heading", { name: "Game Wiki", level: 2 })).toBeInTheDocument();
     expect(screen.getByRole("navigation", { name: "Wiki areas" })).toBeInTheDocument();
+  });
+
+  it("opens the read-only Repository Reality workspace page", async () => {
+    const user = userEvent.setup();
+    render(<WorkspaceShell workspace={workspace} onOpen={async () => undefined} />);
+    await user.click(screen.getByRole("button", { name: "Repository" }));
+    expect(await screen.findByRole("heading", { name: "Git / Repository", level: 2 })).toBeInTheDocument();
+    expect(screen.getByText("The active ForgeMind workspace is not inside a Git repository.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /commit|push|pull|fetch|checkout/i })).not.toBeInTheDocument();
+    expect(screen.getByRole("navigation", { name: "Workspace areas" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Overview" }));
+    expect(screen.getByText(workspace.projectId)).toBeInTheDocument();
   });
 
   it("shows invalid metadata honestly without offering initialization", async () => {

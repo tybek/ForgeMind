@@ -2,6 +2,7 @@ pub mod ai;
 pub mod compendium;
 pub mod decisions;
 pub mod interview;
+pub mod git_reality;
 pub mod model_registry;
 pub mod specialist_history;
 pub mod specialists;
@@ -327,6 +328,14 @@ fn initialize_workspace(path: String) -> Result<WorkspaceInspection, WorkspaceEr
     workspace::initialize(Path::new(&path))
 }
 
+#[tauri::command]
+fn inspect_repository_reality(path: String) -> git_reality::RepositoryRealityResult {
+    match workspace::inspect(Path::new(&path)) {
+        Ok(WorkspaceInspection::Valid { .. }) => git_reality::inspect(Path::new(&path)),
+        _ => git_reality::inspection_failed(),
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -334,6 +343,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             inspect_workspace,
             initialize_workspace,
+            inspect_repository_reality,
             run_ai_evaluation,
             list_models,
             list_specialist_profiles,

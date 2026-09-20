@@ -1,6 +1,6 @@
 # ForgeMind desktop application
 
-The ForgeMind desktop application uses Tauri 2, React, TypeScript, and Vite. Milestones through 0G are complete, including user-driven validation of the AI Behavior Designer specialist profile. 0H has not started.
+The ForgeMind desktop application uses Tauri 2, React, TypeScript, and Vite. Milestones through 0G are complete, including user-driven validation of the AI Behavior Designer specialist profile. 0G.8 Game Wiki and 0H Git Reality Snapshot are implemented with manual validation pending.
 
 It selects a local directory through Tauri's native dialog plugin, inspects `.forgemind/project.json`, and explicitly initializes that file when requested. Initialization creates no other ForgeMind paths and does not read, scan, or modify game-project files.
 
@@ -15,6 +15,8 @@ AI Behavior Designer is a responsive 40/60 two-pane specialist workbench, not ch
 Normalized successes and safe failures are stored in versioned `.forgemind/specialist-runs.json` with the explicit scenario, selected reference IDs, preferred/effective completion budgets, known model maximum when configured, and usage when available. This portable Analysis History excludes raw provider/request content, credentials, authorization data, reasoning, and absolute paths. It is a non-authoritative work artifact and never becomes Compendium knowledge or a Decision automatically.
 
 Analysis History is auxiliary state, not a prerequisite for the specialist workbench. Profiles, models, Compendium context, approved Decisions, and history load independently. A malformed or unsupported history file produces a warning only in the History panel; task/model selection and new analysis remain available. Explicit **Archive and reset history** recovery renames only the existing history file to a timestamped `.forgemind/specialist-runs.invalid-*.json` backup and creates an empty valid history. It never changes Project identity, interview knowledge, Compendium entries, or Decisions.
+
+The Repository workspace exposes a transient, read-only **Repository Reality** snapshot through `inspect_repository_reality`. Rust invokes the system Git executable with fixed inspection arguments against the active initialized workspace and returns branch or detached HEAD, HEAD metadata, clean/dirty state, repository-relative changed files with staged/unstaged status, tracked diff statistics, and at most 10 recent commits. React cannot submit commands or arbitrary Git arguments. No repository path, credentials, remote data, source diff, or snapshot file is persisted. Missing Git, non-repository workspaces, and inspection failures are isolated safe states; there are no Git write or network actions.
 
 ## Development
 
@@ -61,4 +63,4 @@ It calls the registered production Rust evaluation service exactly once with a f
 
 Usage history is application-global rather than stored in a game project. On Windows it is written as JSON Lines to `%LOCALAPPDATA%\ForgeMind\usage-v1.jsonl`; equivalent user data locations are used on macOS and Linux. Records contain timestamps, session and optional project IDs, model/provider identity, optional task category, token counts, latency, estimated cost when explicit pricing exists, success, and safe error category. They never contain prompts, response text, credentials, or authorization headers. Pricing that is not explicitly configured remains unavailable and is never inferred from provider billing.
 
-The only plugin capability granted by `src-tauri/capabilities/main.json` is opening a native dialog. React has no generic filesystem or network capability. Narrow Tauri commands inspect or initialize ForgeMind metadata, list configured models and specialist profiles, read aggregate usage, run normalized native evaluation/interview/specialist requests, and load or save validated interview, Compendium, Decision, and specialist-history data. Shell, Git, Unity, and arbitrary frontend network capabilities are not configured.
+The only plugin capability granted by `src-tauri/capabilities/main.json` is opening a native dialog. React has no generic filesystem, shell, or network capability. Narrow Tauri commands inspect or initialize ForgeMind metadata, inspect normalized read-only Repository Reality, list configured models and specialist profiles, read aggregate usage, run normalized native evaluation/interview/specialist requests, and load or save validated interview, Compendium, Decision, and specialist-history data. No shell plugin, Git plugin, Unity capability, or arbitrary frontend network capability is configured.

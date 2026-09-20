@@ -1301,6 +1301,45 @@ button:focus-visible {
   color: #ead69b;
 }
 
+.wiki-type-reality {
+  border-color: #4f829d;
+  color: #bfe4f4;
+}
+
+.wiki-repository-reality {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid #315163;
+  border-radius: 6px;
+  background: #142027;
+}
+
+.wiki-repository-reality dl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+}
+
+.wiki-repository-reality dt {
+  color: #8299a6;
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.wiki-repository-reality dd {
+  margin: 3px 0 0;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+}
+
+.wiki-repository-reality p {
+  margin: 0;
+  color: #91a5b0;
+  font-size: 11px;
+}
+
 .wiki-row-detail {
   padding: 10px 14px 13px;
   border-top: 1px solid #272d35;
@@ -1325,6 +1364,258 @@ button:focus-visible {
   border: 1px solid #765148;
   border-radius: 6px;
   color: #f0c9bd;
+}
+
+.repository-page {
+  display: grid;
+  gap: 16px;
+}
+
+.repository-intro {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.repository-intro h2,
+.repository-intro p,
+.repository-section-heading h3,
+.repository-head-subject {
+  margin: 0;
+}
+
+.repository-intro h2 {
+  margin-top: 6px;
+}
+
+.repository-intro p {
+  max-width: 760px;
+  margin-top: 8px;
+  color: #aeb5c1;
+  line-height: 1.5;
+}
+
+.repository-intro .outline-button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.repository-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.repository-summary article,
+.repository-card,
+.repository-state {
+  border: 1px solid #2c323b;
+  border-radius: 7px;
+  background: #15191f;
+}
+
+.repository-summary article {
+  display: grid;
+  gap: 7px;
+  padding: 13px;
+}
+
+.repository-summary span,
+.repository-metadata dt,
+.repository-file-detail dt {
+  color: #858d9a;
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.repository-card,
+.repository-state {
+  padding: 16px;
+}
+
+.repository-state h3,
+.repository-state p {
+  margin: 0;
+}
+
+.repository-state p {
+  margin-top: 7px;
+  color: #aeb5c1;
+}
+
+.repository-state-error {
+  border-color: #753b42;
+  color: #ffd9dc;
+  background: #372126;
+}
+
+.repository-section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.repository-section-heading h3 {
+  margin-top: 4px;
+  font-size: 18px;
+}
+
+.repository-section-heading > span,
+.repository-section-heading > code {
+  color: #96a8d6;
+  font-size: 12px;
+}
+
+.repository-head-subject {
+  margin-top: 14px;
+  font-weight: 650;
+}
+
+.repository-metadata,
+.repository-file-detail {
+  display: grid;
+  gap: 12px;
+  margin: 14px 0 0;
+}
+
+.repository-metadata {
+  grid-template-columns: 2fr 1fr 1fr;
+}
+
+.repository-metadata dd,
+.repository-file-detail dd {
+  margin: 4px 0 0;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+}
+
+.repository-diff-stat,
+.repository-empty {
+  margin: 12px 0 0;
+  color: #9da5b2;
+  font-size: 12px;
+}
+
+.repository-files {
+  display: grid;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.repository-file {
+  border: 1px solid #29303a;
+  border-radius: 5px;
+  background: #11151a;
+}
+
+.repository-file summary {
+  display: grid;
+  grid-template-columns: 105px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 11px;
+  cursor: pointer;
+}
+
+.repository-file summary strong {
+  overflow: hidden;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.repository-file summary small {
+  color: #89919e;
+  font-size: 10px;
+}
+
+.repository-status {
+  width: fit-content;
+  padding: 2px 5px;
+  border: 1px solid #536173;
+  border-radius: 4px;
+  color: #c7d2df;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.repository-status-added,
+.repository-status-untracked {
+  border-color: #4d8d65;
+  color: #b9e8c8;
+}
+
+.repository-status-deleted,
+.repository-status-conflicted {
+  border-color: #9a555d;
+  color: #f0bec4;
+}
+
+.repository-status-modified,
+.repository-status-renamed {
+  border-color: #8b733c;
+  color: #ead69b;
+}
+
+.repository-file-detail {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding: 12px;
+  border-top: 1px solid #29303a;
+}
+
+.repository-commits {
+  display: grid;
+  gap: 0;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.repository-commits li {
+  display: grid;
+  grid-template-columns: 80px minmax(0, 1fr);
+  gap: 12px;
+  padding: 9px 0;
+  border-top: 1px solid #272e37;
+}
+
+.repository-commits li div {
+  display: grid;
+  gap: 3px;
+}
+
+.repository-commits small {
+  color: #858d9a;
+}
+
+@media (max-width: 900px) {
+  .repository-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .repository-intro {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .repository-intro .outline-button {
+    align-self: start;
+  }
+
+  .repository-metadata,
+  .wiki-repository-reality dl {
+    grid-template-columns: 1fr;
+  }
+
+  .repository-file summary {
+    grid-template-columns: 100px minmax(0, 1fr);
+  }
+
+  .repository-file summary small {
+    grid-column: 2;
+  }
 }
 
 .wiki-source-warning p {
