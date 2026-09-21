@@ -19,6 +19,7 @@ const detected: UnityGroundTruthResult = {
       unityVersion: "6000.3.23f1",
       coverageCategories: ["SCENES", "COMPONENTS"],
       coverageErrorCount: 0,
+      coverageIssues: [],
       observationCounts: { scenes: 2, gameObjects: 10, components: 14, serializedFields: 8, prefabReferences: 3, scriptableObjects: 2, tags: 4, layers: 2, inputActions: 6, tests: 12 },
     },
   },
@@ -71,5 +72,35 @@ describe("Unity GroundTruth", () => {
     expect(screen.getByText("ForgeMind remains usable.")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Refresh evidence" }));
     expect(inspectUnityGroundTruth).toHaveBeenCalledTimes(2);
+  });
+
+  it("shows capped counts as partial and renders safe classified coverage issues", async () => {
+    vi.mocked(inspectUnityGroundTruth).mockResolvedValue({
+      ...detected,
+      manifest: {
+        status: "AVAILABLE",
+        summary: {
+          ...detected.manifest.summary!,
+          coverageErrorCount: 3,
+          coverageIssues: [
+            { category: "SERIALIZED_FIELDS", code: "SERIALIZED_FIELDS_TRUNCATED", kind: "BOUNDED_TRUNCATION" },
+            { category: "INPUT_ACTIONS", code: "INPUT_ACTION_API_UNAVAILABLE", kind: "UNSUPPORTED" },
+            { category: "TESTS", code: "TEST_DISCOVERY_FAILED", kind: "ERROR" },
+          ],
+          observationCounts: { ...detected.manifest.summary!.observationCounts, serializedFields: 10000 },
+        },
+      },
+    });
+
+    render(<UnityGroundTruthPage workspace={workspace} />);
+    const counts = await screen.findByLabelText("GroundTruth observation counts");
+    expect(within(counts).getByText("Fields").parentElement).toHaveTextContent("10,000+ / partial coverage");
+    const issues = screen.getByRole("heading", { name: "Coverage issues" }).closest("section")!;
+    expect(within(issues).getByText("BOUNDED / TRUNCATED")).toBeInTheDocument();
+    expect(within(issues).getByText("UNSUPPORTED")).toBeInTheDocument();
+    expect(within(issues).getByText("ERROR")).toBeInTheDocument();
+    expect(within(issues).getByText("SERIALIZED_FIELDS_TRUNCATED")).toBeInTheDocument();
+    expect(within(issues).getByText(/minimum, not an exact total/)).toBeInTheDocument();
+    expect(issues).not.toHaveTextContent("D:\\Games\\Sample");
   });
 });

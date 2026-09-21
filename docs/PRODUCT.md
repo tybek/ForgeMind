@@ -2,7 +2,7 @@
 
 ## Status
 
-This document defines the product direction. **Currently implemented:** the local desktop workspace through 0F, including Project Interview, the Game Compendium, structured Decisions, and the 0F.1 density polish. Approved interview evidence, current project knowledge, and decisions are separate portable documents. The broader product behavior described below remains planned MVP or future direction unless explicitly identified as current workspace behavior.
+This document defines the product direction. **CURRENT:** 0J Alignment; 0J.1 is implemented with manual validation pending. The local workspace already includes Project Interview, Compendium knowledge, Decisions, one bounded specialist profile, Game Wiki aggregation, Repository Reality, completed Unity GroundTruth, and the first manual Alignment review workflow. **PLANNED:** later 0J work and 0K Feature Contract. Everything described as future or post-1.0 direction below is **NOT IMPLEMENTED** unless explicitly identified otherwise.
 
 ## Problem
 
@@ -22,9 +22,27 @@ An AI assistant is more useful and safer when it can reason over structured proj
 
 **Reality** describes what currently exists: source and documentation files, Git history, Unity scenes and objects, serialized configuration, tests, and implemented systems. Reality claims should be tied to verifiable evidence and a point in time.
 
-**Alignment** interprets the relationship between them. It may show that a locked decision is implemented, that an implementation claim is unverified, that deprecated behavior is still present, or that a proposal conflicts with current intent. Alignment statuses may eventually include `ALIGNED`, `UNVERIFIED`, `OUT_OF_SYNC`, and `CONFLICT`; this milestone intentionally does not finalize that vocabulary.
+**Alignment** interprets the relationship between them. It may show that a locked decision is implemented, that an implementation claim is unverified, that deprecated behavior is still present, or that a proposal conflicts with current intent. 0J.1 uses `ALIGNED`, `UNVERIFIED`, `OUT_OF_SYNC`, and `CONFLICT` for explicitly selected evidence while preserving uncertainty and human review.
 
 Alignment is a primary product capability, not merely reporting. For example, approving a decision can legitimately change Intent while Reality still reflects the previous behavior. ForgeMind should expose that transition and use it to ground a later Feature Contract.
+
+## Core product loop and 1.0 story
+
+The intended product loop is:
+
+```text
+Intent
+-> Reality
+-> Alignment
+-> Feature Contract
+-> Coding Agent
+-> Tests / Reality refresh
+-> Alignment review
+```
+
+AI Specialists may help at several points, but they augment this loop rather than become the product's only center. Alignment answers **"What is inconsistent?"** A Feature Contract answers **"What exactly should be changed?"** Cursor, Codex, or another coding agent performs repository work; ForgeMind remains the project-memory, evidence, planning, and review layer.
+
+The full intended ForgeMind 1.0 narrative is: **New or Existing Game Project -> Project Brain / Game Wiki -> Intent + Decisions -> Git + Unity Reality -> Alignment -> Feature Contract -> Coding Agent -> refreshed Reality.** AI Studio supports that flow without replacing the Project Brain.
 
 ## Project memory and decision history
 
@@ -49,6 +67,24 @@ Decisions should preserve what was decided, why, who proposed and approved it, w
 
 ForgeMind should make changes understandable to other contributors: what changed, who authored it, why it changed, what it affects, and whether it was approved. Team knowledge must not depend on access to one person's AI conversation. Git-based collaboration is the initial synchronization model. Detailed permissions and real-time cloud collaboration are future concerns, not MVP requirements.
 
+The same product should scale without changing its authority model:
+
+- **Solo:** external project memory, rationale and history, Game Wiki, Decisions, AI assistance, Reality, Alignment, and Feature Contracts.
+- **Small team:** a shared Project Brain lets designers, programmers, artists, and producers review the same Intent and evidence and reduce design/implementation drift.
+- **Larger team, future-ready:** durable entities may later gain concepts such as author, owner, reviewer, approved-by, reviewed-by, and discipline or responsibility.
+
+Accounts, permissions, role-based access control, cloud synchronization, and real-time editing are **NOT IMPLEMENTED**. Current data models should remain evolvable enough to add those concepts later without making them prerequisites now.
+
+## New and existing project onboarding
+
+ForgeMind should eventually support two equal paths. Both are **FUTURE DIRECTION**, not current behavior.
+
+**New project:** Create Project -> Project Interview -> Game Vision -> Player Experience -> Core Loop -> Systems -> Constraints -> initial Wiki / Compendium -> initial Decisions -> Open Questions -> first Feature Contracts. AI may actively help structure early Intent, but people approve durable truth.
+
+**Existing project:** Open Existing Project -> detect Git -> detect Unity -> GroundTruth scan -> import available documentation -> identify implementation evidence -> interview only missing or uncertain Intent -> build the Wiki -> surface undocumented systems, unknowns, and conflicts.
+
+Existing-project import must keep `VERIFIED FROM REALITY`, `DOCUMENTED`, `AI INFERRED`, and `UNRESOLVED` visibly distinct. AI inference must never be imported as approved truth automatically.
+
 ## Major workspace areas
 
 - **Overview** — project identity, current priorities, health, and important unresolved items
@@ -62,9 +98,26 @@ ForgeMind should make changes understandable to other contributors: what changed
 
 These are product concepts, not commitments to separate technical services or storage systems.
 
+The long-term UI should consolidate those concepts into four clearer groups:
+
+- **Project:** Overview, Game Wiki, Decisions, and Roadmap / Production.
+- **Reality:** Repository, Unity, and Alignment.
+- **AI Studio:** Specialists and Model Evaluation / Model Lab.
+- **Delivery:** Feature Contracts and Implementation Briefs.
+
+This is **FUTURE UI CONSOLIDATION DIRECTION**, not the current navigation. The Game Wiki should become the main human-facing knowledge surface by aggregating authoritative stores such as Compendium, Decisions, Specialist analyses, Feature Contracts, GroundTruth, Alignment results, and technical documentation. A future topic such as Enemy AI may bring those sources together as Overview, Intent, Decisions, Behavior Contracts, Reality, Alignment, AI Analyses, and Open Questions. The Wiki remains a view over those sources and must not create a competing `wiki.json` source of truth.
+
+## Lightweight project state and delivery boundaries
+
+Open Questions should eventually become a small first-class concept with a question, area or topic, author, `OPEN` / `RESOLVED` / `DEFERRED` status, resolution, and optional related Decision. Resolving a question should link the resulting Decision rather than silently rewriting knowledge.
+
+Current Priorities may eventually record a title, area or topic, owner, priority, and target milestone. They express project or design focus, not a sprint-management system. ForgeMind may generate implementation tasks, acceptance criteria, dependencies, and owner suggestions, while persistent execution tracking should integrate with GitHub Issues / Projects, Linear, Jira, or similar tools. ForgeMind must not become a Jira clone with full Kanban, sprint, or time tracking.
+
 ## Integration philosophy
 
 ForgeMind should integrate with Unity, Git, repositories, IDEs, coding agents, and planning tools instead of replacing them. Repositories remain authoritative; Unity supplies evidence about Reality; AI proposes and explains; ForgeMind orchestrates context, interpretation, review, and promotion into durable knowledge. Project data should remain portable and human-readable where practical.
+
+Technical Knowledge in Game Wiki should eventually aggregate system purpose, important classes and components, dependencies, tests, Decisions, GroundTruth, implementation status, and known gaps. ForgeMind should reuse rustdoc, TypeDoc, DocFX, C# XML documentation, and similar technology where useful. It adds project-level understanding and alignment rather than reinventing API-documentation generators.
 
 ## Future specialist and production direction
 
@@ -95,3 +148,5 @@ ForgeMind is not intended to:
 - provide real-time cloud collaboration or detailed permissions in the MVP;
 - prescribe production infrastructure before product workflows are validated.
 - become a complete IDE, autonomous coding agent, asset generator, or publishing system.
+- become a chat system, notification platform, Jira clone, or automatic task executor.
+- require RAG or embeddings without a separately approved, evidence-backed milestone.

@@ -7,6 +7,7 @@ import { loadCompendium } from "./platform/projectKnowledge";
 import { loadSpecialistRuns } from "./platform/specialists";
 import { inspectRepositoryReality } from "./platform/repositoryReality";
 import { inspectUnityGroundTruth } from "./platform/unityGroundTruth";
+import { loadAlignmentResults } from "./platform/alignment";
 
 vi.mock("./platform/projectKnowledge", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./platform/projectKnowledge")>()),
@@ -16,6 +17,7 @@ vi.mock("./platform/decisions", () => ({ loadDecisions: vi.fn() }));
 vi.mock("./platform/specialists", () => ({ loadSpecialistRuns: vi.fn() }));
 vi.mock("./platform/repositoryReality", () => ({ inspectRepositoryReality: vi.fn() }));
 vi.mock("./platform/unityGroundTruth", () => ({ inspectUnityGroundTruth: vi.fn() }));
+vi.mock("./platform/alignment", () => ({ loadAlignmentResults: vi.fn() }));
 
 const workspace = { path: "D:\\Games\\Sample" };
 const knowledge = {
@@ -67,9 +69,19 @@ describe("Game Wiki", () => {
       projectVersion: { status: "AVAILABLE", version: "6000.3.23f1" },
       manifest: { status: "AVAILABLE", summary: {
         formatVersion: 1, generatedAt: "2026-09-20T12:00:00Z", unityVersion: "6000.3.23f1",
-        coverageCategories: ["SCENES"], coverageErrorCount: 0,
+        coverageCategories: ["SCENES"], coverageErrorCount: 0, coverageIssues: [],
         observationCounts: { scenes: 2, gameObjects: 10, components: 14, serializedFields: 8, prefabReferences: 3, scriptableObjects: 2, tags: 4, layers: 2, inputActions: 6, tests: 12 },
       } },
+    });
+    vi.mocked(loadAlignmentResults).mockResolvedValue({
+      formatVersion: 1, projectId: "project", updatedAt: "2026-09-21T11:00:00Z",
+      results: [{
+        id: "alignment-1", createdAt: "2026-09-21T11:00:00Z",
+        intent: { sourceType: "COMPENDIUM", sourceId: knowledge.id, title: knowledge.title, statement: knowledge.statement, status: knowledge.status, area: knowledge.area, provenance: "DOCUMENTED" },
+        evidence: [{ evidenceId: "unity:component:0", source: "UNITY", summary: "HearingPerception exists.", capturedAt: "2026-09-21T10:00:00Z", provenance: "VERIFIED_FROM_UNITY", assessment: "INSUFFICIENT" }],
+        status: "UNVERIFIED", rationale: "Presence does not prove behavior.", confidence: "LOW",
+        uncertainty: "Runtime values are unavailable.", provenance: ["DOCUMENTED", "VERIFIED_FROM_UNITY", "MANUAL_ASSESSMENT"], reviewState: "PENDING_REVIEW",
+      }],
     });
   });
 
@@ -88,6 +100,15 @@ describe("Game Wiki", () => {
     expect(within(approvedRow.querySelector("summary")!).getByText("Approved")).toBeInTheDocument();
     expect(within(proposedRow.querySelector("summary")!).getByText("Decision")).toBeInTheDocument();
     expect(within(proposedRow.querySelector("summary")!).getByText("Proposed")).toBeInTheDocument();
+  });
+
+  it("shows a compact read-only Alignment summary in the relevant Wiki Area", async () => {
+    await renderWiki();
+    const summary = screen.getByLabelText("Alignment summary");
+    expect(within(summary).getByText("Unverified")).toBeInTheDocument();
+    expect(within(summary).getByText("1")).toBeInTheDocument();
+    expect(within(summary).getByText("Pending Review")).toBeInTheDocument();
+    expect(within(summary).getByText(/editing stay in the Alignment workspace/)).toBeInTheDocument();
   });
 
   it("keeps specialist analysis visibly non-authoritative", async () => {

@@ -9,6 +9,7 @@ import {
 import { loadSpecialistRuns, type SpecialistRun } from "./platform/specialists";
 import { inspectRepositoryReality, type RepositorySnapshot } from "./platform/repositoryReality";
 import { inspectUnityGroundTruth, type UnityGroundTruthResult } from "./platform/unityGroundTruth";
+import { loadAlignmentResults, type AlignmentResult } from "./platform/alignment";
 
 interface WikiWorkspace {
   path: string;
@@ -60,6 +61,7 @@ export function WikiPage({
   const [runs, setRuns] = useState<SpecialistRun[]>([]);
   const [repository, setRepository] = useState<RepositorySnapshot | null>(null);
   const [unityReality, setUnityReality] = useState<UnityGroundTruthResult | null>(null);
+  const [alignmentResults, setAlignmentResults] = useState<AlignmentResult[]>([]);
   const [loading, setLoading] = useState(true);
   const [errors, setErrors] = useState<string[]>([]);
 
@@ -71,6 +73,7 @@ export function WikiPage({
     setRuns([]);
     setRepository(null);
     setUnityReality(null);
+    setAlignmentResults([]);
     setErrors([]);
     void Promise.allSettled([
       loadCompendium(workspace.path),
@@ -78,7 +81,8 @@ export function WikiPage({
       loadSpecialistRuns(workspace.path),
       inspectRepositoryReality(workspace.path),
       inspectUnityGroundTruth(workspace.path),
-    ]).then(([compendiumResult, decisionsResult, runsResult, repositoryResult, unityResult]) => {
+      loadAlignmentResults(workspace.path),
+    ]).then(([compendiumResult, decisionsResult, runsResult, repositoryResult, unityResult, alignmentResult]) => {
       if (!active) return;
       const nextErrors: string[] = [];
       if (compendiumResult.status === "fulfilled") setKnowledge(compendiumResult.value?.entries ?? []);
@@ -93,6 +97,8 @@ export function WikiPage({
       }
       if (unityResult.status === "fulfilled") setUnityReality(unityResult.value);
       else nextErrors.push(`Unity GroundTruth: ${messageFromError(unityResult.reason)}`);
+      if (alignmentResult.status === "fulfilled") setAlignmentResults(alignmentResult.value?.results ?? []);
+      else nextErrors.push(`Alignment: ${messageFromError(alignmentResult.reason)}`);
       setErrors(nextErrors);
       setLoading(false);
     });
@@ -118,6 +124,7 @@ export function WikiPage({
     && (typeFilter === "ALL" || typeFilter === "AI_ANALYSIS")
     && matchesQuery(run.result!.summary, run.scenario, run.taskType, ...run.result!.recommendations));
   const activeLabel = KNOWLEDGE_AREAS.find(([area]) => area === activeArea)?.[1] ?? activeArea;
+  const areaAlignments = alignmentResults.filter((result) => result.intent.area === activeArea);
 
   function countForArea(area: KnowledgeArea): number {
     return knowledge.filter((entry) => entry.area === area).length
@@ -191,6 +198,17 @@ export function WikiPage({
                 {unityReality.manifest.summary ? <div><dt>Snapshot</dt><dd>{`${unityReality.manifest.summary.observationCounts.scenes} scenes, ${unityReality.manifest.summary.observationCounts.gameObjects} GameObjects, ${unityReality.manifest.summary.observationCounts.components} components, ${unityReality.manifest.summary.observationCounts.scriptableObjects} ScriptableObjects`}</dd></div> : null}
               </dl>
               <p>{unityReality.status === "DETECTED" ? `VERIFIED FROM UNITY — project evidence only; manifest ${unityReality.manifest.status === "AVAILABLE" ? "available" : unityReality.manifest.status === "INVALID_OR_UNSUPPORTED" ? "invalid / unsupported" : "not generated"}.` : "Unity evidence is unavailable; no implementation fact is inferred."}</p>
+            </aside>
+          ) : null}
+          {areaAlignments.length > 0 ? (
+            <aside className="wiki-repository-reality" aria-label="Alignment summary">
+              <span className="wiki-type wiki-type-alignment">Alignment</span>
+              <dl>
+                <div><dt>Latest status</dt><dd>{displayEnum(areaAlignments.at(-1)!.status)}</dd></div>
+                <div><dt>Reviews</dt><dd>{areaAlignments.length}</dd></div>
+                <div><dt>Review</dt><dd>{displayEnum(areaAlignments.at(-1)!.reviewState)}</dd></div>
+              </dl>
+              <p>{areaAlignments.length} review{areaAlignments.length === 1 ? "" : "s"} for this Area. Alignment remains a derived, evidence-backed interpretation; review and editing stay in the Alignment workspace.</p>
             </aside>
           ) : null}
           {areaKnowledge.length === 0 && areaDecisions.length === 0 && areaRuns.length === 0 ? (

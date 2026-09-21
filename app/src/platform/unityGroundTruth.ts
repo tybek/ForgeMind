@@ -13,6 +13,13 @@ export type GroundTruthCategory =
   | "TAGS_LAYERS"
   | "INPUT_ACTIONS"
   | "TESTS";
+export type GroundTruthCoverageIssueKind = "BOUNDED_TRUNCATION" | "UNSUPPORTED" | "ERROR";
+
+export interface GroundTruthCoverageIssue {
+  category: GroundTruthCategory;
+  code: string;
+  kind: GroundTruthCoverageIssueKind;
+}
 
 export interface UnityProjectEvidence {
   assets: boolean;
@@ -39,6 +46,7 @@ export interface GroundTruthManifestSummary {
   unityVersion: string;
   coverageCategories: GroundTruthCategory[];
   coverageErrorCount: number;
+  coverageIssues: GroundTruthCoverageIssue[];
   observationCounts: GroundTruthObservationCounts;
 }
 

@@ -2,13 +2,13 @@
 
 ## Current state
 
-Milestones through 0G.7 are complete, including user-driven validation of the bounded AI Behavior Designer specialist profile. 0G.8 Game Wiki, 0G.9 Specialist + Wiki UX Production Polish, 0H Git Reality Snapshot, and 0I.1–0I.2 Unity GroundTruth are implemented with automated validation complete and user-driven smokes pending. Broader Unity observation coverage beyond the format-version `1` exporter, additional specialists, autonomous agents, Git write workflows, Alignment logic, and Feature Contracts are **NOT IMPLEMENTED**.
+0J Alignment is **CURRENT**: 0J.1 is implemented with automated validation complete and required user-driven validation pending, 0J.2 evidence-selection hardening is implemented, and 0J.3 Alignment Workbench UX and review-creation hardening is implemented. 0I Unity GroundTruth is complete; earlier Game Wiki, specialist UX, and Git Reality items retain their documented manual-validation backlog. Feature Contracts, automatic monitoring, semantic code analysis, the consolidated information architecture, additional specialists, team services, and the other post-1.0 concepts below are **NOT IMPLEMENTED**.
 
 ## Architectural stance
 
 ForgeMind is intended as a desktop-first orchestration and interpretation layer over a local game repository. The repository remains authoritative for durable project files; Git provides durable history; Unity supplies evidence about Reality. ForgeMind owns neither the underlying game project nor its development tools.
 
-The current desktop shell uses Tauri 2 with React and TypeScript. The UI receives no generic filesystem, shell, or network access: it invokes narrow workspace, Repository Reality, model-registry, aggregate-usage, evaluation, interview, Compendium, Decision, and specialist commands. The native layer owns validation and file access under `.forgemind`, fixed-argument Git inspection for the active workspace, provider credentials, outbound inference HTTP, and ForgeMind's application-global usage history.
+The current desktop shell uses Tauri 2 with React and TypeScript. The UI receives no generic filesystem, shell, or network access: it invokes narrow workspace, Repository Reality, Unity GroundTruth, Alignment, model-registry, aggregate-usage, evaluation, interview, Compendium, Decision, and specialist commands. The native layer owns validation and file access under `.forgemind`, fixed-argument Git inspection for the active workspace, provider credentials, outbound inference HTTP, and ForgeMind's application-global usage history.
 
 The boundaries below describe responsibilities, not services, deployable processes, or a production-scale architecture.
 
@@ -32,7 +32,21 @@ Maintains attributable decisions, rationales, approvals, relationships, and supe
 
 ### Alignment Engine
 
-Compares selected Intent claims with supported Reality evidence and produces explainable, reviewable AlignmentFindings. It distinguishes verified observations, missing evidence, and AI inference. Findings do not modify either source automatically, and 0A does not prescribe a permanent rules engine or alignment enum.
+**IMPLEMENTED 0J.1, MANUAL VALIDATION PENDING.** The Alignment workspace loads current non-deprecated Compendium entries and `APPROVED` Decisions through their existing native domains; it never copies or replaces those truth sources. It projects current Git HEAD, working-tree, changed-file, and recent-commit metadata plus validated Unity GroundTruth snapshot and component-type presence as bounded selectable evidence. Component presence proves presence only, never runtime behavior.
+
+The user explicitly assesses selected evidence as supporting, contradicting, or insufficient. Native deterministic rules yield `ALIGNED` only when all selected evidence explicitly supports Intent, `UNVERIFIED` when any evidence is insufficient, `OUT_OF_SYNC` when any evidence explicitly contradicts, and `CONFLICT` when a distinct approved Decision is selected as conflicting Intent. `UNVERIFIED` and `CONFLICT` are capped at low confidence. Every result starts `PENDING_REVIEW`, carries rationale and mandatory uncertainty, and preserves `DOCUMENTED`, `APPROVED_INTENT`, `VERIFIED_FROM_GIT`, `VERIFIED_FROM_UNITY`, and `MANUAL_ASSESSMENT` provenance. AI is not invoked; `AI_INFERENCE` remains reserved and may never masquerade as verified evidence.
+
+**IMPLEMENTED 0J.2.** Evidence discovery remains a UI projection over the existing immutable catalog: safe summaries are grouped by stable Git/Unity evidence identifiers, searched locally, and filtered by source. The Unity projection exposes existing manifest scene and ScriptableObject observations alongside component-type presence; it does not create observations or modify GroundTruth. Suggested evidence is a deterministic normalized-word intersection between selected Intent text and evidence summaries, is visibly non-authoritative, and never changes selection without a user action. Alignment persistence and deterministic assessment remain unchanged.
+
+**IMPLEMENTED 0J.3.** The desktop UI presents that projection as a responsive three-pane workbench. Evidence identity, type, provenance, and presence-only limits are concise presentation derived from the existing safe candidate contract; raw source summaries remain unchanged for persistence and review history. Browse groups render their rows only after explicit expansion, while search renders only matching compact rows and the selected set remains independent from filters. The right pane bounds selected-evidence scrolling so rationale and creation controls remain locally available. Creation uses a frontend-only in-flight guard plus scoped validation, progress, error, and success state; it still invokes the same single native `create_alignment_review` command and does not introduce optimistic persistence, retry, background work, or AI.
+
+The native layer writes a human-readable format-version `1` `.forgemind/alignment.json` document containing portable source references and captured summaries, never absolute paths or credentials. Approval or rejection updates only the review state; rejected results remain historical and original Intent and Reality files are unchanged. Game Wiki reads a compact Area-scoped summary from this domain but exposes no Alignment editing. There is no whole-project scan, background monitoring, code semantic analysis, RAG, task creation, or Feature Contract generation.
+
+### Feature Contracts
+
+**PLANNED 0K.** Turns approved Intent and reviewed Alignment issues into implementation-ready, human-approved contracts. A contract should contain the goal, related Intent and Decisions, current Reality evidence, affected systems, required behavior, exclusions, risks, acceptance criteria, deterministic tests, and likely files or components only where evidence supports them.
+
+Contracts are the preferred handoff to Cursor, Codex, or another coding agent. They do not authorize autonomous execution, and their implementation claims remain subject to refreshed Reality and Alignment review.
 
 ### AI Provider Boundary
 
@@ -68,7 +82,9 @@ The Game Compendium is current project knowledge, not interview history or Decis
 
 Interview import is an explicit command. It reuses the validated interview loader, preserves the supported candidate status and provenance, maps the bounded interview areas into Compendium sections, retains `.forgemind/interview.json`, and skips exact title-plus-statement duplicates. Startup never imports or mutates knowledge.
 
-Game Wiki is a React aggregation over the existing Compendium, Decisions, and Specialist Analysis History boundaries. It groups references by the established Compendium Area vocabulary and does not add a file, schema, or competing source of truth. Compendium knowledge, approved and non-approved Decision states, and AI analysis retain distinct type plus state/subtype tags and compact authority/provenance/source metadata. Keyword search and the All/Knowledge/Decisions/AI Analysis filter operate only over already loaded aggregate data; there is no semantic retrieval or RAG boundary. Knowledge edits route to the existing Compendium editor rather than adding Wiki persistence. The optional 0H Technical/Production card reads the transient Repository Reality boundary separately and never inserts changed files into Wiki rows or project knowledge.
+Game Wiki is a React aggregation over the existing Compendium, Decisions, Specialist Analysis History, and compact Alignment-summary boundaries. It groups references by the established Compendium Area vocabulary and does not add a file, schema, or competing source of truth. Compendium knowledge, approved and non-approved Decision states, AI analysis, and derived Alignment retain distinct authority and review labels. Keyword search and the All/Knowledge/Decisions/AI Analysis filter operate only over the established row sources; there is no semantic retrieval or RAG boundary. Knowledge edits route to the existing Compendium editor, while Alignment review stays in the Alignment workspace. The optional 0H Technical/Production card reads the transient Repository Reality boundary separately and never inserts changed files into Wiki rows or project knowledge.
+
+Future Game Wiki aggregation may also project Feature Contracts, richer GroundTruth, Open Questions, and generated or imported technical documentation through their own boundaries. The source domains remain authoritative; the Wiki does not gain a `wiki.json` persistence layer. Imported existing-project material must preserve whether it is verified Reality evidence, documented Intent, AI inference, or unresolved.
 
 A stored successful specialist finding can enter project knowledge only through the explicit native promotion command. The user edits Area, title, statement, and status and confirms before persistence; Rust verifies the finding against the unchanged stored run, applies the existing exact title-plus-statement duplicate rule, and writes one Compendium entry with `AI_INFERRED` provenance and `specialist_analysis` source. The command never creates a Decision or mutates Specialist Analysis History.
 
@@ -102,7 +118,7 @@ This boundary exposes status and metadata only. It does not persist the snapshot
 
 0I.1 implements a read-only `inspect_unity_groundtruth` command. Rust first validates the active ForgeMind workspace, detects the canonical `Assets/`, `Packages/`, and `ProjectSettings/` directories, parses `ProjectSettings/ProjectVersion.txt`, and optionally loads `.forgemind/unity-groundtruth.json`. React cannot choose another file or access the filesystem directly.
 
-The format-version `1` manifest is tied to portable Project identity and records export time, Unity version, source tool metadata, explicit category coverage/errors, and bounded observations for scenes, GameObjects, components, serialized-field metadata, prefab references, ScriptableObjects, tags/layers, Input Actions, and tests. All paths and identifiers are project-relative; raw serialized values, source contents, credentials, machine paths, and arbitrary exporter errors are excluded. The frontend receives only a normalized summary, not raw observations.
+The format-version `1` manifest is tied to portable Project identity and records export time, Unity version, source tool metadata, explicit category coverage/errors, and bounded observations for scenes, GameObjects, components, serialized-field metadata, prefab references, ScriptableObjects, tags/layers, Input Actions, and tests. All paths and identifiers are project-relative; raw serialized values, source contents, credentials, machine paths, and arbitrary exporter errors are excluded. The Unity page receives only a normalized aggregate summary. The Alignment boundary additionally projects bounded unique component-type presence summaries with explicit presence-only wording; it never exposes raw observations or serialized values.
 
 0I.2 adds a separate editor-only UPM package under `unity/com.forgemind.unity-groundtruth`. Its explicit Unity menu action reads `.forgemind/project.json`, inspects enabled Build Settings scenes additively plus safe Editor asset/settings/assembly metadata, and writes only `.forgemind/unity-groundtruth.json`. ForgeMind never starts or automates Unity. The exporter does not save scenes or mutate prefabs, ScriptableObjects, settings, assets, source, or packages.
 
@@ -118,6 +134,8 @@ The exporter uses stable ordering and portable hashed identities, omits raw seri
 6. AI produces drafts, explanations, and proposals.
 7. Humans approve decisions, contracts, and durable file changes.
 
+Future author, owner, reviewer, approved-by, reviewed-by, and discipline/responsibility metadata may extend durable entities, but it does not imply accounts or authorization. Authentication, RBAC, cloud synchronization, and real-time collaboration remain separate deferred services.
+
 Derived indexes or caches may later improve retrieval, but they must be rebuildable and never become the only copy of project knowledge.
 
 Future content-production integrations follow the same authority flow: ForgeMind may prepare an Asset Brief and coordinate a specialized external generator, but generated output remains a candidate until validation and human approval. See [AI Specialists and Content Production Direction](AI_SPECIALISTS_AND_PRODUCTION.md).
@@ -130,15 +148,18 @@ Core entities contain no Nebius-, Nemotron-, Unity-, Git-host-, database-, or UI
 
 Repository implementation work follows the operational boundaries in [`../AGENTS.md`](../AGENTS.md). [`CODING_CONTEXT_MAP.md`](CODING_CONTEXT_MAP.md) maps each task type to the smallest relevant source set so this architecture document remains the source of architectural truth rather than being duplicated in agent prompts. Product-to-implementation handoffs should use the compact templates under [`templates/`](templates/).
 
+The intended delivery boundary is Project Brain -> specialist or planning analysis -> Feature Contract / implementation brief -> coding agent -> compile/test/fix -> refreshed Reality -> ForgeMind Alignment review. ForgeMind and Token Factory increasingly support planning, design reasoning, documentation, impact analysis, test design, decomposition, and review. Coding agents remain responsible for repository edits and implementation loops. ForgeMind is not an autonomous coding-agent runtime.
+
 ## Deliberately deferred
 
 - supported operating systems and distribution strategy beyond the currently validated Windows development build;
-- file formats and validation for entities beyond Project identity, interview evidence, Compendium knowledge, and Decisions;
+- file formats and validation for entities beyond Project identity, interview evidence, Compendium knowledge, Decisions, specialist history, Unity GroundTruth, and Alignment results;
 - schema migration beyond rejecting unsupported project metadata versions;
 - provider/model discovery, automatic routing, benchmark history, comparison runs, provider billing, human scoring, and retrieval beyond the bounded evaluation harness;
-- Alignment implementation approach and final status vocabulary;
+- broader automatic Alignment discovery, semantic code analysis, background monitoring, and final post-MVP status evolution;
 - Unity compatibility range, scan transport, and full observation coverage;
 - Git library, command-line strategy, host integrations, and branching policy;
 - authentication, permissions, cloud collaboration, caching, and distribution.
+- automatic task execution, a full work-tracking suite, chat/notification infrastructure, and RAG or embeddings without a separately approved need.
 
 These choices belong to the smallest milestone that needs evidence from a working workflow.

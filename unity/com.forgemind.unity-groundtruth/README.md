@@ -24,7 +24,7 @@ The only durable project output is `.forgemind/unity-groundtruth.json`. The expo
 - Coverage errors are bounded uppercase codes. Exceptions, stack traces, source contents, absolute paths, credentials, and machine identity are not exported.
 - Collections are ordered deterministically and capped at the format-v1 maximum of 10,000 observations per category. The required top-level export time is the only intentionally changing value for otherwise unchanged project state.
 
-If a source cannot be inspected safely, the exporter records a coverage error or fails before replacing the manifest. It does not infer design intent or feature completion.
+If a source cannot be inspected safely, the exporter records a safe coverage issue code or fails before replacing the manifest. Each observation category is capped at 10,000 records; reaching that bound records a `_TRUNCATED` issue so consumers can present the retained count as partial coverage. It does not infer design intent or feature completion.
 
 ## EditMode tests
 

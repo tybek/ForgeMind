@@ -2,7 +2,7 @@
 
 ## Scope
 
-This model establishes shared language and relationships. It is not a database schema or API contract. Milestone 0C serializes minimal Project identity in `.forgemind/project.json`; 0E adds approved onboarding evidence in `.forgemind/interview.json`; 0F adds separate versioned Compendium and Decision documents; and 0G.3 adds non-authoritative specialist work history in `.forgemind/specialist-runs.json`.
+This model establishes shared language and relationships. It is not a database schema or API contract. Milestone 0C serializes minimal Project identity in `.forgemind/project.json`; 0E adds approved onboarding evidence in `.forgemind/interview.json`; 0F adds separate versioned Compendium and Decision documents; 0G.3 adds non-authoritative specialist work history in `.forgemind/specialist-runs.json`; and 0J.1 adds derived, reviewable Alignment history in `.forgemind/alignment.json`.
 
 ## Core entities
 
@@ -42,9 +42,9 @@ A reviewable plan for a feature, assembled from design, technical, roadmap, and 
 
 An immutable, time-stamped observation of a game project's implementation state, initially from Unity. It records source identity and scan metadata plus structured facts the bridge could observe. It is evidence, not intent, and becomes stale as the source project changes.
 
-### AlignmentFinding
+### AlignmentCheck / AlignmentResult
 
-A reviewable interpretation of the relationship between a specific Intent claim and Reality evidence. It records the subject, current conceptual state, supporting and contradicting sources, snapshot identity, explanation, confidence or uncertainty, affected systems, timestamps, and review outcome. A finding may describe alignment, insufficient verification, an out-of-sync implementation, or a conflict between proposed and current Intent. It is derived and re-evaluable; it must not silently change either source.
+An `AlignmentCheck` is the explicit manual input: one current Compendium entry or approved Decision, optional distinct conflicting approved Decision, selected Git/Unity evidence references with per-item assessment, rationale, confidence, and uncertainty. An `AlignmentResult` is the durable derived record with stable `id`, `createdAt`, captured source references and summaries, `ALIGNED` / `UNVERIFIED` / `OUT_OF_SYNC` / `CONFLICT` status, provenance, `PENDING_REVIEW` / `APPROVED` / `REJECTED` review state, and optional review time. It is evidence-backed and historical; it never silently changes Intent or Reality.
 
 ### User / Author metadata
 
@@ -118,11 +118,11 @@ The exact vocabulary may evolve after GroundTruth is tested. Combinations are me
 
 ### Alignment status
 
-Conceptual states may include `ALIGNED`, `UNVERIFIED`, `OUT_OF_SYNC`, and `CONFLICT`. They should express whether selected Intent and available Reality evidence agree, not duplicate design or implementation status. This vocabulary is intentionally provisional in 0A.
+0J.1 uses `ALIGNED`, `UNVERIFIED`, `OUT_OF_SYNC`, and `CONFLICT`. They express whether explicitly selected Intent and Reality evidence agree, not design or implementation status. Insufficient evidence produces `UNVERIFIED`; uncertainty wins over unsupported certainty.
 
 ### Approval state
 
-Approval answers whether a person has accepted an artifact; it does not replace its design or implementation status. A minimal future vocabulary may include `DRAFT`, `PROPOSED`, `APPROVED`, and `REJECTED`, but 0A does not fix a persistence representation or authorization policy.
+Approval answers whether a person has accepted an artifact; it does not replace its design or implementation status. 0J.1 Alignment results use `PENDING_REVIEW`, `APPROVED`, and `REJECTED`. Rejection preserves the historical result.
 
 ## Invariants
 
@@ -161,6 +161,15 @@ Approval answers whether a person has accepted an artifact; it does not replace 
 - The frontend receives detection state and a safe aggregate summary, not raw observations or arbitrary filesystem access.
 - `VERIFIED FROM UNITY` identifies validated implementation evidence. `DOCUMENTED` remains Intent, and `AI INFERENCE` remains interpretation; 0I.1 does not compare or merge them.
 - Missing, corrupt, not-generated, invalid, unsupported, or uncovered evidence is unverified. It is not silently converted into verified absence.
+
+## 0J.1 Alignment invariants
+
+- `.forgemind/alignment.json` is a human-readable format-version `1` derived-history document tied to portable Project identity; it is not a competing Intent or Reality store.
+- Compendium references resolve only to current non-deprecated entries. Decision references resolve only to `APPROVED` Decisions; proposed, superseded, and deprecated Decisions are not authoritative Alignment Intent.
+- Evidence references must resolve through current Git Reality or validated Unity GroundTruth when the result is created. Stored summaries and timestamps make the reviewed comparison historical and portable.
+- Every new result begins `PENDING_REVIEW`. Approval and rejection update only Alignment history and never mutate Compendium, Decisions, Git, or Unity GroundTruth.
+- `DOCUMENTED` / `APPROVED_INTENT`, `VERIFIED_FROM_GIT`, `VERIFIED_FROM_UNITY`, and `MANUAL_ASSESSMENT` remain distinct. No 0J.1 result uses live AI; any future `AI_INFERENCE` must remain visibly non-evidence provenance.
+- Absolute paths, credentials, raw provider content, hidden reasoning, raw Unity observations, and source-file contents are excluded.
 
 ## Deliberately unresolved
 

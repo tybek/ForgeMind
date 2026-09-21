@@ -1,4 +1,5 @@
 pub mod ai;
+pub mod alignment;
 pub mod compendium;
 pub mod decisions;
 pub mod interview;
@@ -16,6 +17,10 @@ use std::sync::OnceLock;
 use workspace::{WorkspaceError, WorkspaceInspection};
 
 use ai::{AIError, AIRequest, AIResponse};
+use alignment::{
+    AlignmentCheck, AlignmentDocument, AlignmentError, AlignmentSourceCatalog,
+    ReviewAlignmentRequest,
+};
 use compendium::{
     CompendiumDocument, CompendiumError, CreateKnowledgeEntryRequest,
     ImportInterviewRequest, InterviewImportResult, KnowledgeEntryActionRequest,
@@ -313,6 +318,28 @@ fn deprecate_decision(request: DecisionActionRequest) -> Result<DecisionsDocumen
     decisions::deprecate(request)
 }
 
+#[tauri::command]
+fn load_alignment_sources(path: String) -> Result<AlignmentSourceCatalog, AlignmentError> {
+    alignment::sources(Path::new(&path))
+}
+
+#[tauri::command]
+fn load_alignment_results(path: String) -> Result<Option<AlignmentDocument>, AlignmentError> {
+    alignment::load(Path::new(&path))
+}
+
+#[tauri::command]
+fn create_alignment_review(request: AlignmentCheck) -> Result<AlignmentDocument, AlignmentError> {
+    alignment::create(request)
+}
+
+#[tauri::command]
+fn review_alignment_result(
+    request: ReviewAlignmentRequest,
+) -> Result<AlignmentDocument, AlignmentError> {
+    alignment::review(request)
+}
+
 fn session_id() -> &'static str {
     SESSION_ID.get_or_init(|| uuid::Uuid::new_v4().to_string())
 }
@@ -379,6 +406,10 @@ pub fn run() {
             update_decision,
             approve_decision,
             deprecate_decision,
+            load_alignment_sources,
+            load_alignment_results,
+            create_alignment_review,
+            review_alignment_result,
             development_workspace_path
         ])
         .run(tauri::generate_context!())

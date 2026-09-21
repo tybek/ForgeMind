@@ -1,6 +1,6 @@
 use chrono::DateTime;
 use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
+use std::collections::{BTreeMap, HashSet};
 use std::fs;
 use std::path::{Component, Path};
 
@@ -73,7 +73,24 @@ pub struct GroundTruthManifestSummary {
     pub unity_version: String,
     pub coverage_categories: Vec<GroundTruthCategory>,
     pub coverage_error_count: usize,
+    pub coverage_issues: Vec<GroundTruthCoverageIssue>,
     pub observation_counts: GroundTruthObservationCounts,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum GroundTruthCoverageIssueKind {
+    BoundedTruncation,
+    Unsupported,
+    Error,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GroundTruthCoverageIssue {
+    pub category: GroundTruthCategory,
+    pub code: String,
+    pub kind: GroundTruthCoverageIssueKind,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
@@ -95,6 +112,13 @@ pub struct UnityGroundTruthResult {
     pub manifest: GroundTruthManifestEvidence,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub message: Option<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct GroundTruthAlignmentEvidence {
+    pub id: String,
+    pub summary: String,
+    pub generated_at: String,
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, PartialEq, Eq, Hash, Serialize)]
@@ -280,6 +304,67 @@ pub fn inspection_failed() -> UnityGroundTruthResult {
     }
 }
 
+pub fn alignment_evidence(
+    workspace_root: &Path,
+    project_id: &str,
+) -> Vec<GroundTruthAlignmentEvidence> {
+    let path = workspace_root.join(".forgemind").join(GROUNDTRUTH_FILE);
+    let Ok(manifest) = load_manifest(&path, project_id) else {
+        return Vec::new();
+    };
+    let mut evidence = vec![GroundTruthAlignmentEvidence {
+        id: format!("unity:manifest:{}", manifest.generated_at),
+        summary: format!(
+            "Unity GroundTruth snapshot {} from Unity {} contains {} scenes, {} GameObjects, and {} components.",
+            manifest.generated_at,
+            manifest.unity_version,
+            manifest.observations.scenes.len(),
+            manifest.observations.game_objects.len(),
+            manifest.observations.components.len(),
+        ),
+        generated_at: manifest.generated_at.clone(),
+    }];
+
+    for scene in &manifest.observations.scenes {
+        evidence.push(GroundTruthAlignmentEvidence {
+            id: format!("unity:scene:{}", scene.id),
+            summary: format!(
+                "Unity GroundTruth observed scene {}.",
+                scene.path,
+            ),
+            generated_at: manifest.generated_at.clone(),
+        });
+    }
+
+    let mut component_types = BTreeMap::<String, usize>::new();
+    for component in &manifest.observations.components {
+        *component_types.entry(component.type_name.clone()).or_default() += 1;
+    }
+    for (index, (type_name, count)) in component_types.into_iter().enumerate() {
+        evidence.push(GroundTruthAlignmentEvidence {
+            id: format!("unity:component:{}:{index}", manifest.generated_at),
+            summary: format!(
+                "Unity GroundTruth observed component type {type_name} on {count} component{}; this proves presence only, not runtime behavior.",
+                if count == 1 { "" } else { "s" },
+            ),
+            generated_at: manifest.generated_at.clone(),
+        });
+    }
+
+    for scriptable_object in &manifest.observations.scriptable_objects {
+        evidence.push(GroundTruthAlignmentEvidence {
+            id: format!("unity:scriptable-object:{}", scriptable_object.id),
+            summary: format!(
+                "Unity GroundTruth observed ScriptableObject {} of type {}.",
+                scriptable_object.path,
+                scriptable_object.type_name,
+            ),
+            generated_at: manifest.generated_at.clone(),
+        });
+    }
+    evidence
+}
+
 fn read_project_version(workspace_root: &Path) -> UnityVersionEvidence {
     let path = workspace_root.join("ProjectSettings").join("ProjectVersion.txt");
     if !path.is_file() {
@@ -423,6 +508,16 @@ fn manifest_summary(manifest: &GroundTruthManifest) -> GroundTruthManifestSummar
         unity_version: manifest.unity_version.clone(),
         coverage_categories: manifest.coverage.categories.clone(),
         coverage_error_count: manifest.coverage.errors.len(),
+        coverage_issues: manifest
+            .coverage
+            .errors
+            .iter()
+            .map(|issue| GroundTruthCoverageIssue {
+                category: issue.category,
+                code: issue.code.clone(),
+                kind: coverage_issue_kind(&issue.code),
+            })
+            .collect(),
         observation_counts: GroundTruthObservationCounts {
             scenes: manifest.observations.scenes.len(),
             game_objects: manifest.observations.game_objects.len(),
@@ -435,6 +530,16 @@ fn manifest_summary(manifest: &GroundTruthManifest) -> GroundTruthManifestSummar
             input_actions: manifest.observations.input_actions.len(),
             tests: manifest.observations.tests.len(),
         },
+    }
+}
+
+fn coverage_issue_kind(code: &str) -> GroundTruthCoverageIssueKind {
+    if code.ends_with("_TRUNCATED") {
+        GroundTruthCoverageIssueKind::BoundedTruncation
+    } else if code.ends_with("_API_UNAVAILABLE") {
+        GroundTruthCoverageIssueKind::Unsupported
+    } else {
+        GroundTruthCoverageIssueKind::Error
     }
 }
 
@@ -524,6 +629,48 @@ mod tests {
         let serialized = serde_json::to_string(&result).unwrap();
         assert!(!serialized.contains("Assets/Scenes/Main.unity"));
         assert!(!serialized.contains("Movement.cs"));
+    }
+
+    #[test]
+    fn reports_capped_coverage_as_a_safe_partial_issue() {
+        let mut manifest: GroundTruthManifest = serde_json::from_value(valid_manifest()).unwrap();
+        let field = manifest.observations.serialized_fields[0].clone();
+        manifest.observations.serialized_fields = vec![field; MAX_OBSERVATIONS_PER_CATEGORY];
+        manifest.coverage.errors = vec![
+            GroundTruthCoverageError {
+                category: GroundTruthCategory::SerializedFields,
+                code: "SERIALIZED_FIELDS_TRUNCATED".to_owned(),
+            },
+            GroundTruthCoverageError {
+                category: GroundTruthCategory::InputActions,
+                code: "INPUT_ACTION_API_UNAVAILABLE".to_owned(),
+            },
+            GroundTruthCoverageError {
+                category: GroundTruthCategory::Tests,
+                code: "TEST_DISCOVERY_FAILED".to_owned(),
+            },
+        ];
+
+        let summary = manifest_summary(&manifest);
+        assert_eq!(
+            summary.observation_counts.serialized_fields,
+            MAX_OBSERVATIONS_PER_CATEGORY
+        );
+        assert_eq!(
+            summary.coverage_issues[0].kind,
+            GroundTruthCoverageIssueKind::BoundedTruncation
+        );
+        assert_eq!(
+            summary.coverage_issues[1].kind,
+            GroundTruthCoverageIssueKind::Unsupported
+        );
+        assert_eq!(
+            summary.coverage_issues[2].kind,
+            GroundTruthCoverageIssueKind::Error
+        );
+        let serialized = serde_json::to_string(&summary).unwrap();
+        assert!(serialized.contains("SERIALIZED_FIELDS_TRUNCATED"));
+        assert!(!serialized.contains("Assets/"));
     }
 
     #[test]

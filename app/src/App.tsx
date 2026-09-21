@@ -7,6 +7,7 @@ import { SpecialistPage } from "./SpecialistPage";
 import { WikiPage } from "./WikiPage";
 import { RepositoryPage } from "./RepositoryPage";
 import { UnityGroundTruthPage } from "./UnityGroundTruthPage";
+import { AlignmentPage } from "./AlignmentPage";
 import type { KnowledgeEntry } from "./platform/projectKnowledge";
 import {
   getDevelopmentWorkspacePath,
@@ -222,7 +223,7 @@ function Overview({ workspace }: { workspace: Workspace }) {
   );
 }
 
-function Placeholder({ area }: { area: Exclude<WorkspaceArea, "Overview" | "Repository / Git Reality" | "Game Wiki" | "Unity"> }) {
+function Placeholder({ area }: { area: Exclude<WorkspaceArea, "Overview" | "Repository / Git Reality" | "Game Wiki" | "Unity" | "Alignment"> }) {
   return (
     <section className="placeholder-card">
       <span className="section-label">Planned workspace area</span>
@@ -339,6 +340,8 @@ export function WorkspaceShell({
                 ? "0H Git Reality"
               : activeArea === "Unity"
                 ? "0I.2 Unity GroundTruth"
+              : activeArea === "Alignment"
+                ? "0J.1 Alignment Foundation"
               : activeArea === "AI Evaluation"
                 ? "0D.1 Model Lab"
                 : activeArea === "Game Design" || activeArea === "Decisions"
@@ -366,6 +369,8 @@ export function WorkspaceShell({
             <CompendiumPage workspace={workspace} onPromote={promoteToDecision} editEntryId={knowledgeEditTarget} />
           ) : activeArea === "Decisions" ? (
             <DecisionsPage workspace={workspace} promotedKnowledge={promotedKnowledge} />
+          ) : activeArea === "Alignment" ? (
+            <AlignmentPage workspace={workspace} />
           ) : (
             <Placeholder area={activeArea} />
           )}

@@ -176,6 +176,40 @@ namespace ForgeMind.UnityGroundTruth.Tests
             Assert.That(JsonUtility.FromJson<GroundTruthManifest>(json), Is.Not.Null);
         }
 
+        [Test]
+        public void BoundedCollectionRecordsOneExplicitTruncationIssue()
+        {
+            GroundTruthCollection collection = new GroundTruthCollection();
+            for (int index = 0; index <= GroundTruthCollection.MaximumObservationsPerCategory; index++)
+            {
+                collection.AddBounded(
+                    collection.SerializedFields,
+                    new SerializedFieldObservation
+                    {
+                        componentId = "component:1",
+                        name = "field" + index,
+                        typeName = "int"
+                    },
+                    GroundTruthCategories.SerializedFields);
+            }
+
+            collection.AddBounded(
+                collection.SerializedFields,
+                new SerializedFieldObservation
+                {
+                    componentId = "component:1",
+                    name = "another-field",
+                    typeName = "int"
+                },
+                GroundTruthCategories.SerializedFields);
+
+            Assert.That(collection.SerializedFields.Count,
+                Is.EqualTo(GroundTruthCollection.MaximumObservationsPerCategory));
+            Assert.That(collection.Errors.Count, Is.EqualTo(1));
+            Assert.That(collection.Errors[0].category, Is.EqualTo(GroundTruthCategories.SerializedFields));
+            Assert.That(collection.Errors[0].code, Is.EqualTo("SERIALIZED_FIELDS_TRUNCATED"));
+        }
+
         private static GroundTruthManifest Manifest(string projectId)
         {
             return new GroundTruthManifest

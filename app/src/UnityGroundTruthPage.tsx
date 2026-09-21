@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import {
   inspectUnityGroundTruth,
+  type GroundTruthCategory,
+  type GroundTruthCoverageIssue,
   type GroundTruthManifestSummary,
   type UnityGroundTruthResult,
 } from "./platform/unityGroundTruth";
@@ -28,6 +30,42 @@ function manifestStatus(result: UnityGroundTruthResult): string {
   }
 }
 
+const categoryLabels: Record<GroundTruthCategory, string> = {
+  SCENES: "Scenes",
+  GAME_OBJECTS: "GameObjects",
+  COMPONENTS: "Components",
+  SERIALIZED_FIELDS: "Fields",
+  PREFAB_REFERENCES: "Prefabs",
+  SCRIPTABLE_OBJECTS: "ScriptableObjects",
+  TAGS_LAYERS: "Tags / layers",
+  INPUT_ACTIONS: "Input Actions",
+  TESTS: "Tests",
+};
+
+function isTruncated(category: GroundTruthCategory, issues: GroundTruthCoverageIssue[]): boolean {
+  return issues.some((issue) => issue.category === category && issue.kind === "BOUNDED_TRUNCATION");
+}
+
+function observationCount(count: number, category: GroundTruthCategory, issues: GroundTruthCoverageIssue[]): string {
+  return isTruncated(category, issues) ? `${count.toLocaleString("en-US")}+ / partial coverage` : count.toLocaleString("en-US");
+}
+
+function issueLabel(issue: GroundTruthCoverageIssue): string {
+  switch (issue.kind) {
+    case "BOUNDED_TRUNCATION": return "BOUNDED / TRUNCATED";
+    case "UNSUPPORTED": return "UNSUPPORTED";
+    default: return "ERROR";
+  }
+}
+
+function issueDescription(issue: GroundTruthCoverageIssue): string {
+  switch (issue.kind) {
+    case "BOUNDED_TRUNCATION": return "The exporter reached its safe collection limit. The displayed count is a minimum, not an exact total.";
+    case "UNSUPPORTED": return "This evidence source is not supported by the current Unity export environment.";
+    default: return "The exporter could not fully inspect this category.";
+  }
+}
+
 function ManifestSummary({ summary }: { summary: GroundTruthManifestSummary }) {
   const counts = summary.observationCounts;
   return (
@@ -40,19 +78,33 @@ function ManifestSummary({ summary }: { summary: GroundTruthManifestSummary }) {
         <div><dt>Generated</dt><dd><time dateTime={summary.generatedAt}>{summary.generatedAt}</time></dd></div>
         <div><dt>Exported Unity version</dt><dd>{summary.unityVersion}</dd></div>
         <div><dt>Coverage</dt><dd>{summary.coverageCategories.length} categories</dd></div>
-        <div><dt>Export errors</dt><dd>{summary.coverageErrorCount}</dd></div>
+        <div><dt>Coverage issues</dt><dd>{summary.coverageIssues.length}</dd></div>
       </dl>
       <div className="unity-counts" aria-label="GroundTruth observation counts">
-        <span>Scenes <strong>{counts.scenes}</strong></span>
-        <span>GameObjects <strong>{counts.gameObjects}</strong></span>
-        <span>Components <strong>{counts.components}</strong></span>
-        <span>Fields <strong>{counts.serializedFields}</strong></span>
-        <span>Prefabs <strong>{counts.prefabReferences}</strong></span>
-        <span>ScriptableObjects <strong>{counts.scriptableObjects}</strong></span>
-        <span>Tags / layers <strong>{counts.tags + counts.layers}</strong></span>
-        <span>Input Actions <strong>{counts.inputActions}</strong></span>
-        <span>Tests <strong>{counts.tests}</strong></span>
+        <span>Scenes <strong>{observationCount(counts.scenes, "SCENES", summary.coverageIssues)}</strong></span>
+        <span>GameObjects <strong>{observationCount(counts.gameObjects, "GAME_OBJECTS", summary.coverageIssues)}</strong></span>
+        <span>Components <strong>{observationCount(counts.components, "COMPONENTS", summary.coverageIssues)}</strong></span>
+        <span>Fields <strong>{observationCount(counts.serializedFields, "SERIALIZED_FIELDS", summary.coverageIssues)}</strong></span>
+        <span>Prefabs <strong>{observationCount(counts.prefabReferences, "PREFAB_REFERENCES", summary.coverageIssues)}</strong></span>
+        <span>ScriptableObjects <strong>{observationCount(counts.scriptableObjects, "SCRIPTABLE_OBJECTS", summary.coverageIssues)}</strong></span>
+        <span>Tags / layers <strong>{observationCount(counts.tags + counts.layers, "TAGS_LAYERS", summary.coverageIssues)}</strong></span>
+        <span>Input Actions <strong>{observationCount(counts.inputActions, "INPUT_ACTIONS", summary.coverageIssues)}</strong></span>
+        <span>Tests <strong>{observationCount(counts.tests, "TESTS", summary.coverageIssues)}</strong></span>
       </div>
+      {summary.coverageIssues.length > 0 ? (
+        <section className="unity-coverage-issues" aria-labelledby="unity-coverage-issues-title">
+          <h4 id="unity-coverage-issues-title">Coverage issues</h4>
+          <ul>
+            {summary.coverageIssues.map((issue) => (
+              <li key={`${issue.category}:${issue.code}`}>
+                <div><strong>{issueLabel(issue)}</strong><span>{categoryLabels[issue.category]}</span></div>
+                <p>{issueDescription(issue)}</p>
+                <code>{issue.code}</code>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
     </section>
   );
 }

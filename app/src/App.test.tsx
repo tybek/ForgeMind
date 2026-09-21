@@ -121,6 +121,14 @@ vi.mock("./platform/unityGroundTruth", () => ({
   }),
 }));
 
+vi.mock("./platform/alignment", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./platform/alignment")>()),
+  loadAlignmentSources: vi.fn().mockResolvedValue({ projectId: "550e8400-e29b-41d4-a716-446655440000", intentSources: [], realityEvidence: [] }),
+  loadAlignmentResults: vi.fn().mockResolvedValue(null),
+  createAlignmentReview: vi.fn(),
+  reviewAlignmentResult: vi.fn(),
+}));
+
 const selectedPath = "D:\\Games\\SampleGame";
 const workspace: Workspace = {
   formatVersion: 1,
@@ -236,7 +244,8 @@ describe("ForgeMind local workspace", () => {
     expect(screen.getByText("Repository Reality page")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Alignment" }));
-    expect(screen.getByText("Alignment workspace is not implemented yet.")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Alignment", level: 2 })).toBeInTheDocument();
+    expect(screen.getByText("No Alignment Reviews have been created yet.")).toBeInTheDocument();
   });
 
   it("opens the bounded AI evaluation harness from the workspace shell", async () => {
@@ -387,7 +396,7 @@ describe("ForgeMind local workspace", () => {
     expect(screen.queryByRole("button", { name: "Initialize Workspace" })).not.toBeInTheDocument();
   });
 
-  it.each(["Narrative", "Alignment"])(
+  it.each(["Narrative"])(
     "keeps the %s placeholder honest after a valid workspace loads",
     async (area) => {
       const user = userEvent.setup();
