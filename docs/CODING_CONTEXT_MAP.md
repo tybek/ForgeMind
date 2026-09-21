@@ -25,9 +25,9 @@ Always begin with `AGENTS.md`, `ROADMAP.md`, `ARCHITECTURE.md`, and `VALIDATION.
 | UI direction and brand | `UI_DIRECTION.md`, `BRANDBOOK.md`, `PRODUCT.md`, `ROADMAP.md`, then the relevant page/tests/styles | Dashboard behavior, information architecture, shared visual system, branding, artwork, copy, or redesign-phase work. Treat UI-1 through UI-5 as future until explicitly authorized. |
 | Native commands | `../app/src-tauri/src/lib.rs`, matching Rust domain, matching `../app/src/platform/*.ts` | A Tauri command or frontend/native contract changes. |
 | Persistence | `DATA_MODEL.md`, matching Rust domain, `../app/src-tauri/src/workspace.rs` | A `.forgemind/` schema, validation, recovery, or file lifecycle changes. |
-| Future Git integration | `ROADMAP.md` section 0H, `ARCHITECTURE.md` Git boundary | Planning explicitly authorized 0H work. Do not implement it early. |
-| Future Unity GroundTruth | `MVP.md`, `DATA_MODEL.md`, `ARCHITECTURE.md`, `ROADMAP.md` section 0I, `../unity/README.md` | Planning explicitly authorized Reality snapshot work. |
-| Future Alignment Engine | `PRODUCT.md`, `MVP.md`, `DATA_MODEL.md`, `WORKFLOWS.md`, `ROADMAP.md` section 0J | Planning explicitly authorized alignment work. |
+| Git Reality | `ARCHITECTURE.md` Git boundary, `ROADMAP.md` section 0H, `../app/src-tauri/src/git_reality.rs`, `../app/src/platform/repositoryReality.ts`, `../app/src/RepositoryPage.tsx` | Read-only repository evidence or future explicitly authorized Git changes. Keep write and network operations out of the current boundary. |
+| Unity GroundTruth | `UNITY_GROUNDTRUTH.md`, `MVP.md`, `DATA_MODEL.md`, `ARCHITECTURE.md`, `ROADMAP.md` section 0I, `../unity/README.md` | Exporter, manifest, coverage, normalized Unity Reality evidence, or future explicitly authorized GroundTruth changes. |
+| Alignment Engine | `PRODUCT.md`, `MVP.md`, `DATA_MODEL.md`, `WORKFLOWS.md`, `ROADMAP.md` section 0J, `../app/src-tauri/src/alignment.rs`, `../app/src/platform/alignment.ts`, `../app/src/AlignmentPage.tsx` | Alignment evidence, deterministic status, review lifecycle, persistence, Wiki summary, or future explicitly authorized Alignment changes. |
 | Feature Contracts | `PRODUCT.md`, `DATA_MODEL.md`, `WORKFLOWS.md`, `../app/src-tauri/src/feature_contracts.rs`, `../app/src/platform/featureContracts.ts`, `../app/src/FeatureContractsPage.tsx` | Contract sources, persistence, approval, traceability, or implementation-brief handoff changes. |
 
 Tests beside the target code are part of each context set even when the table does not list them separately.

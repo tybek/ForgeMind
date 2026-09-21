@@ -6,6 +6,22 @@ This document records the agreed ForgeMind brand foundation for future design an
 
 **FUTURE PLANNED WORK — NOT IMPLEMENTED.** Brand integration begins only when a scoped UI phase is authorized. See [ForgeMind UI Direction](UI_DIRECTION.md) for dashboard behavior, information architecture, artwork use inside the application, and the UI-1 through UI-5 plan.
 
+## Concept / visual-direction references
+
+The images below are **concept and visual-direction references**, not final production logo assets, trademark-safe vector artwork, or implemented UI specifications. The final ForgeMind app icon and FM monogram should be recreated later as controlled, original SVG/vector artwork with deliberate geometry, clear-space rules, small-size testing, and legal review where appropriate. Generated mockups must not be treated as pixel-accurate UI requirements. Product implementation should follow this Brandbook together with [ForgeMind UI Direction](UI_DIRECTION.md), preserve existing product behavior and authority boundaries, and use the images only to understand the intended atmosphere and hierarchy.
+
+### Brand system reference
+
+![ForgeMind brand system concept reference](brand/brandbookv_0.1.png)
+
+### Product and dashboard mood references
+
+![ForgeMind workspace mood concept reference](brand/mockup_1.png)
+
+![ForgeMind monogram and wordmark concept reference](brand/mockup_2.png)
+
+![ForgeMind product workspace concept reference](brand/mockup_3.png)
+
 ## Brand essence
 
 **Name:** ForgeMind

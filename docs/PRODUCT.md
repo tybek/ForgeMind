@@ -35,6 +35,7 @@ Intent
 -> Reality
 -> Alignment
 -> Feature Contract
+-> Implementation Brief
 -> Coding Agent
 -> Tests / Reality refresh
 -> Alignment review
@@ -64,6 +65,7 @@ Decisions should preserve what was decided, why, who proposed and approved it, w
 - **Use replaceable boundaries.** AI, Unity, and Git integrations must not define the core domain model.
 - **Grow from demonstrated needs.** Avoid speculative services, permissions, and infrastructure.
 - **Scope control is a feature.** Milestones and contracts should make approved boundaries and exclusions visible.
+- **AI-assisted first, manual entry available.** Prefer bounded context-aware proposals and section-level review where they reduce authoring burden, while retaining manual entry as an escape hatch and keeping approval human-controlled.
 
 ## Team-first direction
 

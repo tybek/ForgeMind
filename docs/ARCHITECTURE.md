@@ -74,7 +74,7 @@ The harness makes no request on startup and performs no polling or automatic ret
 
 The Rust model registry is the authoritative configured-model location. Each entry carries provider and model identity, display metadata, availability, enabled state, optional notes, optional explicit per-million-token pricing, and a small optional capability record for maximum completion tokens, reasoning-effort support, and structured-output support. Missing capability values remain Unknown. Duplicate IDs fail registry validation, unknown or disabled IDs fail before a provider request, and no provider discovery or automatic routing occurs.
 
-The configured Nebius Token Factory entries are DeepSeek V4.1 Flash and NVIDIA Nemotron 3 Super 120B. Nemotron is the first NVIDIA model configured for hackathon validation; its pricing and unverified capability fields remain Unknown, and configuration does not claim a successful live inference.
+The configured Nebius Token Factory entries are DeepSeek V4.1 Flash and NVIDIA Nemotron 3 Super 120B. Both have been used through explicit user-authorized Token Factory requests, including a successful normalized Nemotron Specialist run. That evidence is too small to support a universal or task-level model recommendation; Nemotron pricing and unverified capability fields remain Unknown.
 
 Desktop and headless evaluations share one registered-and-metered service. Each attempt creates a minimal `UsageRecord` containing timestamp, session ID, optional portable project ID, provider, model ID, optional task category, provider-reported token counts, latency when available, optional estimated cost, success, and a controlled error category. The schema has no prompt, response, credential, or authorization fields.
 
