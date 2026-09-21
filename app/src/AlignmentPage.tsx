@@ -21,6 +21,8 @@ interface AlignmentWorkspace {
 }
 
 type EvidenceGroupId = "unity-components" | "unity-scenes" | "unity-other" | "git-files" | "git-state";
+type AlignmentSubview = "CREATE" | "HISTORY";
+type EvidenceDiscoveryMode = "SUGGESTED" | "SEARCH" | "BROWSE";
 
 interface EvidencePresentation {
   name: string;
@@ -136,22 +138,35 @@ function projectedStatus(evidence: Record<string, EvidenceAssessment>, hasConfli
   return "UNVERIFIED";
 }
 
-function EvidenceIdentity({ evidence }: { evidence: Pick<RealityEvidenceCandidate, "id" | "source" | "summary" | "provenance"> }) {
+function EvidenceIdentity({
+  evidence,
+  matchReason,
+}: {
+  evidence: Pick<RealityEvidenceCandidate, "id" | "source" | "summary" | "provenance">;
+  matchReason?: string;
+}) {
   const presentation = evidencePresentation(evidence);
   return (
     <div className="alignment-evidence-identity">
-      <div className="alignment-evidence-tags" aria-label={`${evidence.source} ${presentation.type}`}>
-        <span>{evidence.source}</span><span>{presentation.type}</span>
+      <div className="alignment-evidence-primary">
+        <div className="alignment-evidence-tags" aria-label={`${evidence.source} ${presentation.type}`}>
+          <span>{evidence.source}</span><span>{presentation.type}</span>
+        </div>
+        <strong>{presentation.name}</strong>
       </div>
-      <strong>{presentation.name}</strong>
-      <span>{presentation.detail}</span>
-      {presentation.caveat ? <small>{presentation.caveat}</small> : null}
-      <small className="alignment-evidence-provenance">{evidence.provenance}</small>
+      <div className="alignment-evidence-secondary">
+        <span>{presentation.detail}</span>
+        {presentation.caveat ? <small>{presentation.caveat}</small> : null}
+        {matchReason ? <small className="alignment-match-reason">{matchReason}</small> : null}
+        <small className="alignment-evidence-provenance">{evidence.provenance}</small>
+      </div>
     </div>
   );
 }
 
 export function AlignmentPage({ workspace }: { workspace: AlignmentWorkspace }) {
+  const [activeSubview, setActiveSubview] = useState<AlignmentSubview>("CREATE");
+  const [discoveryMode, setDiscoveryMode] = useState<EvidenceDiscoveryMode>("SUGGESTED");
   const [catalog, setCatalog] = useState<AlignmentSourceCatalog | null>(null);
   const [document, setDocument] = useState<AlignmentDocument | null>(null);
   const [intentValue, setIntentValue] = useState("");
@@ -164,11 +179,14 @@ export function AlignmentPage({ workspace }: { workspace: AlignmentWorkspace }) 
   const [rationale, setRationale] = useState("");
   const [confidence, setConfidence] = useState<AlignmentConfidence>("LOW");
   const [uncertainty, setUncertainty] = useState("");
+  const [noAdditionalUncertainty, setNoAdditionalUncertainty] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [createdResultId, setCreatedResultId] = useState<string | null>(null);
+  const [selectedHistoryId, setSelectedHistoryId] = useState<string | null>(null);
+  const [unviewedReviewCount, setUnviewedReviewCount] = useState(0);
   const [reviewingId, setReviewingId] = useState<string | null>(null);
   const [reviewError, setReviewError] = useState<string | null>(null);
   const createInFlight = useRef(false);
@@ -177,6 +195,9 @@ export function AlignmentPage({ workspace }: { workspace: AlignmentWorkspace }) 
     let active = true;
     setLoading(true);
     setLoadError(null);
+    setCreatedResultId(null);
+    setSelectedHistoryId(null);
+    setUnviewedReviewCount(0);
     void Promise.all([loadAlignmentSources(workspace.path), loadAlignmentResults(workspace.path)])
       .then(([nextCatalog, nextDocument]) => {
         if (!active) return;
@@ -248,11 +269,19 @@ export function AlignmentPage({ workspace }: { workspace: AlignmentWorkspace }) 
     !selectedIntent ? "Select a documented Intent source." : null,
     evidenceCount === 0 ? "Select at least one Reality evidence item." : null,
     !rationale.trim() ? "Add a rationale." : null,
-    !uncertainty.trim() ? "State the remaining uncertainty." : null,
+    !noAdditionalUncertainty && !uncertainty.trim() ? "State the remaining uncertainty or choose No additional uncertainty." : null,
   ].filter((message): message is string => message !== null);
   const previewStatus = projectedStatus(selectedEvidence, Boolean(conflictingDecisionId));
-  const latestResult = document?.results.at(-1);
-  const currentResult = document?.results.find((result) => result.id === createdResultId) ?? latestResult;
+  const historyResults = [...(document?.results ?? [])].reverse();
+  const createdResult = document?.results.find((result) => result.id === createdResultId);
+  const selectedHistoryResult = document?.results.find((result) => result.id === selectedHistoryId)
+    ?? historyResults[0];
+
+  function openHistory(resultId?: string) {
+    setActiveSubview("HISTORY");
+    setUnviewedReviewCount(0);
+    setSelectedHistoryId(resultId ?? selectedHistoryId ?? historyResults[0]?.id ?? null);
+  }
 
   function toggleEvidence(id: string, selected: boolean) {
     setSelectedEvidence((current) => {
@@ -279,13 +308,16 @@ export function AlignmentPage({ workspace }: { workspace: AlignmentWorkspace }) 
         evidence: Object.entries(selectedEvidence).map(([evidenceId, assessment]) => ({ evidenceId, assessment })),
         rationale,
         confidence,
-        uncertainty,
+        uncertainty: noAdditionalUncertainty ? "No additional uncertainty." : uncertainty.trim(),
       });
       const created = next.results.at(-1);
       setDocument(next);
       setCreatedResultId(created?.id ?? null);
+      setSelectedHistoryId(created?.id ?? null);
+      setUnviewedReviewCount((count) => count + 1);
       setRationale("");
       setUncertainty("");
+      setNoAdditionalUncertainty(false);
       setConfidence("LOW");
       setConflictingDecisionId("");
       setSelectedEvidence({});
@@ -316,17 +348,32 @@ export function AlignmentPage({ workspace }: { workspace: AlignmentWorkspace }) 
 
   function renderEvidencePicker(evidence: RealityEvidenceCandidate, context: "search" | "browse") {
     const presentation = evidencePresentation(evidence);
+    const selected = selectedEvidence[evidence.id] !== undefined;
     return (
       <div className={`alignment-evidence-row alignment-evidence-row-${context}`} key={evidence.id}>
-        <label className="alignment-evidence-check">
-          <input
-            type="checkbox"
-            checked={selectedEvidence[evidence.id] !== undefined}
-            onChange={(event) => toggleEvidence(evidence.id, event.target.checked)}
-            aria-label={`Select ${presentation.name}`}
-          />
-          <EvidenceIdentity evidence={evidence} />
-        </label>
+        <EvidenceIdentity
+          evidence={evidence}
+          matchReason={context === "search" ? `Matches search: “${evidenceSearch.trim()}”` : undefined}
+        />
+        <button
+          className={selected ? "text-button" : "outline-button"}
+          type="button"
+          onClick={() => toggleEvidence(evidence.id, !selected)}
+        >
+          {selected ? "Selected" : "Select"}
+        </button>
+      </div>
+    );
+  }
+
+  function renderSuggestion({ evidence, matches }: { evidence: RealityEvidenceCandidate; matches: string[] }) {
+    return (
+      <div className="alignment-suggestion" key={evidence.id}>
+        <EvidenceIdentity evidence={evidence} matchReason={`Match reason: shared ${matches.join(", ")}`} />
+        <div className="alignment-suggestion-actions">
+          <button className="outline-button" type="button" onClick={() => toggleEvidence(evidence.id, true)}>Select</button>
+          <button className="text-button" type="button" onClick={() => setDismissedSuggestions((current) => new Set(current).add(evidence.id))}>Dismiss</button>
+        </div>
       </div>
     );
   }
@@ -343,198 +390,205 @@ export function AlignmentPage({ workspace }: { workspace: AlignmentWorkspace }) 
 
       {loadError ? <p className="alignment-error" role="alert">{loadError}</p> : null}
 
-      <section className="alignment-builder" aria-labelledby="new-alignment-title">
-        <div className="alignment-section-heading">
-          <div><span className="section-label">Manual-first workflow</span><h3 id="new-alignment-title">Create Alignment Review</h3></div>
-          <span>{evidenceCount} evidence selected</span>
-        </div>
+      <nav className="alignment-subview-tabs" role="tablist" aria-label="Alignment views">
+        <button type="button" role="tab" aria-selected={activeSubview === "CREATE"} onClick={() => setActiveSubview("CREATE")}>Create Review</button>
+        <button type="button" role="tab" aria-selected={activeSubview === "HISTORY"} onClick={() => openHistory()}>
+          Review History{unviewedReviewCount > 0 ? <> <span className="alignment-unread-badge">• {unviewedReviewCount}</span></> : null}
+        </button>
+      </nav>
 
-        <div className="alignment-workbench" data-layout="three-pane-responsive">
-          <aside className="alignment-pane alignment-intent-pane" aria-labelledby="alignment-intent-title">
-            <div className="alignment-pane-heading"><span>1</span><h4 id="alignment-intent-title">Intent</h4></div>
-            <label>
-              Documented Intent source
-              <select value={intentValue} onChange={(event) => {
-                setIntentValue(event.target.value);
-                setConflictingDecisionId("");
-                setDismissedSuggestions(new Set());
-                setCreateError(null);
-                setCreatedResultId(null);
-              }}>
-                <option value="">Select current Intent</option>
-                {(catalog?.intentSources ?? []).map((source) => (
-                  <option key={sourceValue(source.sourceType, source.sourceId)} value={sourceValue(source.sourceType, source.sourceId)}>
-                    {source.sourceType === "COMPENDIUM" ? "Compendium" : "Approved Decision"}: {source.title}
-                  </option>
-                ))}
-              </select>
-            </label>
-            {selectedIntent ? (
-              <article className="alignment-source-preview">
-                <div className="alignment-tags"><span>{selectedIntent.sourceType}</span><span>{selectedIntent.status}</span><span>{selectedIntent.provenance}</span></div>
-                <strong>{selectedIntent.title}</strong>
-                <p>{selectedIntent.statement}</p>
-                <small>{displayEnum(selectedIntent.area)}</small>
-              </article>
-            ) : <p className="alignment-help">Choose current Compendium knowledge or an approved Decision. Deprecated or proposed sources are excluded.</p>}
-            <label>
-              Conflicting approved Decision (optional)
-              <select value={conflictingDecisionId} onChange={(event) => setConflictingDecisionId(event.target.value)}>
-                <option value="">No conflicting Intent</option>
-                {conflictingOptions.map((source) => <option key={source.sourceId} value={source.sourceId}>{source.title}</option>)}
-              </select>
-            </label>
-            <p className="alignment-help">Use only for a material conflict between two approved Intent statements.</p>
-          </aside>
+      {activeSubview === "CREATE" ? (
+        <section className="alignment-builder" aria-labelledby="new-alignment-title">
+          <div className="alignment-section-heading">
+            <div><span className="section-label">Manual-first workflow</span><h3 id="new-alignment-title">Create Alignment Review</h3></div>
+            <span>{evidenceCount} evidence selected</span>
+          </div>
 
-          <main className="alignment-pane alignment-discovery-pane" aria-labelledby="alignment-evidence-title">
-            <div className="alignment-pane-heading"><span>2</span><h4 id="alignment-evidence-title">Reality Evidence</h4></div>
-            {(catalog?.realityEvidence.length ?? 0) === 0 ? (
-              <p>No selectable Git or Unity GroundTruth evidence is currently available.</p>
-            ) : (
-              <>
-                <div className="alignment-evidence-controls">
-                  <label>Search evidence<input type="search" value={evidenceSearch} onChange={(event) => setEvidenceSearch(event.target.value)} placeholder="Name, type, path, or safe summary" /></label>
-                  <label>Source<select value={sourceFilter} onChange={(event) => setSourceFilter(event.target.value as "ALL" | RealitySource)}><option value="ALL">All</option><option value="UNITY">Unity</option><option value="GIT">Git</option></select></label>
-                </div>
+          <div className="alignment-workbench" data-layout="three-pane-responsive">
+            <aside className="alignment-pane alignment-intent-pane" aria-labelledby="alignment-intent-title">
+              <div className="alignment-pane-heading"><span>1</span><h4 id="alignment-intent-title">Intent</h4></div>
+              <label>
+                Documented Intent source
+                <select value={intentValue} onChange={(event) => {
+                  setIntentValue(event.target.value);
+                  setConflictingDecisionId("");
+                  setDismissedSuggestions(new Set());
+                  setCreateError(null);
+                  setCreatedResultId(null);
+                }}>
+                  <option value="">Select current Intent</option>
+                  {(catalog?.intentSources ?? []).map((source) => (
+                    <option key={sourceValue(source.sourceType, source.sourceId)} value={sourceValue(source.sourceType, source.sourceId)}>
+                      {source.sourceType === "COMPENDIUM" ? "Compendium" : "Approved Decision"}: {source.title}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {selectedIntent ? (
+                <article className="alignment-source-preview">
+                  <div className="alignment-tags"><span>{selectedIntent.sourceType}</span><span>{selectedIntent.status}</span><span>{selectedIntent.provenance}</span></div>
+                  <strong>{selectedIntent.title}</strong>
+                  <p>{selectedIntent.statement}</p>
+                  <small>{displayEnum(selectedIntent.area)}</small>
+                </article>
+              ) : <p className="alignment-help">Choose current Compendium knowledge or an approved Decision. Deprecated or proposed sources are excluded.</p>}
+              <label>
+                Conflicting approved Decision (optional)
+                <select value={conflictingDecisionId} onChange={(event) => setConflictingDecisionId(event.target.value)}>
+                  <option value="">No conflicting Intent</option>
+                  {conflictingOptions.map((source) => <option key={source.sourceId} value={source.sourceId}>{source.title}</option>)}
+                </select>
+              </label>
+              <p className="alignment-help">Use only for a material conflict between two approved Intent statements.</p>
+            </aside>
 
-                {selectedIntent && suggestions.length > 0 ? (
-                  <section className="alignment-suggestions" aria-labelledby="suggested-evidence-title">
-                    <div className="alignment-evidence-toolbar"><div><h5 id="suggested-evidence-title">Suggested Evidence</h5><span>{suggestions.length} explainable text matches</span></div></div>
-                    <p className="alignment-help">Suggestions are unverified relevance hints. They are never selected automatically.</p>
-                    <div className="alignment-suggestion-list">
-                      {suggestions.map(({ evidence, matches }) => (
-                        <div className="alignment-suggestion" key={evidence.id}>
-                          <div><EvidenceIdentity evidence={evidence} /><small>Match reason: shared {matches.join(", ")}</small></div>
-                          <div className="alignment-suggestion-actions"><button className="outline-button" type="button" onClick={() => toggleEvidence(evidence.id, true)}>Select</button><button className="text-button" type="button" onClick={() => setDismissedSuggestions((current) => new Set(current).add(evidence.id))}>Dismiss</button></div>
-                        </div>
-                      ))}
-                    </div>
-                  </section>
-                ) : null}
+            <main className="alignment-pane alignment-discovery-pane" aria-labelledby="alignment-evidence-title">
+              <div className="alignment-pane-heading"><span>2</span><h4 id="alignment-evidence-title">Reality Evidence</h4></div>
+              {(catalog?.realityEvidence.length ?? 0) === 0 ? (
+                <p>No selectable Git or Unity GroundTruth evidence is currently available.</p>
+              ) : (
+                <>
+                  <div className="alignment-evidence-controls">
+                    <label>Search evidence<input type="search" value={evidenceSearch} onChange={(event) => {
+                      setEvidenceSearch(event.target.value);
+                      if (event.target.value.trim()) setDiscoveryMode("SEARCH");
+                    }} placeholder="Name, type, path, or safe summary" /></label>
+                    <label>Source<select value={sourceFilter} onChange={(event) => setSourceFilter(event.target.value as "ALL" | RealitySource)}><option value="ALL">All</option><option value="UNITY">Unity</option><option value="GIT">Git</option></select></label>
+                  </div>
+                  <div className="alignment-discovery-tabs" role="tablist" aria-label="Evidence discovery modes">
+                    {(["SUGGESTED", "SEARCH", "BROWSE"] as EvidenceDiscoveryMode[]).map((mode) => (
+                      <button key={mode} type="button" role="tab" aria-selected={discoveryMode === mode} onClick={() => {
+                        setDiscoveryMode(mode);
+                        if (mode !== "SEARCH") setEvidenceSearch("");
+                      }}>{displayEnum(mode)}</button>
+                    ))}
+                  </div>
 
-                {normalizedSearch ? (
-                  <section className="alignment-search-results" aria-labelledby="alignment-search-results-title">
-                    <div className="alignment-evidence-toolbar"><div><h5 id="alignment-search-results-title">Search Results</h5><span>{searchResults.length} matches</span></div></div>
-                    {searchResults.length === 0 ? <p>No evidence matches the current search and source filter.</p> : <div className="alignment-evidence-list">{searchResults.map((item) => renderEvidencePicker(item, "search"))}</div>}
-                  </section>
-                ) : null}
-
-                <section className="alignment-browse-all" aria-labelledby="alignment-browse-title">
-                  <div className="alignment-evidence-toolbar"><div><h5 id="alignment-browse-title">Browse all evidence</h5><span>Groups stay collapsed until opened</span></div></div>
-                  <div className="alignment-evidence-groups">
-                    {groupedEvidence.map((group) => {
-                      const isOpen = Boolean(openGroups[group.id]);
-                      return (
-                        <details
-                          className="alignment-evidence-group"
-                          key={group.id}
-                          open={isOpen}
-                          onToggle={(event) => {
-                            const isNowOpen = event.currentTarget.open;
-                            setOpenGroups((current) => ({ ...current, [group.id]: isNowOpen }));
-                          }}
-                        >
-                          <summary><strong>{group.label}</strong><span>{group.items.length} total · {group.selectedCount} selected</span></summary>
-                          {isOpen ? <div className="alignment-evidence-list">{group.items.map((item) => renderEvidencePicker(item, "browse"))}</div> : null}
+                  {discoveryMode === "SEARCH" ? (
+                    <>
+                      <section className="alignment-search-results" aria-labelledby="alignment-search-results-title">
+                        <div className="alignment-evidence-toolbar"><div><h5 id="alignment-search-results-title">Search Results</h5><span>{normalizedSearch ? `${searchResults.length} matches` : "Enter a search term"}</span></div></div>
+                        {!normalizedSearch ? <p className="alignment-help">Search by evidence name, type, path, or safe summary.</p> : searchResults.length === 0 ? <p>No evidence matches the current search and source filter.</p> : <div className="alignment-evidence-list">{searchResults.map((item) => renderEvidencePicker(item, "search"))}</div>}
+                      </section>
+                      {normalizedSearch && selectedIntent ? (
+                        <details className="alignment-suggestions alignment-suggestions-compact">
+                          <summary><strong>Suggested Evidence</strong><span>{suggestions.length} available · collapsed while searching</span></summary>
+                          <p className="alignment-help">Suggestions are unverified relevance hints and never selected automatically.</p>
+                          {suggestions.length > 0 ? <div className="alignment-suggestion-list">{suggestions.map(renderSuggestion)}</div> : null}
                         </details>
+                      ) : null}
+                    </>
+                  ) : null}
+
+                  {discoveryMode === "SUGGESTED" ? (
+                    <section className="alignment-suggestions" aria-labelledby="suggested-evidence-title">
+                      <div className="alignment-evidence-toolbar"><div><h5 id="suggested-evidence-title">Suggested Evidence</h5><span>{suggestions.length} explainable text matches</span></div></div>
+                      <p className="alignment-help">Suggestions are unverified relevance hints. They are never selected automatically.</p>
+                      {!selectedIntent ? <p>Select Intent to calculate deterministic suggestions.</p> : suggestions.length === 0 ? <p>No undismissed suggestions match this Intent and source filter.</p> : <div className="alignment-suggestion-list">{suggestions.map(renderSuggestion)}</div>}
+                    </section>
+                  ) : null}
+
+                  {discoveryMode === "BROWSE" ? (
+                    <section className="alignment-browse-all" aria-labelledby="alignment-browse-title">
+                      <div className="alignment-evidence-toolbar"><div><h5 id="alignment-browse-title">Browse Evidence</h5><span>Groups stay collapsed until opened</span></div></div>
+                      <div className="alignment-evidence-groups">
+                        {groupedEvidence.map((group) => {
+                          const isOpen = Boolean(openGroups[group.id]);
+                          return (
+                            <details className="alignment-evidence-group" key={group.id} open={isOpen} onToggle={(event) => {
+                              const isNowOpen = event.currentTarget.open;
+                              setOpenGroups((current) => ({ ...current, [group.id]: isNowOpen }));
+                            }}>
+                              <summary><strong>{group.label}</strong><span>{group.items.length} total · {group.selectedCount} selected</span></summary>
+                              {isOpen ? <div className="alignment-evidence-list">{group.items.map((item) => renderEvidencePicker(item, "browse"))}</div> : null}
+                            </details>
+                          );
+                        })}
+                      </div>
+                    </section>
+                  ) : null}
+                </>
+              )}
+            </main>
+
+            <aside className="alignment-pane alignment-review-pane" aria-labelledby="alignment-review-title">
+              <div className="alignment-pane-heading"><span>3</span><h4 id="alignment-review-title">Review</h4></div>
+              <section className="alignment-selected-evidence" aria-labelledby="selected-evidence-title">
+                <div className="alignment-evidence-toolbar">
+                  <div><h5 id="selected-evidence-title">Selected Evidence</h5><span>{evidenceCount} selected</span></div>
+                  <button className="text-button" type="button" disabled={evidenceCount === 0 || creating} onClick={() => setSelectedEvidence({})}>Deselect all</button>
+                </div>
+                {selectedEvidenceItems.length === 0 ? <p className="alignment-help">Selected evidence stays here while you search or filter.</p> : (
+                  <div className="alignment-selected-list">
+                    {selectedEvidenceItems.map((evidence) => {
+                      const presentation = evidencePresentation(evidence);
+                      return (
+                        <div className="alignment-selected-item" key={evidence.id}>
+                          <EvidenceIdentity evidence={evidence} />
+                          <label>Assessment<select aria-label={`Assessment for ${presentation.name}`} value={selectedEvidence[evidence.id]} disabled={creating} onChange={(event) => setSelectedEvidence((current) => ({ ...current, [evidence.id]: event.target.value as EvidenceAssessment }))}>
+                            <option value="SUPPORTS">Supports</option><option value="CONTRADICTS">Contradicts</option><option value="INSUFFICIENT">Insufficient</option>
+                          </select></label>
+                          <button className="text-button" type="button" disabled={creating} onClick={() => toggleEvidence(evidence.id, false)}>Remove</button>
+                        </div>
                       );
                     })}
                   </div>
-                </section>
-              </>
-            )}
-          </main>
-
-          <aside className="alignment-pane alignment-review-pane" aria-labelledby="alignment-review-title">
-            <div className="alignment-pane-heading"><span>3</span><h4 id="alignment-review-title">Review</h4></div>
-            <section className="alignment-selected-evidence" aria-labelledby="selected-evidence-title">
-              <div className="alignment-evidence-toolbar">
-                <div><h5 id="selected-evidence-title">Selected Evidence</h5><span>{evidenceCount} selected</span></div>
-                <button className="text-button" type="button" disabled={evidenceCount === 0 || creating} onClick={() => setSelectedEvidence({})}>Deselect all</button>
-              </div>
-              {selectedEvidenceItems.length === 0 ? <p className="alignment-help">Selected evidence stays here while you search or filter.</p> : (
-                <div className="alignment-selected-list">
-                  {selectedEvidenceItems.map((evidence) => {
-                    const presentation = evidencePresentation(evidence);
-                    return (
-                      <div className="alignment-selected-item" key={evidence.id}>
-                        <EvidenceIdentity evidence={evidence} />
-                        <label>
-                          Assessment
-                          <select
-                            aria-label={`Assessment for ${presentation.name}`}
-                            value={selectedEvidence[evidence.id]}
-                            disabled={creating}
-                            onChange={(event) => setSelectedEvidence((current) => ({ ...current, [evidence.id]: event.target.value as EvidenceAssessment }))}
-                          >
-                            <option value="SUPPORTS">Supports</option>
-                            <option value="CONTRADICTS">Contradicts</option>
-                            <option value="INSUFFICIENT">Insufficient</option>
-                          </select>
-                        </label>
-                        <button className="text-button" type="button" disabled={creating} onClick={() => toggleEvidence(evidence.id, false)}>Remove</button>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </section>
-
-            <section className="alignment-assessment-summary" aria-label="Assessment summary">
-              <span>Assessment summary</span>
-              <strong className={`alignment-status-${previewStatus.toLowerCase()}`}>{displayEnum(previewStatus)}</strong>
-              <small>Deterministic preview from the explicit assessments above.</small>
-            </section>
-
-            <div className="alignment-review-form">
-              <label>Rationale<textarea value={rationale} rows={4} maxLength={2000} disabled={creating} onChange={(event) => { setRationale(event.target.value); setCreateError(null); setCreatedResultId(null); }} placeholder="Explain how the selected evidence relates to this Intent." /></label>
-              <div className="alignment-form-grid">
-                <label>Confidence<select value={confidence} disabled={creating} onChange={(event) => setConfidence(event.target.value as AlignmentConfidence)}><option value="LOW">Low</option><option value="MEDIUM">Medium</option><option value="HIGH">High</option></select></label>
-                <label>Uncertainty<textarea value={uncertainty} rows={3} maxLength={1000} disabled={creating} onChange={(event) => { setUncertainty(event.target.value); setCreateError(null); setCreatedResultId(null); }} placeholder="State what this evidence cannot prove." /></label>
-              </div>
-              {validationMessages.length > 0 ? (
-                <div className="alignment-validation" role="status"><strong>Complete before creating:</strong><ul>{validationMessages.map((message) => <li key={message}>{message}</li>)}</ul></div>
-              ) : <p className="alignment-ready" role="status">Ready to create a pending review.</p>}
-              {createError ? <p className="alignment-create-error" role="alert">{createError}</p> : null}
-              {createdResultId ? <p className="alignment-create-success" role="status">Pending review created and shown below.</p> : null}
-              <div className="alignment-create-actions">
-                <button className={`primary-button${creating ? " alignment-create-button-loading" : ""}`} type="button" disabled={creating || validationMessages.length > 0} onClick={() => void submitReview()}>Create Pending Review</button>
-                {creating ? <span className="alignment-create-loading" role="status"><span aria-hidden="true" />Creating review…</span> : null}
-              </div>
-            </div>
-
-            {currentResult ? (
-              <section className="alignment-current-result" aria-labelledby="current-review-title">
-                <div><h5 id="current-review-title">Current Review</h5><span>{currentResult.createdAt}</span></div>
-                <div className="alignment-tags"><span className={`alignment-status-${currentResult.status.toLowerCase()}`}>{displayEnum(currentResult.status)}</span><span>{displayEnum(currentResult.reviewState)}</span></div>
-                <p><strong>{currentResult.intent.title}</strong></p>
-                <p>{currentResult.rationale}</p>
+                )}
               </section>
-            ) : null}
-          </aside>
-        </div>
-      </section>
 
-      <section className="alignment-history" aria-labelledby="alignment-history-title">
-        <div className="alignment-section-heading"><div><span className="section-label">Durable review history</span><h3 id="alignment-history-title">Alignment Reviews</h3></div><span>{document?.results.length ?? 0} results</span></div>
-        {reviewError ? <p className="alignment-error" role="alert">{reviewError}</p> : null}
-        {(document?.results.length ?? 0) === 0 ? <p>No Alignment Reviews have been created yet.</p> : (
-          <div className="alignment-result-list">
-            {[...(document?.results ?? [])].reverse().map((result: AlignmentResult) => (
-              <article className="alignment-result" key={result.id}>
-                <header><div className="alignment-tags"><span className={`alignment-status-${result.status.toLowerCase()}`}>{displayEnum(result.status)}</span><span>{displayEnum(result.reviewState)}</span></div><time>{result.createdAt}</time></header>
-                <section><h4>INTENT</h4><p><strong>{result.intent.sourceType}: {result.intent.title}</strong></p><p>{result.intent.statement}</p><div className="alignment-tags"><span>{result.intent.status}</span><span>{result.intent.provenance}</span></div>
-                  {result.conflictingIntent ? <p className="alignment-conflict"><strong>Conflicting approved Intent:</strong> {result.conflictingIntent.title} — {result.conflictingIntent.statement}</p> : null}
-                </section>
-                <section><h4>REALITY EVIDENCE</h4>{result.evidence.map((item) => <div className="alignment-evidence-summary" key={item.evidenceId}><EvidenceIdentity evidence={{ id: item.evidenceId, source: item.source, summary: item.summary, provenance: item.provenance }} /><strong>{displayEnum(item.assessment)}</strong></div>)}</section>
-                <section><h4>ALIGNMENT</h4><dl className="alignment-result-grid"><div><dt>Status</dt><dd>{displayEnum(result.status)}</dd></div><div><dt>Confidence</dt><dd>{displayEnum(result.confidence)}</dd></div><div><dt>Review state</dt><dd>{displayEnum(result.reviewState)}</dd></div></dl><p><strong>Rationale:</strong> {result.rationale}</p><p><strong>Uncertainty:</strong> {result.uncertainty}</p></section>
-                <footer><div className="alignment-provenance" aria-label="Alignment provenance">{result.provenance.map((item: AlignmentProvenance) => <span key={item}>{item}</span>)}</div>{result.reviewState === "PENDING_REVIEW" ? <div className="alignment-review-actions"><button className="primary-button" type="button" disabled={reviewingId !== null} onClick={() => void review(result.id, "APPROVED")}>Approve</button><button className="outline-button" type="button" disabled={reviewingId !== null} onClick={() => void review(result.id, "REJECTED")}>Reject</button></div> : null}</footer>
-              </article>
-            ))}
+              <section className="alignment-assessment-summary" aria-label="Alignment preview">
+                <div><span>Alignment preview:</span><strong className={`alignment-status-${previewStatus.toLowerCase()}`}>{previewStatus}</strong></div>
+                <small>Based on explicit assessments; unobserved behavior remains unverified.</small>
+              </section>
+
+              <div className="alignment-review-form">
+                <label>Rationale<textarea value={rationale} rows={4} maxLength={2000} disabled={creating} onChange={(event) => { setRationale(event.target.value); setCreateError(null); setCreatedResultId(null); }} placeholder="Explain how the selected evidence relates to this Intent." /></label>
+                <label>Confidence<select value={confidence} disabled={creating} onChange={(event) => setConfidence(event.target.value as AlignmentConfidence)}><option value="LOW">Low</option><option value="MEDIUM">Medium</option><option value="HIGH">High</option></select></label>
+                <div className="alignment-uncertainty-field">
+                  <label>Uncertainty<textarea aria-label="Uncertainty" value={uncertainty} rows={3} maxLength={1000} disabled={creating || noAdditionalUncertainty} onChange={(event) => { setUncertainty(event.target.value); setCreateError(null); setCreatedResultId(null); }} placeholder="State what this evidence cannot prove." /></label>
+                  <label className="alignment-uncertainty-choice"><input type="checkbox" checked={noAdditionalUncertainty} disabled={creating} onChange={(event) => { setNoAdditionalUncertainty(event.target.checked); setCreateError(null); setCreatedResultId(null); }} />No additional uncertainty</label>
+                </div>
+                {validationMessages.length > 0 ? <div className="alignment-validation" role="status"><strong>Complete before creating:</strong><ul>{validationMessages.map((message) => <li key={message}>{message}</li>)}</ul></div> : <p className="alignment-ready" role="status">Ready to create a pending review.</p>}
+                {createError ? <p className="alignment-create-error" role="alert">{createError}</p> : null}
+                {createdResult ? <div className="alignment-create-success" role="status"><span>Review created · {createdResult.status}</span><button className="text-button" type="button" onClick={() => openHistory(createdResult.id)}>View in Review History</button></div> : null}
+                <div className="alignment-create-actions">
+                  <button className={`primary-button${creating ? " alignment-create-button-loading" : ""}`} type="button" disabled={creating || validationMessages.length > 0} onClick={() => void submitReview()}>Create Pending Review</button>
+                  {creating ? <span className="alignment-create-loading" role="status"><span aria-hidden="true" />Creating review…</span> : null}
+                </div>
+              </div>
+            </aside>
           </div>
-        )}
-      </section>
+        </section>
+      ) : (
+        <section className="alignment-history" aria-labelledby="alignment-history-title">
+          <div className="alignment-section-heading"><div><span className="section-label">Durable review history</span><h3 id="alignment-history-title">Review History</h3></div><span>{document?.results.length ?? 0} reviews</span></div>
+          {reviewError ? <p className="alignment-error" role="alert">{reviewError}</p> : null}
+          {historyResults.length === 0 ? <p>No Alignment Reviews have been created yet.</p> : (
+            <div className="alignment-history-workbench">
+              <div className="alignment-history-list" aria-label="Alignment review list">
+                {historyResults.map((result: AlignmentResult) => (
+                  <button className="alignment-history-row" type="button" aria-pressed={selectedHistoryResult?.id === result.id} key={result.id} onClick={() => setSelectedHistoryId(result.id)}>
+                    <span className="alignment-history-row-heading"><strong>{result.intent.title}</strong><time>{result.createdAt}</time></span>
+                    <span className="alignment-tags"><span className={`alignment-status-${result.status.toLowerCase()}`}>{displayEnum(result.status)}</span><span>{displayEnum(result.reviewState)}</span><span>{displayEnum(result.confidence)} confidence</span></span>
+                  </button>
+                ))}
+              </div>
+              {selectedHistoryResult ? (
+                <article className="alignment-result alignment-history-detail" aria-label="Selected alignment review">
+                  <header><div><span className="section-label">Selected review</span><h3>{selectedHistoryResult.intent.title}</h3></div><time>{selectedHistoryResult.createdAt}</time></header>
+                  <dl className="alignment-result-grid"><div><dt>Status</dt><dd>{displayEnum(selectedHistoryResult.status)}</dd></div><div><dt>Review state</dt><dd>{displayEnum(selectedHistoryResult.reviewState)}</dd></div><div><dt>Confidence</dt><dd>{displayEnum(selectedHistoryResult.confidence)}</dd></div></dl>
+                  <section><h4>INTENT</h4><p><strong>{selectedHistoryResult.intent.sourceType}: {selectedHistoryResult.intent.title}</strong></p><p>{selectedHistoryResult.intent.statement}</p><div className="alignment-tags"><span>{selectedHistoryResult.intent.status}</span><span>{selectedHistoryResult.intent.provenance}</span></div>
+                    {selectedHistoryResult.conflictingIntent ? <p className="alignment-conflict"><strong>Conflicting approved Intent:</strong> {selectedHistoryResult.conflictingIntent.title} — {selectedHistoryResult.conflictingIntent.statement}</p> : null}
+                  </section>
+                  <section><h4>REALITY EVIDENCE</h4>{selectedHistoryResult.evidence.map((item) => <div className="alignment-evidence-summary" key={item.evidenceId}><EvidenceIdentity evidence={{ id: item.evidenceId, source: item.source, summary: item.summary, provenance: item.provenance }} /><strong>{displayEnum(item.assessment)}</strong></div>)}</section>
+                  <section><h4>ALIGNMENT</h4><p><strong>Rationale:</strong> {selectedHistoryResult.rationale}</p><p><strong>Uncertainty:</strong> {selectedHistoryResult.uncertainty}</p></section>
+                  <footer><div className="alignment-provenance" aria-label="Alignment provenance">{selectedHistoryResult.provenance.map((item: AlignmentProvenance) => <span key={item}>{item}</span>)}</div>{selectedHistoryResult.reviewState === "PENDING_REVIEW" ? <div className="alignment-review-actions"><button className="primary-button" type="button" disabled={reviewingId !== null} onClick={() => void review(selectedHistoryResult.id, "APPROVED")}>Approve</button><button className="outline-button" type="button" disabled={reviewingId !== null} onClick={() => void review(selectedHistoryResult.id, "REJECTED")}>Reject</button></div> : null}</footer>
+                </article>
+              ) : null}
+            </div>
+          )}
+        </section>
+      )}
     </div>
   );
 }

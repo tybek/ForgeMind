@@ -341,7 +341,7 @@ export function WorkspaceShell({
               : activeArea === "Unity"
                 ? "0I.2 Unity GroundTruth"
               : activeArea === "Alignment"
-                ? "0J.1 Alignment Foundation"
+                ? "0J Alignment · Current"
               : activeArea === "AI Evaluation"
                 ? "0D.1 Model Lab"
                 : activeArea === "Game Design" || activeArea === "Decisions"

@@ -132,60 +132,64 @@ describe("Alignment workspace", () => {
     });
   });
 
-  it("puts search and source controls above suggestions and browse results", async () => {
+  it("provides Suggested, Search, and Browse discovery modes", async () => {
     const user = await renderWorkspace();
-    await user.selectOptions(screen.getByRole("combobox", { name: "Documented Intent source" }), "COMPENDIUM|intent-1");
-    const search = screen.getByRole("searchbox", { name: "Search evidence" });
-    const source = screen.getByRole("combobox", { name: "Source" });
-    const suggested = screen.getByRole("heading", { name: "Suggested Evidence" });
-    const browse = screen.getByRole("heading", { name: "Browse all evidence" });
-    expect(search.compareDocumentPosition(suggested) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(source.compareDocumentPosition(suggested) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(suggested.compareDocumentPosition(browse) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const modes = screen.getByRole("tablist", { name: "Evidence discovery modes" });
+    expect(within(modes).getByRole("tab", { name: "Suggested" })).toHaveAttribute("aria-selected", "true");
+    expect(within(modes).getByRole("tab", { name: "Search" })).toBeInTheDocument();
+    expect(within(modes).getByRole("tab", { name: "Browse" })).toBeInTheDocument();
+    await user.click(within(modes).getByRole("tab", { name: "Browse" }));
+    expect(screen.getByRole("heading", { name: "Browse Evidence" })).toBeInTheDocument();
   });
 
-  it("keeps browse-all groups collapsed and does not render their rows until opened", async () => {
+  it("shows search results immediately before a compact collapsed Suggested summary", async () => {
     const user = await renderWorkspace();
+    await user.selectOptions(screen.getByRole("combobox", { name: "Documented Intent source" }), "COMPENDIUM|intent-1");
+    await user.type(screen.getByRole("searchbox", { name: "Search evidence" }), "CombatLab");
+    expect(screen.getByRole("tab", { name: "Search" })).toHaveAttribute("aria-selected", "true");
+    const results = screen.getByRole("heading", { name: "Search Results" }).closest<HTMLElement>("section")!;
+    const compactSuggestions = screen.getByText(/available · collapsed while searching/).closest<HTMLElement>("details")!;
+    expect(results).toHaveTextContent("CombatLab.unity");
+    expect(results.compareDocumentPosition(compactSuggestions) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(compactSuggestions).not.toHaveAttribute("open");
+  });
+
+  it("keeps Browse groups collapsed and does not render their rows until opened", async () => {
+    const user = await renderWorkspace();
+    await user.click(screen.getByRole("tab", { name: "Browse" }));
     for (const label of [
       "Unity Components",
       "Unity Scenes",
       "Unity ScriptableObjects / other supported Unity evidence",
       "Git Changed Files",
       "Git HEAD / Repository State",
-    ]) {
-      expect(screen.getByText(label).closest<HTMLElement>("details")).not.toHaveAttribute("open");
-    }
-    expect(screen.queryByRole("checkbox", { name: "Select HearingPerception" })).not.toBeInTheDocument();
+    ]) expect(screen.getByText(label).closest<HTMLElement>("details")).not.toHaveAttribute("open");
+    expect(screen.queryByText("HearingPerception")).not.toBeInTheDocument();
     const componentGroup = screen.getByText("Unity Components").closest<HTMLElement>("details")!;
     await user.click(within(componentGroup).getByText("Unity Components"));
     expect(componentGroup).toHaveAttribute("open");
-    expect(within(componentGroup).getByRole("checkbox", { name: "Select HearingPerception" })).toBeInTheDocument();
+    expect(within(componentGroup).getByText("HearingPerception")).toBeInTheDocument();
   });
 
-  it("shows concise typed evidence labels and keeps suggestions explicit and unselected", async () => {
+  it("uses a compact source, type, name, summary, and match-reason evidence hierarchy", async () => {
     const user = await renderWorkspace();
     await user.selectOptions(screen.getByRole("combobox", { name: "Documented Intent source" }), "COMPENDIUM|intent-1");
     const suggested = screen.getByRole("heading", { name: "Suggested Evidence" }).closest<HTMLElement>("section")!;
-    expect(suggested).toHaveTextContent("unverified relevance hints");
-    expect(suggested).toHaveTextContent("never selected automatically");
-    expect(suggested).toHaveTextContent("HearingPerception");
-    expect(suggested).toHaveTextContent("UNITY");
-    expect(suggested).toHaveTextContent("Component");
-    expect(suggested).toHaveTextContent("observed 4 times");
-    expect(suggested).toHaveTextContent("Presence only — runtime behavior unverified");
-    expect(suggested).not.toHaveTextContent("Unity GroundTruth observed component type");
-    expect(screen.getByRole("heading", { name: "Selected Evidence" }).closest("section")).toHaveTextContent("0 selected");
-    const firstSuggestion = within(suggested).getAllByRole("button", { name: "Select" })[0].closest<HTMLElement>(".alignment-suggestion")!;
-    await user.click(within(firstSuggestion).getByRole("button", { name: "Dismiss" }));
-    expect(firstSuggestion).not.toBeInTheDocument();
+    const row = within(suggested).getAllByRole("button", { name: "Select" })[0].closest<HTMLElement>(".alignment-suggestion")!;
+    expect(row.querySelector(".alignment-evidence-primary")).toHaveTextContent("UNITYComponentHearingPerception");
+    expect(row.querySelector(".alignment-evidence-secondary")).toHaveTextContent("observed 4 times");
+    expect(row).toHaveTextContent("Presence only — runtime behavior unverified");
+    expect(row).toHaveTextContent("Match reason: shared perception");
+    expect(row).not.toHaveTextContent("Unity GroundTruth observed component type");
+    expect(within(row).getByRole("button", { name: "Dismiss" })).toBeInTheDocument();
   });
 
-  it("shows matching evidence directly while search reduces visible result rows", async () => {
+  it("shows only matching compact evidence rows and honors the source filter", async () => {
     const user = await renderWorkspace();
     await user.type(screen.getByRole("searchbox", { name: "Search evidence" }), "CombatLab");
     const results = screen.getByRole("heading", { name: "Search Results" }).closest<HTMLElement>("section")!;
     expect(results).toHaveTextContent("1 matches");
-    expect(results).toHaveTextContent("CombatLab.unity");
+    expect(results).toHaveTextContent("Matches search: “CombatLab”");
     expect(results).not.toHaveTextContent("HearingPerception");
     await user.selectOptions(screen.getByRole("combobox", { name: "Source" }), "GIT");
     expect(results).toHaveTextContent("0 matches");
@@ -193,11 +197,12 @@ describe("Alignment workspace", () => {
 
   it("keeps selected evidence visible across source filtering and shows Assessment only there", async () => {
     const user = await renderWorkspace();
+    await user.click(screen.getByRole("tab", { name: "Browse" }));
     const componentGroup = screen.getByText("Unity Components").closest<HTMLElement>("details")!;
     await user.click(within(componentGroup).getByText("Unity Components"));
-    const rawRow = within(componentGroup).getByRole("checkbox", { name: "Select HearingPerception" }).closest<HTMLElement>(".alignment-evidence-row")!;
+    const rawRow = within(componentGroup).getByText("HearingPerception").closest<HTMLElement>(".alignment-evidence-row")!;
     expect(within(rawRow).queryByRole("combobox", { name: /Assessment/ })).not.toBeInTheDocument();
-    await user.click(within(rawRow).getByRole("checkbox", { name: "Select HearingPerception" }));
+    await user.click(within(rawRow).getByRole("button", { name: "Select" }));
     await user.selectOptions(screen.getByRole("combobox", { name: "Source" }), "GIT");
     const selected = screen.getByRole("heading", { name: "Selected Evidence" }).closest<HTMLElement>("section")!;
     expect(selected).toHaveTextContent("HearingPerception");
@@ -215,6 +220,7 @@ describe("Alignment workspace", () => {
     expect(within(reviewPane).getByRole("heading", { name: "Selected Evidence" })).toBeInTheDocument();
     expect(within(reviewPane).getByRole("textbox", { name: "Rationale" })).toBeInTheDocument();
     expect(within(reviewPane).getByRole("button", { name: "Create Pending Review" })).toBeInTheDocument();
+    expect(within(reviewPane).getByLabelText("Alignment preview")).toHaveTextContent("Alignment preview:UNVERIFIED");
   });
 
   it("defines a stacked responsive fallback for narrow windows", () => {
@@ -232,7 +238,17 @@ describe("Alignment workspace", () => {
     expect(within(reviewPane).queryByText("Creating review…")).not.toBeInTheDocument();
   });
 
-  it("creates a pending review, shows local loading, blocks duplicate submission, and renders success immediately", async () => {
+  it("supports the explicit No additional uncertainty flow without meaningless placeholder text", async () => {
+    const user = await renderWorkspace();
+    await selectIntentAndSuggestedEvidence(user);
+    await user.type(screen.getByRole("textbox", { name: "Rationale" }), "Component presence is enough for this bounded review.");
+    await user.click(screen.getByRole("checkbox", { name: "No additional uncertainty" }));
+    expect(screen.getByRole("textbox", { name: "Uncertainty" })).toBeDisabled();
+    await user.click(screen.getByRole("button", { name: "Create Pending Review" }));
+    expect(createAlignmentReview).toHaveBeenCalledWith(workspace.path, workspace.projectId, expect.objectContaining({ uncertainty: "No additional uncertainty." }));
+  });
+
+  it("creates once, shows compact success, adds a local badge, and opens the created review in history", async () => {
     const request = deferred<AlignmentDocument>();
     vi.mocked(createAlignmentReview).mockReturnValue(request.promise);
     const user = await renderWorkspace();
@@ -244,11 +260,15 @@ describe("Alignment workspace", () => {
     expect(create).toBeDisabled();
     expect(screen.getByText("Creating review…")).toBeInTheDocument();
     request.resolve(pendingDocument);
-    expect(await screen.findByText("Pending review created and shown below.")).toBeInTheDocument();
-    const current = screen.getByRole("heading", { name: "Current Review" }).closest<HTMLElement>("section")!;
-    expect(current).toHaveTextContent("Unverified");
-    expect(current).toHaveTextContent("Pending Review");
-    expect(screen.getByRole("heading", { name: "Alignment Reviews" }).closest("section")).toHaveTextContent("MANUAL_ASSESSMENT");
+    expect(await screen.findByText("Review created · UNVERIFIED")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Current Review" })).not.toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Review History • 1" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "View in Review History" }));
+    expect(screen.getByRole("heading", { name: "Review History" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Review History" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Selected alignment review")).toHaveTextContent("Uncertain sound perception");
+    expect(screen.getByLabelText("Selected alignment review")).toHaveTextContent("Pending Review");
+    expect(screen.getByLabelText("Selected alignment review")).toHaveTextContent("MANUAL_ASSESSMENT");
     expect(screen.queryByText("AI_INFERENCE")).not.toBeInTheDocument();
   });
 
@@ -268,6 +288,7 @@ describe("Alignment workspace", () => {
   it("approves a pending result while preserving its evidence and provenance rendering", async () => {
     vi.mocked(loadAlignmentResults).mockResolvedValue(pendingDocument);
     const user = await renderWorkspace();
+    await user.click(screen.getByRole("tab", { name: "Review History" }));
     const approve = screen.getByRole("button", { name: "Approve" });
     expect(screen.getAllByText("HearingPerception").length).toBeGreaterThan(0);
     await user.click(approve);
@@ -283,6 +304,7 @@ describe("Alignment workspace", () => {
       results: [{ ...pendingResult, reviewState: "REJECTED", reviewedAt: "2026-09-21T12:00:00Z" }],
     });
     const user = await renderWorkspace();
+    await user.click(screen.getByRole("tab", { name: "Review History" }));
     await user.click(screen.getByRole("button", { name: "Reject" }));
     expect((await screen.findAllByText("Rejected")).length).toBeGreaterThan(0);
     expect(screen.getByText(/COMPENDIUM: Uncertain sound perception/)).toBeInTheDocument();

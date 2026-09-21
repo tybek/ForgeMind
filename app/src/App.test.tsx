@@ -245,6 +245,7 @@ describe("ForgeMind local workspace", () => {
 
     await user.click(screen.getByRole("button", { name: "Alignment" }));
     expect(await screen.findByRole("heading", { name: "Alignment", level: 2 })).toBeInTheDocument();
+    await user.click(screen.getByRole("tab", { name: "Review History" }));
     expect(screen.getByText("No Alignment Reviews have been created yet.")).toBeInTheDocument();
   });
 
