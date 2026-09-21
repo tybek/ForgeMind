@@ -164,8 +164,14 @@ function EvidenceIdentity({
   );
 }
 
-export function AlignmentPage({ workspace }: { workspace: AlignmentWorkspace }) {
-  const [activeSubview, setActiveSubview] = useState<AlignmentSubview>("CREATE");
+export function AlignmentPage({
+  workspace,
+  initialSubview = "CREATE",
+}: {
+  workspace: AlignmentWorkspace;
+  initialSubview?: AlignmentSubview;
+}) {
+  const [activeSubview, setActiveSubview] = useState<AlignmentSubview>(initialSubview);
   const [discoveryMode, setDiscoveryMode] = useState<EvidenceDiscoveryMode>("SUGGESTED");
   const [catalog, setCatalog] = useState<AlignmentSourceCatalog | null>(null);
   const [document, setDocument] = useState<AlignmentDocument | null>(null);

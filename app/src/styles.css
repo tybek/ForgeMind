@@ -1685,6 +1685,27 @@ button:focus-visible {
   color: #d5ccff;
 }
 
+.wiki-alignment-summary {
+  border-color: #514879;
+  background: #1a1827;
+}
+
+.wiki-alignment-summary-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.wiki-alignment-summary-heading small {
+  color: #9e96ba;
+  font-size: 10px;
+}
+
+.wiki-alignment-history-action {
+  justify-self: start;
+}
+
 .wiki-repository-reality {
   display: grid;
   gap: 10px;

@@ -28,6 +28,10 @@ function displayEnum(value: string): string {
   return value.toLowerCase().split("_").map((part) => `${part[0]?.toUpperCase() ?? ""}${part.slice(1)}`).join(" ");
 }
 
+function entryCountLabel(count: number): string {
+  return `${count} ${count === 1 ? "entry" : "entries"}`;
+}
+
 function relevantAnalysisAreas(
   run: SpecialistRun,
   knowledgeById: Map<string, KnowledgeEntry>,
@@ -49,9 +53,11 @@ function relevantAnalysisAreas(
 export function WikiPage({
   workspace,
   onEditKnowledge,
+  onViewAlignmentHistory,
 }: {
   workspace: WikiWorkspace;
   onEditKnowledge?: (entryId: string) => void;
+  onViewAlignmentHistory?: () => void;
 }) {
   const [activeArea, setActiveArea] = useState<KnowledgeArea>("overview");
   const [query, setQuery] = useState("");
@@ -124,7 +130,13 @@ export function WikiPage({
     && (typeFilter === "ALL" || typeFilter === "AI_ANALYSIS")
     && matchesQuery(run.result!.summary, run.scenario, run.taskType, ...run.result!.recommendations));
   const activeLabel = KNOWLEDGE_AREAS.find(([area]) => area === activeArea)?.[1] ?? activeArea;
+  const visibleEntryCount = areaKnowledge.length + areaDecisions.length + areaRuns.length;
   const areaAlignments = alignmentResults.filter((result) => result.intent.area === activeArea);
+  const approvedAlignments = areaAlignments.filter((result) => result.reviewState === "APPROVED");
+  const pendingAlignmentCount = areaAlignments.filter((result) => result.reviewState === "PENDING_REVIEW").length;
+  const latestApprovedAlignment = approvedAlignments.reduce<AlignmentResult | null>((latest, result) => (
+    latest === null || result.createdAt > latest.createdAt ? result : latest
+  ), null);
 
   function countForArea(area: KnowledgeArea): number {
     return knowledge.filter((entry) => entry.area === area).length
@@ -149,7 +161,7 @@ export function WikiPage({
             className={activeArea === area ? "wiki-area-active" : ""}
             onClick={() => setActiveArea(area)}
           >
-            <span>{label}</span><small>{countForArea(area)}</small>
+            <span>{label}</span><small>{entryCountLabel(countForArea(area))}</small>
           </button>
         ))}
       </nav>
@@ -175,7 +187,7 @@ export function WikiPage({
         <section className="wiki-area" aria-labelledby="wiki-area-title">
           <div className="wiki-area-heading">
             <h3 id="wiki-area-title">{activeLabel}</h3>
-            <span>{areaKnowledge.length + areaDecisions.length + areaRuns.length} entries</span>
+            <span>{entryCountLabel(visibleEntryCount)}</span>
           </div>
           {(activeArea === "technical" || activeArea === "production") && repository ? (
             <aside className="wiki-repository-reality" aria-label="Repository Reality summary">
@@ -201,14 +213,19 @@ export function WikiPage({
             </aside>
           ) : null}
           {areaAlignments.length > 0 ? (
-            <aside className="wiki-repository-reality" aria-label="Alignment summary">
-              <span className="wiki-type wiki-type-alignment">Alignment</span>
+            <aside className="wiki-repository-reality wiki-alignment-summary" aria-label="Alignment summary">
+              <div className="wiki-alignment-summary-heading">
+                <span className="wiki-type wiki-type-alignment">Alignment</span>
+                <small>Derived summary · not a Wiki entry</small>
+              </div>
               <dl>
-                <div><dt>Latest status</dt><dd>{displayEnum(areaAlignments.at(-1)!.status)}</dd></div>
-                <div><dt>Reviews</dt><dd>{areaAlignments.length}</dd></div>
-                <div><dt>Review</dt><dd>{displayEnum(areaAlignments.at(-1)!.reviewState)}</dd></div>
+                {latestApprovedAlignment ? <div><dt>Latest approved status</dt><dd>{displayEnum(latestApprovedAlignment.status)}</dd></div> : null}
+                <div><dt>Approved reviews</dt><dd>{approvedAlignments.length}</dd></div>
+                <div><dt>Pending reviews</dt><dd>{pendingAlignmentCount}</dd></div>
+                <div><dt>Total reviews</dt><dd>{areaAlignments.length}</dd></div>
               </dl>
-              <p>{areaAlignments.length} review{areaAlignments.length === 1 ? "" : "s"} for this Area. Alignment remains a derived, evidence-backed interpretation; review and editing stay in the Alignment workspace.</p>
+              <p>Alignment remains a derived, evidence-backed interpretation; reviews are not counted as Wiki entries.</p>
+              {onViewAlignmentHistory ? <button className="text-button wiki-alignment-history-action" type="button" onClick={onViewAlignmentHistory}>View Alignment History</button> : null}
             </aside>
           ) : null}
           {areaKnowledge.length === 0 && areaDecisions.length === 0 && areaRuns.length === 0 ? (

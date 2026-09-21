@@ -7,7 +7,7 @@ import { loadCompendium } from "./platform/projectKnowledge";
 import { loadSpecialistRuns } from "./platform/specialists";
 import { inspectRepositoryReality } from "./platform/repositoryReality";
 import { inspectUnityGroundTruth } from "./platform/unityGroundTruth";
-import { loadAlignmentResults } from "./platform/alignment";
+import { loadAlignmentResults, type AlignmentResult } from "./platform/alignment";
 
 vi.mock("./platform/projectKnowledge", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./platform/projectKnowledge")>()),
@@ -38,10 +38,17 @@ const run = {
   result: { summary: "Investigate under uncertainty.", assumptions: [], recommendations: ["Orient before moving."], risks: [], exploits: [], openQuestions: [], suggestedTests: [] },
   usage: {},
 };
+const alignment: AlignmentResult = {
+  id: "alignment-1", createdAt: "2026-09-21T11:00:00Z",
+  intent: { sourceType: "COMPENDIUM", sourceId: knowledge.id, title: knowledge.title, statement: knowledge.statement, status: knowledge.status, area: knowledge.area, provenance: "DOCUMENTED" },
+  evidence: [{ evidenceId: "unity:component:0", source: "UNITY", summary: "HearingPerception exists.", capturedAt: "2026-09-21T10:00:00Z", provenance: "VERIFIED_FROM_UNITY", assessment: "INSUFFICIENT" }],
+  status: "UNVERIFIED", rationale: "Presence does not prove behavior.", confidence: "LOW",
+  uncertainty: "Runtime values are unavailable.", provenance: ["DOCUMENTED", "VERIFIED_FROM_UNITY", "MANUAL_ASSESSMENT"], reviewState: "PENDING_REVIEW",
+};
 
-async function renderWiki(onEditKnowledge?: (entryId: string) => void) {
+async function renderWiki(onEditKnowledge?: (entryId: string) => void, onViewAlignmentHistory?: () => void) {
   const user = userEvent.setup();
-  render(<WikiPage workspace={workspace} onEditKnowledge={onEditKnowledge} />);
+  render(<WikiPage workspace={workspace} onEditKnowledge={onEditKnowledge} onViewAlignmentHistory={onViewAlignmentHistory} />);
   await screen.findByRole("heading", { name: "Game Wiki" });
   await screen.findByText("No project knowledge is associated with this area yet.");
   await user.click(screen.getByRole("button", { name: /Systems/ }));
@@ -75,13 +82,7 @@ describe("Game Wiki", () => {
     });
     vi.mocked(loadAlignmentResults).mockResolvedValue({
       formatVersion: 1, projectId: "project", updatedAt: "2026-09-21T11:00:00Z",
-      results: [{
-        id: "alignment-1", createdAt: "2026-09-21T11:00:00Z",
-        intent: { sourceType: "COMPENDIUM", sourceId: knowledge.id, title: knowledge.title, statement: knowledge.statement, status: knowledge.status, area: knowledge.area, provenance: "DOCUMENTED" },
-        evidence: [{ evidenceId: "unity:component:0", source: "UNITY", summary: "HearingPerception exists.", capturedAt: "2026-09-21T10:00:00Z", provenance: "VERIFIED_FROM_UNITY", assessment: "INSUFFICIENT" }],
-        status: "UNVERIFIED", rationale: "Presence does not prove behavior.", confidence: "LOW",
-        uncertainty: "Runtime values are unavailable.", provenance: ["DOCUMENTED", "VERIFIED_FROM_UNITY", "MANUAL_ASSESSMENT"], reviewState: "PENDING_REVIEW",
-      }],
+      results: [alignment],
     });
   });
 
@@ -102,13 +103,37 @@ describe("Game Wiki", () => {
     expect(within(proposedRow.querySelector("summary")!).getByText("Proposed")).toBeInTheDocument();
   });
 
-  it("shows a compact read-only Alignment summary in the relevant Wiki Area", async () => {
+  it("excludes the derived Alignment summary from Area entry counts", async () => {
+    await renderWiki();
+    expect(screen.getByText("Systems", { selector: ".wiki-area-nav span" }).closest("button")).toHaveTextContent("4 entries");
+    expect(screen.getByRole("heading", { name: "Systems" }).nextElementSibling).toHaveTextContent("4 entries");
+    const summary = screen.getByLabelText("Alignment summary");
+    expect(within(summary).getByText("Derived summary · not a Wiki entry")).toBeInTheDocument();
+    expect(within(summary).getByText(/reviews are not counted as Wiki entries/)).toBeInTheDocument();
+  });
+
+  it("shows approved, pending, and total review counts with the latest approved status", async () => {
+    vi.mocked(loadAlignmentResults).mockResolvedValue({
+      formatVersion: 1, projectId: "project", updatedAt: "2026-09-21T13:00:00Z",
+      results: [
+        { ...alignment, id: "approved-latest", createdAt: "2026-09-21T12:00:00Z", status: "OUT_OF_SYNC", reviewState: "APPROVED" },
+        { ...alignment, id: "pending-newest", createdAt: "2026-09-21T13:00:00Z" },
+        { ...alignment, id: "approved-older", createdAt: "2026-09-21T10:00:00Z", status: "ALIGNED", reviewState: "APPROVED" },
+      ],
+    });
     await renderWiki();
     const summary = screen.getByLabelText("Alignment summary");
-    expect(within(summary).getByText("Unverified")).toBeInTheDocument();
-    expect(within(summary).getByText("1")).toBeInTheDocument();
-    expect(within(summary).getByText("Pending Review")).toBeInTheDocument();
-    expect(within(summary).getByText(/editing stay in the Alignment workspace/)).toBeInTheDocument();
+    expect(within(summary).getByText("Latest approved status").parentElement).toHaveTextContent("Out Of Sync");
+    expect(within(summary).getByText("Approved reviews").parentElement).toHaveTextContent("2");
+    expect(within(summary).getByText("Pending reviews").parentElement).toHaveTextContent("1");
+    expect(within(summary).getByText("Total reviews").parentElement).toHaveTextContent("3");
+  });
+
+  it("routes the Alignment summary action to Review History", async () => {
+    const onViewAlignmentHistory = vi.fn();
+    const user = await renderWiki(undefined, onViewAlignmentHistory);
+    await user.click(screen.getByRole("button", { name: "View Alignment History" }));
+    expect(onViewAlignmentHistory).toHaveBeenCalledOnce();
   });
 
   it("keeps specialist analysis visibly non-authoritative", async () => {

@@ -243,10 +243,12 @@ export function WorkspaceShell({
   const [activeArea, setActiveArea] = useState<WorkspaceView>("Overview");
   const [promotedKnowledge, setPromotedKnowledge] = useState<KnowledgeEntry | null>(null);
   const [knowledgeEditTarget, setKnowledgeEditTarget] = useState<string | null>(null);
+  const [alignmentInitialSubview, setAlignmentInitialSubview] = useState<"CREATE" | "HISTORY">("CREATE");
 
   function openArea(area: WorkspaceView) {
     setPromotedKnowledge(null);
     setKnowledgeEditTarget(null);
+    setAlignmentInitialSubview("CREATE");
     setActiveArea(area);
   }
 
@@ -258,6 +260,11 @@ export function WorkspaceShell({
   function editKnowledgeAtSource(entryId: string) {
     setKnowledgeEditTarget(entryId);
     setActiveArea("Game Design");
+  }
+
+  function viewAlignmentHistory() {
+    setAlignmentInitialSubview("HISTORY");
+    setActiveArea("Alignment");
   }
 
   return (
@@ -341,7 +348,7 @@ export function WorkspaceShell({
               : activeArea === "Unity"
                 ? "0I.2 Unity GroundTruth"
               : activeArea === "Alignment"
-                ? "0J Alignment · Current"
+                ? "0J Alignment · Complete"
               : activeArea === "AI Evaluation"
                 ? "0D.1 Model Lab"
                 : activeArea === "Game Design" || activeArea === "Decisions"
@@ -364,13 +371,13 @@ export function WorkspaceShell({
           ) : activeArea === "Unity" ? (
             <UnityGroundTruthPage workspace={workspace} />
           ) : activeArea === "Game Wiki" ? (
-            <WikiPage workspace={workspace} onEditKnowledge={editKnowledgeAtSource} />
+            <WikiPage workspace={workspace} onEditKnowledge={editKnowledgeAtSource} onViewAlignmentHistory={viewAlignmentHistory} />
           ) : activeArea === "Game Design" ? (
             <CompendiumPage workspace={workspace} onPromote={promoteToDecision} editEntryId={knowledgeEditTarget} />
           ) : activeArea === "Decisions" ? (
             <DecisionsPage workspace={workspace} promotedKnowledge={promotedKnowledge} />
           ) : activeArea === "Alignment" ? (
-            <AlignmentPage workspace={workspace} />
+            <AlignmentPage workspace={workspace} initialSubview={alignmentInitialSubview} />
           ) : (
             <Placeholder area={activeArea} />
           )}

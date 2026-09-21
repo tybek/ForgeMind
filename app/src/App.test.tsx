@@ -10,6 +10,7 @@ import {
   selectWorkspaceDirectory,
 } from "./platform/workspaceDirectory";
 import { inspectUnityGroundTruth } from "./platform/unityGroundTruth";
+import { loadAlignmentResults } from "./platform/alignment";
 
 vi.mock("./platform/workspaceDirectory", () => ({
   getDevelopmentWorkspacePath: vi.fn(),
@@ -167,6 +168,7 @@ describe("ForgeMind local workspace", () => {
     vi.clearAllMocks();
     vi.mocked(getDevelopmentWorkspacePath).mockResolvedValue(null);
     vi.mocked(loadCompendium).mockResolvedValue(null);
+    vi.mocked(loadAlignmentResults).mockResolvedValue(null);
   });
 
   it("renders the welcome screen with the Open Project action", () => {
@@ -264,6 +266,40 @@ describe("ForgeMind local workspace", () => {
     expect(
       screen.getByRole("button", { name: "Project Interview" }),
     ).toBeInTheDocument();
+  });
+
+  it("opens Alignment Review History from the derived Game Wiki summary", async () => {
+    vi.mocked(loadCompendium).mockResolvedValue({
+      formatVersion: 1,
+      projectId: workspace.projectId,
+      updatedAt: "2026-09-21T10:00:00Z",
+      entries: [{
+        id: "knowledge-1", area: "systems", title: "Perception model", statement: "Enemies act only on perceived facts.",
+        status: "LOCKED", provenance: "MANUAL", source: "manual_entry",
+        createdAt: "2026-09-21T09:00:00Z", updatedAt: "2026-09-21T09:00:00Z",
+      }],
+    });
+    vi.mocked(loadAlignmentResults).mockResolvedValue({
+      formatVersion: 1,
+      projectId: workspace.projectId,
+      updatedAt: "2026-09-21T10:00:00Z",
+      results: [{
+        id: "alignment-1", createdAt: "2026-09-21T10:00:00Z",
+        intent: { sourceType: "COMPENDIUM", sourceId: "knowledge-1", title: "Perception model", statement: "Enemies act only on perceived facts.", status: "LOCKED", area: "systems", provenance: "DOCUMENTED" },
+        evidence: [], status: "UNVERIFIED", rationale: "Runtime evidence is missing.", confidence: "LOW",
+        uncertainty: "Runtime behavior is unavailable.", provenance: ["DOCUMENTED", "MANUAL_ASSESSMENT"], reviewState: "APPROVED",
+      }],
+    });
+    const user = userEvent.setup();
+    render(<WorkspaceShell workspace={workspace} onOpen={async () => undefined} />);
+
+    await user.click(screen.getByRole("button", { name: "Game Wiki" }));
+    await user.click((await screen.findByText("Systems", { selector: ".wiki-area-nav span" })).closest("button")!);
+    await user.click(screen.getByRole("button", { name: "View Alignment History" }));
+
+    expect(await screen.findByRole("heading", { name: "Alignment", level: 2 })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Review History" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("heading", { name: "Review History" })).toBeInTheDocument();
   });
 
   it("opens AI Behavior Designer inside the existing workspace shell", async () => {
