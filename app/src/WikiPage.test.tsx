@@ -8,6 +8,7 @@ import { loadSpecialistRuns } from "./platform/specialists";
 import { inspectRepositoryReality } from "./platform/repositoryReality";
 import { inspectUnityGroundTruth } from "./platform/unityGroundTruth";
 import { loadAlignmentResults, type AlignmentResult } from "./platform/alignment";
+import { loadFeatureContracts, type FeatureContract } from "./platform/featureContracts";
 
 vi.mock("./platform/projectKnowledge", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./platform/projectKnowledge")>()),
@@ -18,6 +19,7 @@ vi.mock("./platform/specialists", () => ({ loadSpecialistRuns: vi.fn() }));
 vi.mock("./platform/repositoryReality", () => ({ inspectRepositoryReality: vi.fn() }));
 vi.mock("./platform/unityGroundTruth", () => ({ inspectUnityGroundTruth: vi.fn() }));
 vi.mock("./platform/alignment", () => ({ loadAlignmentResults: vi.fn() }));
+vi.mock("./platform/featureContracts", () => ({ loadFeatureContracts: vi.fn() }));
 
 const workspace = { path: "D:\\Games\\Sample" };
 const knowledge = {
@@ -46,9 +48,23 @@ const alignment: AlignmentResult = {
   uncertainty: "Runtime values are unavailable.", provenance: ["DOCUMENTED", "VERIFIED_FROM_UNITY", "MANUAL_ASSESSMENT"], reviewState: "PENDING_REVIEW",
 };
 
-async function renderWiki(onEditKnowledge?: (entryId: string) => void, onViewAlignmentHistory?: () => void) {
+const featureContract: FeatureContract = {
+  id: "contract-1", createdAt: "2026-09-21T12:00:00Z", updatedAt: "2026-09-21T12:00:00Z",
+  title: "Enemy sound knowledge", goal: "Keep sound uncertain.", currentRealitySummary: "Approved Alignment is UNVERIFIED.",
+  sources: {
+    origin: { sourceType: "ALIGNMENT", sourceId: alignment.id, title: knowledge.title, statement: knowledge.statement, status: "UNVERIFIED", area: "systems", provenance: "MANUAL_ASSESSMENT" },
+    intent: { sourceType: "COMPENDIUM", sourceId: knowledge.id, title: knowledge.title, statement: knowledge.statement, status: knowledge.status, area: knowledge.area, provenance: "DOCUMENTED" },
+    alignment: { alignmentId: alignment.id, status: "UNVERIFIED", rationale: alignment.rationale, createdAt: alignment.createdAt, reviewState: "APPROVED" },
+    realityEvidence: [],
+  },
+  affectedSystems: ["Enemy perception"], requiredBehavior: ["Omit exact coordinates."], outOfScope: ["Vision"], risks: [],
+  acceptanceCriteria: ["No exact coordinate."], deterministicTests: ["Sound-only knowledge test."], implementationNotes: "", likelyAffectedEvidenceIds: [],
+  status: "APPROVED", reviewState: "APPROVED", reviewedAt: "2026-09-21T12:01:00Z",
+};
+
+async function renderWiki(onEditKnowledge?: (entryId: string) => void, onViewAlignmentHistory?: () => void, onViewFeatureContracts?: () => void) {
   const user = userEvent.setup();
-  render(<WikiPage workspace={workspace} onEditKnowledge={onEditKnowledge} onViewAlignmentHistory={onViewAlignmentHistory} />);
+  render(<WikiPage workspace={workspace} onEditKnowledge={onEditKnowledge} onViewAlignmentHistory={onViewAlignmentHistory} onViewFeatureContracts={onViewFeatureContracts} />);
   await screen.findByRole("heading", { name: "Game Wiki" });
   await screen.findByText("No project knowledge is associated with this area yet.");
   await user.click(screen.getByRole("button", { name: /Systems/ }));
@@ -84,6 +100,7 @@ describe("Game Wiki", () => {
       formatVersion: 1, projectId: "project", updatedAt: "2026-09-21T11:00:00Z",
       results: [alignment],
     });
+    vi.mocked(loadFeatureContracts).mockResolvedValue({ formatVersion: 1, projectId: "project", updatedAt: "2026-09-21T12:01:00Z", contracts: [featureContract] });
   });
 
   it("renders aggregated Compendium knowledge under its existing Area", async () => {
@@ -134,6 +151,19 @@ describe("Game Wiki", () => {
     const user = await renderWiki(undefined, onViewAlignmentHistory);
     await user.click(screen.getByRole("button", { name: "View Alignment History" }));
     expect(onViewAlignmentHistory).toHaveBeenCalledOnce();
+  });
+
+  it("shows a compact read-only Feature Contract summary without changing Wiki entry counts", async () => {
+    const onViewFeatureContracts = vi.fn();
+    const user = await renderWiki(undefined, undefined, onViewFeatureContracts);
+    expect(screen.getByText("Systems", { selector: ".wiki-area-nav span" }).closest("button")).toHaveTextContent("4 entries");
+    const summary = screen.getByLabelText("Feature Contract summary");
+    expect(within(summary).getByText("Enemy sound knowledge")).toBeInTheDocument();
+    expect(within(summary).getByText("Approved contracts").parentElement).toHaveTextContent("1");
+    expect(within(summary).getByText(/editing remains in the Feature Contracts workspace/)).toBeInTheDocument();
+    expect(within(summary).queryByRole("textbox")).not.toBeInTheDocument();
+    await user.click(within(summary).getByRole("button", { name: "View Feature Contracts" }));
+    expect(onViewFeatureContracts).toHaveBeenCalledOnce();
   });
 
   it("keeps specialist analysis visibly non-authoritative", async () => {

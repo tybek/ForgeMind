@@ -10,6 +10,7 @@ import { loadSpecialistRuns, type SpecialistRun } from "./platform/specialists";
 import { inspectRepositoryReality, type RepositorySnapshot } from "./platform/repositoryReality";
 import { inspectUnityGroundTruth, type UnityGroundTruthResult } from "./platform/unityGroundTruth";
 import { loadAlignmentResults, type AlignmentResult } from "./platform/alignment";
+import { loadFeatureContracts, type FeatureContract } from "./platform/featureContracts";
 
 interface WikiWorkspace {
   path: string;
@@ -54,10 +55,12 @@ export function WikiPage({
   workspace,
   onEditKnowledge,
   onViewAlignmentHistory,
+  onViewFeatureContracts,
 }: {
   workspace: WikiWorkspace;
   onEditKnowledge?: (entryId: string) => void;
   onViewAlignmentHistory?: () => void;
+  onViewFeatureContracts?: () => void;
 }) {
   const [activeArea, setActiveArea] = useState<KnowledgeArea>("overview");
   const [query, setQuery] = useState("");
@@ -68,6 +71,7 @@ export function WikiPage({
   const [repository, setRepository] = useState<RepositorySnapshot | null>(null);
   const [unityReality, setUnityReality] = useState<UnityGroundTruthResult | null>(null);
   const [alignmentResults, setAlignmentResults] = useState<AlignmentResult[]>([]);
+  const [featureContracts, setFeatureContracts] = useState<FeatureContract[]>([]);
   const [loading, setLoading] = useState(true);
   const [errors, setErrors] = useState<string[]>([]);
 
@@ -80,6 +84,7 @@ export function WikiPage({
     setRepository(null);
     setUnityReality(null);
     setAlignmentResults([]);
+    setFeatureContracts([]);
     setErrors([]);
     void Promise.allSettled([
       loadCompendium(workspace.path),
@@ -88,7 +93,8 @@ export function WikiPage({
       inspectRepositoryReality(workspace.path),
       inspectUnityGroundTruth(workspace.path),
       loadAlignmentResults(workspace.path),
-    ]).then(([compendiumResult, decisionsResult, runsResult, repositoryResult, unityResult, alignmentResult]) => {
+      loadFeatureContracts(workspace.path),
+    ]).then(([compendiumResult, decisionsResult, runsResult, repositoryResult, unityResult, alignmentResult, featureContractsResult]) => {
       if (!active) return;
       const nextErrors: string[] = [];
       if (compendiumResult.status === "fulfilled") setKnowledge(compendiumResult.value?.entries ?? []);
@@ -105,6 +111,8 @@ export function WikiPage({
       else nextErrors.push(`Unity GroundTruth: ${messageFromError(unityResult.reason)}`);
       if (alignmentResult.status === "fulfilled") setAlignmentResults(alignmentResult.value?.results ?? []);
       else nextErrors.push(`Alignment: ${messageFromError(alignmentResult.reason)}`);
+      if (featureContractsResult.status === "fulfilled") setFeatureContracts(featureContractsResult.value?.contracts ?? []);
+      else nextErrors.push(`Feature Contracts: ${messageFromError(featureContractsResult.reason)}`);
       setErrors(nextErrors);
       setLoading(false);
     });
@@ -136,6 +144,12 @@ export function WikiPage({
   const pendingAlignmentCount = areaAlignments.filter((result) => result.reviewState === "PENDING_REVIEW").length;
   const latestApprovedAlignment = approvedAlignments.reduce<AlignmentResult | null>((latest, result) => (
     latest === null || result.createdAt > latest.createdAt ? result : latest
+  ), null);
+  const areaFeatureContracts = featureContracts.filter((contract) => contract.sources.intent.area === activeArea);
+  const approvedFeatureContracts = areaFeatureContracts.filter((contract) => contract.status === "APPROVED");
+  const draftFeatureContractCount = areaFeatureContracts.filter((contract) => contract.status === "DRAFT").length;
+  const latestApprovedFeatureContract = approvedFeatureContracts.reduce<FeatureContract | null>((latest, contract) => (
+    latest === null || contract.updatedAt > latest.updatedAt ? contract : latest
   ), null);
 
   function countForArea(area: KnowledgeArea): number {
@@ -226,6 +240,22 @@ export function WikiPage({
               </dl>
               <p>Alignment remains a derived, evidence-backed interpretation; reviews are not counted as Wiki entries.</p>
               {onViewAlignmentHistory ? <button className="text-button wiki-alignment-history-action" type="button" onClick={onViewAlignmentHistory}>View Alignment History</button> : null}
+            </aside>
+          ) : null}
+          {areaFeatureContracts.length > 0 ? (
+            <aside className="wiki-repository-reality wiki-feature-contract-summary" aria-label="Feature Contract summary">
+              <div className="wiki-alignment-summary-heading">
+                <span className="wiki-type wiki-type-contract">Feature Contract</span>
+                <small>Derived delivery summary · not a Wiki entry</small>
+              </div>
+              <dl>
+                {latestApprovedFeatureContract ? <div><dt>Latest approved</dt><dd>{latestApprovedFeatureContract.title}</dd></div> : null}
+                <div><dt>Approved contracts</dt><dd>{approvedFeatureContracts.length}</dd></div>
+                <div><dt>Draft contracts</dt><dd>{draftFeatureContractCount}</dd></div>
+                <div><dt>Total contracts</dt><dd>{areaFeatureContracts.length}</dd></div>
+              </dl>
+              <p>Compact read-only handoff status; contract editing remains in the Feature Contracts workspace.</p>
+              {onViewFeatureContracts ? <button className="text-button wiki-alignment-history-action" type="button" onClick={onViewFeatureContracts}>View Feature Contracts</button> : null}
             </aside>
           ) : null}
           {areaKnowledge.length === 0 && areaDecisions.length === 0 && areaRuns.length === 0 ? (

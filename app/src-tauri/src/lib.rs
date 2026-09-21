@@ -2,6 +2,7 @@ pub mod ai;
 pub mod alignment;
 pub mod compendium;
 pub mod decisions;
+pub mod feature_contracts;
 pub mod interview;
 pub mod git_reality;
 pub mod model_registry;
@@ -29,6 +30,11 @@ use compendium::{
 use decisions::{
     CreateDecisionRequest, DecisionActionRequest, DecisionError, DecisionsDocument,
     UpdateDecisionRequest,
+};
+use feature_contracts::{
+    CreateFeatureContractRequest, DeleteFeatureContractRequest, DraftFeatureContractWithAiRequest,
+    FeatureContractAiDraftResult, FeatureContractError, FeatureContractSourceCatalog,
+    FeatureContractsDocument, SetFeatureContractStatusRequest, UpdateFeatureContractRequest,
 };
 use interview::{
     InterviewDocument, InterviewError, InterviewTurnRequest, InterviewTurnResult,
@@ -340,6 +346,58 @@ fn review_alignment_result(
     alignment::review(request)
 }
 
+#[tauri::command]
+fn load_feature_contract_sources(path: String) -> Result<FeatureContractSourceCatalog, FeatureContractError> {
+    feature_contracts::sources(Path::new(&path))
+}
+
+#[tauri::command]
+fn load_feature_contracts(path: String) -> Result<Option<FeatureContractsDocument>, FeatureContractError> {
+    feature_contracts::load(Path::new(&path))
+}
+
+#[tauri::command]
+fn create_feature_contract(request: CreateFeatureContractRequest) -> Result<FeatureContractsDocument, FeatureContractError> {
+    feature_contracts::create(request)
+}
+
+#[tauri::command]
+fn update_feature_contract(request: UpdateFeatureContractRequest) -> Result<FeatureContractsDocument, FeatureContractError> {
+    feature_contracts::update(request)
+}
+
+#[tauri::command]
+fn delete_feature_contract_draft(request: DeleteFeatureContractRequest) -> Result<FeatureContractsDocument, FeatureContractError> {
+    feature_contracts::delete_draft(request)
+}
+
+#[tauri::command]
+async fn draft_feature_contract_with_ai(
+    request: DraftFeatureContractWithAiRequest,
+) -> Result<FeatureContractAiDraftResult, FeatureContractError> {
+    let prepared = feature_contracts::build_ai_draft_request(&request)?;
+    let response = evaluate_registered(
+        prepared.ai_request,
+        Some(request.project_id),
+        Some(TaskCategory::FeatureContract),
+    )
+    .await
+    .map_err(FeatureContractError::from_ai_error)?;
+    feature_contracts::normalize_ai_draft(
+        &response.text,
+        response.model,
+        response.latency_ms,
+        response.input_tokens,
+        response.output_tokens,
+        response.total_tokens,
+    )
+}
+
+#[tauri::command]
+fn set_feature_contract_status(request: SetFeatureContractStatusRequest) -> Result<FeatureContractsDocument, FeatureContractError> {
+    feature_contracts::set_status(request)
+}
+
 fn session_id() -> &'static str {
     SESSION_ID.get_or_init(|| uuid::Uuid::new_v4().to_string())
 }
@@ -410,6 +468,13 @@ pub fn run() {
             load_alignment_results,
             create_alignment_review,
             review_alignment_result,
+            load_feature_contract_sources,
+            load_feature_contracts,
+            create_feature_contract,
+            update_feature_contract,
+            delete_feature_contract_draft,
+            draft_feature_contract_with_ai,
+            set_feature_contract_status,
             development_workspace_path
         ])
         .run(tauri::generate_context!())

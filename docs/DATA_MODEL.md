@@ -2,7 +2,7 @@
 
 ## Scope
 
-This model establishes shared language and relationships. It is not a database schema or API contract. Milestone 0C serializes minimal Project identity in `.forgemind/project.json`; 0E adds approved onboarding evidence in `.forgemind/interview.json`; 0F adds separate versioned Compendium and Decision documents; 0G.3 adds non-authoritative specialist work history in `.forgemind/specialist-runs.json`; and 0J.1 adds derived, reviewable Alignment history in `.forgemind/alignment.json`.
+This model establishes shared language and relationships. It is not a database schema or API contract. Milestone 0C serializes minimal Project identity in `.forgemind/project.json`; 0E adds approved onboarding evidence in `.forgemind/interview.json`; 0F adds separate versioned Compendium and Decision documents; 0G.3 adds non-authoritative specialist work history in `.forgemind/specialist-runs.json`; 0J.1 adds derived, reviewable Alignment history in `.forgemind/alignment.json`; and 0K adds reviewed delivery artifacts in `.forgemind/feature-contracts.json`.
 
 ## Core entities
 
@@ -36,7 +36,7 @@ A bounded delivery objective with a status, scope, dependencies, and optional ta
 
 ### FeatureContract
 
-A reviewable plan for a feature, assembled from design, technical, roadmap, and GroundTruth context. It includes a summary, alignment, dependencies, affected systems, expected changes, acceptance criteria, risks, explicit exclusions, suggested tests, source references, authorship, and approval state.
+A durable, derived delivery artifact assembled manually from one approved Alignment Review, current Compendium entry, or approved Decision. The format-version `1` model records stable `id`, `createdAt` / `updatedAt`, immutable captured source trace, title, goal, current Reality summary, affected systems, required behavior, out of scope, risks, acceptance criteria, deterministic tests, implementation notes, evidence-backed likely affected references, lifecycle status, human review state, and optional review time. It is implementation scope, not a competing truth source or authorization to execute code changes.
 
 ### GroundTruthSnapshot
 
@@ -124,6 +124,8 @@ The exact vocabulary may evolve after GroundTruth is tested. Combinations are me
 
 Approval answers whether a person has accepted an artifact; it does not replace its design or implementation status. 0J.1 Alignment results use `PENDING_REVIEW`, `APPROVED`, and `REJECTED`. Rejection preserves the historical result.
 
+0K Feature Contracts use lifecycle status `DRAFT`, `APPROVED`, `SUPERSEDED`, or `DEPRECATED` plus human review state `PENDING_REVIEW` or `APPROVED`. New contracts always start `DRAFT` / `PENDING_REVIEW`. A draft title and implementation scope may change, and a draft alone may be explicitly hard-deleted. Approval is an explicit action after required implementation scope is complete; approved, superseded, and deprecated artifacts cannot be hard-deleted and remain history.
+
 ## Invariants
 
 - Observed implementation facts must identify their snapshot and time.
@@ -170,6 +172,18 @@ Approval answers whether a person has accepted an artifact; it does not replace 
 - Every new result begins `PENDING_REVIEW`. Approval and rejection update only Alignment history and never mutate Compendium, Decisions, Git, or Unity GroundTruth.
 - `DOCUMENTED` / `APPROVED_INTENT`, `VERIFIED_FROM_GIT`, `VERIFIED_FROM_UNITY`, and `MANUAL_ASSESSMENT` remain distinct. No 0J.1 result uses live AI; any future `AI_INFERENCE` must remain visibly non-evidence provenance.
 - Absolute paths, credentials, raw provider content, hidden reasoning, raw Unity observations, and source-file contents are excluded.
+
+## 0K Feature Contract invariants
+
+- `.forgemind/feature-contracts.json` is a human-readable format-version `1` project-owned delivery document tied to portable Project identity.
+- Creation accepts approved Alignment Reviews, current non-deprecated Compendium entries, and `APPROVED` Decisions. An approved Alignment Review is preferred but never selected automatically.
+- Captured origin, Intent, Alignment, and Reality references are immutable after creation. Editing changes only the reviewed contract title/scope fields and `updatedAt`.
+- Direct Compendium/Decision contracts state that current Reality is not established; they never invent evidence. Evidence-backed likely affected references must be selected from Reality evidence captured by the source Alignment Review.
+- `DRAFT` is editable and `PENDING_REVIEW`; explicit approval moves a complete contract to `APPROVED`. Approved contracts may later be marked `SUPERSEDED` or `DEPRECATED` without deletion.
+- Absolute machine paths, common credential material, raw provider content, hidden reasoning, and invented source references are rejected or excluded.
+- 0K.2 AI drafting is an explicit single-request transient proposal. It uses an enabled registered model, is metered as `feature_contract`, includes only captured source facts plus current human fields, never retries automatically, and never writes to project persistence. The normalized proposal contains no file path; evidence-backed locations continue to come only from captured Reality references selected by the user.
+- Applying an AI proposal changes only unsaved editor state. Per-section replacement is explicit, Apply All fills only empty sections, and Save/Approve remain separate human actions.
+- Game Wiki reads compact Area-scoped counts and latest-approved title from this domain; it does not persist a copy or expose the full editor.
 
 ## Deliberately unresolved
 

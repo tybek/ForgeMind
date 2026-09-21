@@ -1,0 +1,318 @@
+# ForgeMind UI Direction
+
+## Status and scope
+
+This document records the agreed future product and interface direction for ForgeMind. It is a design and implementation-planning reference, not a claim about current application behavior.
+
+**FUTURE PLANNED WORK — NOT IMPLEMENTED.** The current product milestone remains 0K, with manual validation pending. Do not begin UI-1 or later phases unless a task explicitly authorizes that phase. Do not rewrite working behavior solely to make it fit this direction.
+
+Use this document with the [ForgeMind Brandbook](BRANDBOOK.md), [Product Direction](PRODUCT.md), and [Roadmap](ROADMAP.md). The Brandbook owns visual identity and voice; this document owns information architecture, dashboard behavior, layout, workflow, artwork policy inside the product, and phased UI implementation.
+
+## Product experience
+
+ForgeMind should feel like an AI game-development workspace, project control center, and creative production cockpit built for people making real games. The useful metaphor is:
+
+**workshop + control room + creative studio**
+
+The experience should be competent, focused, modern, practical, creative, technically credible without feeling sterile, and premium without feeling corporate. It should feel game-development native without becoming an esports interface.
+
+ForgeMind should not resemble a generic administration dashboard, Notion clone, Jira clone, ChatGPT clone, form-heavy documentation system, or an over-decorated gaming UI.
+
+The governing principle is:
+
+> ForgeMind should make complex game development feel clearer, not more complicated.
+
+## Core UX principles
+
+### Clarity before decoration
+
+Hierarchy, current state, provenance, and the next useful action matter more than visual novelty. Decoration may establish atmosphere, but it must never obscure project state or compete with editing and review.
+
+### Reduce typing
+
+ForgeMind should reduce documentation work, not create more of it. When enough reviewed context exists, complex artifacts should increasingly follow this flow:
+
+```text
+User intent
+-> ForgeMind gathers relevant context
+-> an appropriate specialist or model proposes a draft
+-> the human reviews choices
+-> the human edits only where needed
+-> explicit approval
+-> implementation handoff
+```
+
+Manual entry remains available as an escape hatch. A useful artifact should usually take minutes to review rather than 15 or more minutes to author from an empty form.
+
+### Explain state
+
+Do not invent opaque health scores or unexplained recommendations. Every project-health summary, suggested next step, and status must be traceable to understandable project data. If a score is added later, its inputs and calculation must be visible.
+
+### Keep authority visible
+
+Documented Intent, approved Decisions, verified Reality, derived Alignment, AI analysis, drafts, and approved delivery artifacts must remain visibly distinct. AI output is a proposal until a person applies, saves, promotes, or approves it through the owning workflow.
+
+### One local priority
+
+Each card or local action area should have one clear purpose, one primary state or value, and at most one visually primary action. Secondary and tertiary controls should not compete with the next recommended action.
+
+### Resume work in place
+
+Dashboards should help the user continue meaningful work, not become a second task-management system. A recommendation or activity item should route to the existing authoritative workspace and preserve context where practical.
+
+## Workspace Home
+
+The future Home screen should answer three questions quickly:
+
+- What am I working on?
+- What is the current state of my projects?
+- What should I do next?
+
+Home may be more atmospheric than dense project workspaces, but utility remains primary.
+
+### Welcome / hero
+
+Use a short, calm welcome such as:
+
+- **Good morning. What shall we build today?**
+- **Welcome back. Continue building your game.**
+
+The hero may use subtle ForgeMind branding or real project artwork. It must not push recent work and next steps below a large decorative surface.
+
+### Recent Projects
+
+Show compact project cards with:
+
+- user-selected cover, real project image, or branded fallback;
+- project name;
+- compact, explainable state;
+- last opened or updated time;
+- optional short metadata when it helps selection.
+
+Primary actions are **Open project**, **View all**, and **Open another project**. Raw filesystem paths may remain available as secondary technical metadata, but they must not be the dominant visual identifier.
+
+### Recommended Next Steps
+
+Show approximately three to five contextual actions derived from current project state. Initial logic should be deterministic; AI is not required for the first implementation.
+
+Examples include:
+
+- Review an unresolved Alignment issue.
+- Continue a Feature Contract.
+- Refresh Unity GroundTruth.
+- Review a proposed Decision.
+- Review new AI analysis.
+- Generate an Implementation Brief.
+
+Each recommendation should state why it appears and route to the owning workflow. Avoid generic productivity advice, automatic execution, hidden ranking, or an unbounded task feed.
+
+## Project Overview Dashboard
+
+After project selection, land on a project cockpit that answers: what is true, what needs attention, and what can be continued now.
+
+### Project Health
+
+Summarize explainable signals such as:
+
+- Intent coverage;
+- unresolved Alignment issues;
+- Reality freshness;
+- Decision state;
+- Feature Contract state.
+
+Do not collapse these dimensions into a meaningless score. A future aggregate score is acceptable only when its calculation and source data are explainable.
+
+### Active Decisions
+
+Show approved and proposed counts, the most relevant recent or current Decision, and one action to open Decisions.
+
+### AI Insights
+
+Use **AI Insights**, not **All Insights**. Possible content includes recent specialist analyses, unpromoted findings, the last specialist run, and analysis awaiting review. The primary action is **Open AI Studio**. Analysis remains non-authoritative.
+
+### Feature Contracts
+
+Show draft and approved counts, the latest or currently relevant contract, and one action to **Continue Contract**. Do not duplicate the contract editor on the dashboard.
+
+## Project dashboard secondary sections
+
+### Recent Activity
+
+Aggregate a bounded set of meaningful events from existing timestamps and domain data where possible:
+
+- Decision approved;
+- Alignment Review approved;
+- Feature Contract created or approved;
+- Unity GroundTruth refreshed;
+- Git Reality refreshed or changed;
+- specialist run completed.
+
+This is a concise project narrative, not an enterprise audit log. Do not create a new competing event store merely to populate the first version.
+
+### Continue Building
+
+Present resumable or consequential next work, such as:
+
+- Continue Feature Contract;
+- Resolve Alignment issue;
+- Review Decision;
+- Refresh Reality;
+- Run specialist analysis;
+- Generate Implementation Brief.
+
+Treat this as a lightweight, derived work queue. It does not introduce sprints, Kanban, assignment, time tracking, or a new source of task truth.
+
+## Long-term information architecture
+
+The future sidebar direction is:
+
+### Project
+
+- Overview
+- Game Wiki
+- Decisions
+- Roadmap / Production
+
+### Reality
+
+- Repository
+- Unity
+- Alignment
+
+### AI
+
+- AI Studio
+- Model Evaluation
+
+### Delivery
+
+- Feature Contracts
+- Implementation Briefs / Workflows
+
+Use an icon plus label for each destination, one consistent line-icon family, and restrained group hierarchy. This grouping is future consolidation, not authorization to migrate the current navigation. Preserve existing routes and ownership until a scoped implementation phase defines migration behavior and regression coverage.
+
+## AI-assisted workflow direction
+
+The long-term entry point may ask:
+
+> What do you want to work on?
+
+Given a short intent such as “I want enemies to react to sound without omniscience,” ForgeMind may eventually:
+
+1. infer a likely task type;
+2. gather relevant Project Brain context;
+3. suggest an appropriate specialist or workflow;
+4. recommend a model when supported by local task-specific evidence;
+5. generate a structured proposal;
+6. let the user accept, edit, or reject sections;
+7. create the owning artifact only after explicit confirmation;
+8. hand reviewed scope to implementation.
+
+Potential categories include Behavior Design, Exploit Analysis, Balance Analysis, Encounter Design, Progression Design, Technical Impact, Test Design, Code Documentation, Feature Contract drafting, and Implementation Brief generation.
+
+Model recommendations should eventually use local task-specific evaluation data, show sample size and limitations, and remain unavailable when evidence is insufficient. Never claim one model is universally best or route work automatically without explicit scope.
+
+## Layout and interaction direction
+
+- Use responsive workbenches for list/editor/detail relationships; preserve selection when panes stack.
+- Keep history compact and scannable. Put detail and editing in a stable pane rather than expanding the whole page repeatedly.
+- Place progress, success, warning, and failure feedback beside the action that caused it.
+- Prefer review surfaces, structured choices, sensible defaults, and section-level apply controls over many empty text areas.
+- Keep source trace, provenance, uncertainty, and evidence readable but compact.
+- Use progressive disclosure for advanced controls, long evidence, diagnostics, and secondary metadata.
+- Preserve meaningful empty, loading, running, success, warning, error, history/detail, dialog, compact, and wide states.
+- Keep destructive actions explicit, local, and visually distinct; do not place them beside a primary action without separation.
+- Use motion only for quick functional feedback. Never make the user wait for decorative animation.
+
+## Surface direction
+
+The visual system is defined in the [Brandbook](BRANDBOOK.md). Product layouts should apply it with these constraints:
+
+- deep dark base with slightly lighter working surfaces;
+- subtle borders and minimal shadows;
+- moderate corner radius;
+- orange reserved for brand emphasis, primary actions, and selected states;
+- semantic colors reserved for state meaning;
+- cards grouped by purpose rather than putting every text fragment in its own box;
+- dense editing workspaces progressively more functional and less decorative than Home.
+
+## Artwork policy inside the product
+
+The application must not present random generated fantasy artwork as if it belongs to the user's project. Preferred project-image sources are:
+
+1. user-selected project cover;
+2. user-uploaded concept art;
+3. actual project or game screenshot;
+4. a future Unity-derived screenshot;
+5. neutral ForgeMind branded fallback.
+
+When no project image exists, use an abstract dark branded fallback. Home may use restrained cinematic atmosphere; dense project workspaces should avoid large background art that harms readability.
+
+## Accessibility and adaptability
+
+- Never communicate state through color alone; retain explicit text labels.
+- Maintain readable contrast for text, borders, focus, and disabled states.
+- Preserve visible keyboard focus and semantic controls.
+- Keep icons accompanied by labels in primary navigation and unfamiliar actions.
+- Test wide and compact layouts; stacking must preserve workflow order, selection, and local feedback.
+- Respect reduced-motion preferences when motion is introduced.
+
+## Future implementation phases
+
+These phases are recorded in the [Roadmap](ROADMAP.md) as planned work. They are not started by this document.
+
+### UI-1 — Brand / Design System Foundation
+
+- establish color tokens;
+- establish typography hierarchy;
+- select one licensed line-icon system;
+- define card, button, badge, spacing, radius, border, focus, and motion tokens;
+- polish the sidebar shell without changing information ownership;
+- integrate original ForgeMind branding and responsive logo configurations.
+
+Exit direction: shared primitives and tokens can be applied without feature-specific color or control drift.
+
+### UI-2 — Workspace Home
+
+- greeting and welcome hero;
+- recent project cards with approved image sources and branded fallbacks;
+- deterministic recommended next steps;
+- improved project selection and open-another-project flow.
+
+Exit direction: Home answers current project, project state, and next action without emphasizing filesystem paths.
+
+### UI-3 — Project Overview Dashboard
+
+- Project Health;
+- Active Decisions;
+- AI Insights;
+- Feature Contracts;
+- Recent Activity;
+- Continue Building.
+
+Exit direction: every state and recommendation is explainable from existing domain data and routes to the owning workspace.
+
+### UI-4 — Workspace Consistency Pass
+
+Apply the shared visual system to Game Wiki, Decisions, Repository, Unity, Alignment, AI Studio / Specialists, Model Evaluation, and Feature Contracts. Preserve working behavior and authority boundaries; do not rewrite a workflow solely for styling.
+
+Exit direction: the major workspaces share hierarchy, actions, feedback, badges, icons, responsive behavior, and provenance treatment without behavioral regression.
+
+### UI-5 — Full Screenshot UX Audit
+
+Review all major empty, loading, running, success, warning, error, history/detail, dialog, compact, and wide states. Then perform one consolidated consistency and polish pass.
+
+Exit direction: visual evidence covers the complete state matrix, remaining inconsistencies are resolved or documented, and manual sign-off remains separate from automated regression validation.
+
+## Non-goals for the redesign track
+
+- changing domain authority or persistence to simplify a screen;
+- implementing a generic browser-history system solely for navigation polish;
+- adding an opaque health score;
+- building a Jira-style task manager or enterprise audit system;
+- using AI to generate project artwork implicitly;
+- automatically routing models or accepting AI output;
+- replacing human approval;
+- starting post-0K core product milestones through visual work;
+- copying external brands, trademarks, or commercial product identities.
+

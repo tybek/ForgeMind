@@ -2,7 +2,7 @@
 
 ## Status
 
-This document defines the product direction. **CURRENT:** 0J Alignment; 0J.1 is implemented with manual validation pending. The local workspace already includes Project Interview, Compendium knowledge, Decisions, one bounded specialist profile, Game Wiki aggregation, Repository Reality, completed Unity GroundTruth, and the first manual Alignment review workflow. **PLANNED:** later 0J work and 0K Feature Contract. Everything described as future or post-1.0 direction below is **NOT IMPLEMENTED** unless explicitly identified otherwise.
+This document defines the product direction. **CURRENT:** 0K Feature Contract. 0K.1 and 0K.2 are implemented with manual validation pending. The local workspace includes Project Interview, Compendium knowledge, Decisions, one bounded specialist profile, Game Wiki aggregation, Repository Reality, completed Unity GroundTruth and Alignment workflows, plus the reviewed Feature Contract workbench, explicit AI-assisted drafting proposals, and coding-agent handoff workflow. Everything described as future or post-1.0 direction below is **NOT IMPLEMENTED** unless explicitly identified otherwise.
 
 ## Problem
 
@@ -24,7 +24,7 @@ An AI assistant is more useful and safer when it can reason over structured proj
 
 **Alignment** interprets the relationship between them. It may show that a locked decision is implemented, that an implementation claim is unverified, that deprecated behavior is still present, or that a proposal conflicts with current intent. 0J.1 uses `ALIGNED`, `UNVERIFIED`, `OUT_OF_SYNC`, and `CONFLICT` for explicitly selected evidence while preserving uncertainty and human review.
 
-Alignment is a primary product capability, not merely reporting. For example, approving a decision can legitimately change Intent while Reality still reflects the previous behavior. ForgeMind should expose that transition and use it to ground a later Feature Contract.
+Alignment is a primary product capability, not merely reporting. For example, approving a decision can legitimately change Intent while Reality still reflects the previous behavior. ForgeMind exposes that transition and 0K.1 can use an approved review to ground a Feature Contract.
 
 ## Core product loop and 1.0 story
 
@@ -47,6 +47,8 @@ The full intended ForgeMind 1.0 narrative is: **New or Existing Game Project -> 
 ## Project memory and decision history
 
 Temporary discussion includes brainstorming, alternatives, rough analysis, and rejected ideas. It should not silently become project truth. Durable project knowledge includes approved decisions, design direction, canon, technical constraints, roadmap scope, and Feature Contracts. A future explicit action such as **Save to Project** may promote selected discussion into portable, reviewable files.
+
+0K Feature Contracts are project-owned, versioned delivery artifacts derived from an approved Alignment Review, current Compendium entry, or approved Decision. They capture immutable source traceability plus human-reviewed implementation scope, begin `DRAFT`, and require explicit approval. Drafts may be saved incomplete, edited, or explicitly deleted; approved and historical states are preserved through lifecycle actions. **Draft with AI** may propose bounded sections from captured Intent, approved Alignment, Reality, and current human text, but never applies, saves, approves, or invents paths automatically. **Preview / Copy Implementation Brief** produces one deterministic bounded handoff from reviewed contract content and evidence-supported locations. Contracts are not a competing truth store, task board, coding runtime, or authority to execute changes.
 
 Decisions should preserve what was decided, why, who proposed and approved it, when it changed, what it affects, whether it is active, and whether available implementation evidence agrees. A superseding decision links to its predecessor instead of erasing it.
 
@@ -95,6 +97,7 @@ Existing-project import must keep `VERIFIED FROM REALITY`, `DOCUMENTED`, `AI INF
 - **Roadmap** — milestones, scope, dependencies, and progress
 - **Decisions** — durable conclusions with rationale, relationships, and provenance
 - **Alignment** — evidence-backed agreement, uncertainty, conflict, and drift between Intent and Reality
+- **Feature Contracts** — reviewed implementation scope and deterministic coding-agent handoffs derived from Intent and Reality evidence
 
 These are product concepts, not commitments to separate technical services or storage systems.
 
@@ -106,6 +109,8 @@ The long-term UI should consolidate those concepts into four clearer groups:
 - **Delivery:** Feature Contracts and Implementation Briefs.
 
 This is **FUTURE UI CONSOLIDATION DIRECTION**, not the current navigation. The Game Wiki should become the main human-facing knowledge surface by aggregating authoritative stores such as Compendium, Decisions, Specialist analyses, Feature Contracts, GroundTruth, Alignment results, and technical documentation. A future topic such as Enemy AI may bring those sources together as Overview, Intent, Decisions, Behavior Contracts, Reality, Alignment, AI Analyses, and Open Questions. The Wiki remains a view over those sources and must not create a competing `wiki.json` source of truth.
+
+The detailed dashboard, layout, workflow, artwork, and phased redesign plan lives in [ForgeMind UI Direction](UI_DIRECTION.md). The original visual identity, messaging, logo, color, typography, icon, voice, motion, and marketing guidance lives in the [ForgeMind Brandbook](BRANDBOOK.md). Both are future planning references; neither changes the current 0K milestone state or current application behavior.
 
 ## Lightweight project state and delivery boundaries
 
@@ -124,6 +129,8 @@ Technical Knowledge in Game Wiki should eventually aggregate system purpose, imp
 ForgeMind may eventually expose specialist game-development role profiles and coordinate external content-production tools. Every profile must use the same Project Brain rather than maintain isolated truth, and every generated proposal or asset remains subject to evidence labeling and human review. This is **FUTURE DIRECTION**, is **NOT IMPLEMENTED**, and does not expand the required MVP.
 
 See [AI Specialists and Content Production Direction](AI_SPECIALISTS_AND_PRODUCTION.md) for potential roles, multi-perspective review, the distinction between simulation and AI scenario reasoning, content-production orchestration, private-project dogfooding boundaries, and the planned model-evaluation approach.
+
+The [ForgeMind Studios Roadmap](STUDIOS_ROADMAP.md) defines how future task-oriented specialist workspaces should share context building, structured proposal review, artifact promotion, provenance, and task-specific model recommendations. Its S0-S9 sequence is planning direction only: no Studio is started, and 0K remains the current milestone with manual validation pending.
 
 ## What ForgeMind is not
 

@@ -8,6 +8,8 @@ import { WikiPage } from "./WikiPage";
 import { RepositoryPage } from "./RepositoryPage";
 import { UnityGroundTruthPage } from "./UnityGroundTruthPage";
 import { AlignmentPage } from "./AlignmentPage";
+import { FeatureContractsPage } from "./FeatureContractsPage";
+import type { FeatureContractSourceType } from "./platform/featureContracts";
 import type { KnowledgeEntry } from "./platform/projectKnowledge";
 import {
   getDevelopmentWorkspacePath,
@@ -29,6 +31,7 @@ const workspaceAreas = [
   "Roadmap",
   "Decisions",
   "Alignment",
+  "Feature Contracts",
 ] as const;
 
 type WorkspaceArea = (typeof workspaceAreas)[number];
@@ -244,11 +247,13 @@ export function WorkspaceShell({
   const [promotedKnowledge, setPromotedKnowledge] = useState<KnowledgeEntry | null>(null);
   const [knowledgeEditTarget, setKnowledgeEditTarget] = useState<string | null>(null);
   const [alignmentInitialSubview, setAlignmentInitialSubview] = useState<"CREATE" | "HISTORY">("CREATE");
+  const [featureContractsFromWiki, setFeatureContractsFromWiki] = useState(false);
 
   function openArea(area: WorkspaceView) {
     setPromotedKnowledge(null);
     setKnowledgeEditTarget(null);
     setAlignmentInitialSubview("CREATE");
+    setFeatureContractsFromWiki(false);
     setActiveArea(area);
   }
 
@@ -265,6 +270,28 @@ export function WorkspaceShell({
   function viewAlignmentHistory() {
     setAlignmentInitialSubview("HISTORY");
     setActiveArea("Alignment");
+  }
+
+  function openFeatureContractSource(sourceType: FeatureContractSourceType, sourceId: string) {
+    if (sourceType === "ALIGNMENT") {
+      viewAlignmentHistory();
+    } else if (sourceType === "COMPENDIUM") {
+      editKnowledgeAtSource(sourceId);
+    } else {
+      openArea("Decisions");
+    }
+  }
+
+  function openFeatureContractReality(source: "GIT" | "UNITY") {
+    openArea(source === "GIT" ? "Repository / Git Reality" : "Unity");
+  }
+
+  function viewFeatureContracts() {
+    setPromotedKnowledge(null);
+    setKnowledgeEditTarget(null);
+    setAlignmentInitialSubview("CREATE");
+    setFeatureContractsFromWiki(true);
+    setActiveArea("Feature Contracts");
   }
 
   return (
@@ -349,6 +376,8 @@ export function WorkspaceShell({
                 ? "0I.2 Unity GroundTruth"
               : activeArea === "Alignment"
                 ? "0J Alignment · Complete"
+              : activeArea === "Feature Contracts"
+                ? "0K.2 Feature Contract"
               : activeArea === "AI Evaluation"
                 ? "0D.1 Model Lab"
                 : activeArea === "Game Design" || activeArea === "Decisions"
@@ -371,13 +400,20 @@ export function WorkspaceShell({
           ) : activeArea === "Unity" ? (
             <UnityGroundTruthPage workspace={workspace} />
           ) : activeArea === "Game Wiki" ? (
-            <WikiPage workspace={workspace} onEditKnowledge={editKnowledgeAtSource} onViewAlignmentHistory={viewAlignmentHistory} />
+            <WikiPage workspace={workspace} onEditKnowledge={editKnowledgeAtSource} onViewAlignmentHistory={viewAlignmentHistory} onViewFeatureContracts={viewFeatureContracts} />
           ) : activeArea === "Game Design" ? (
             <CompendiumPage workspace={workspace} onPromote={promoteToDecision} editEntryId={knowledgeEditTarget} />
           ) : activeArea === "Decisions" ? (
             <DecisionsPage workspace={workspace} promotedKnowledge={promotedKnowledge} />
           ) : activeArea === "Alignment" ? (
             <AlignmentPage workspace={workspace} initialSubview={alignmentInitialSubview} />
+          ) : activeArea === "Feature Contracts" ? (
+            <FeatureContractsPage
+              workspace={workspace}
+              onOpenSource={openFeatureContractSource}
+              onOpenReality={openFeatureContractReality}
+              onBackToWiki={featureContractsFromWiki ? () => openArea("Game Wiki") : undefined}
+            />
           ) : (
             <Placeholder area={activeArea} />
           )}

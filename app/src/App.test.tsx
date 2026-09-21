@@ -11,6 +11,7 @@ import {
 } from "./platform/workspaceDirectory";
 import { inspectUnityGroundTruth } from "./platform/unityGroundTruth";
 import { loadAlignmentResults } from "./platform/alignment";
+import { loadFeatureContracts } from "./platform/featureContracts";
 
 vi.mock("./platform/workspaceDirectory", () => ({
   getDevelopmentWorkspacePath: vi.fn(),
@@ -130,6 +131,17 @@ vi.mock("./platform/alignment", async (importOriginal) => ({
   reviewAlignmentResult: vi.fn(),
 }));
 
+vi.mock("./platform/featureContracts", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./platform/featureContracts")>()),
+  loadFeatureContractSources: vi.fn().mockResolvedValue({ projectId: "550e8400-e29b-41d4-a716-446655440000", sources: [] }),
+  loadFeatureContracts: vi.fn().mockResolvedValue(null),
+  createFeatureContract: vi.fn(),
+  updateFeatureContract: vi.fn(),
+  deleteFeatureContractDraft: vi.fn(),
+  draftFeatureContractWithAi: vi.fn(),
+  setFeatureContractStatus: vi.fn(),
+}));
+
 const selectedPath = "D:\\Games\\SampleGame";
 const workspace: Workspace = {
   formatVersion: 1,
@@ -161,6 +173,7 @@ const requiredAreas = [
   "Roadmap",
   "Decisions",
   "Alignment",
+  "Feature Contracts",
 ];
 
 describe("ForgeMind local workspace", () => {
@@ -169,6 +182,7 @@ describe("ForgeMind local workspace", () => {
     vi.mocked(getDevelopmentWorkspacePath).mockResolvedValue(null);
     vi.mocked(loadCompendium).mockResolvedValue(null);
     vi.mocked(loadAlignmentResults).mockResolvedValue(null);
+    vi.mocked(loadFeatureContracts).mockResolvedValue(null);
   });
 
   it("renders the welcome screen with the Open Project action", () => {
@@ -249,6 +263,10 @@ describe("ForgeMind local workspace", () => {
     expect(await screen.findByRole("heading", { name: "Alignment", level: 2 })).toBeInTheDocument();
     await user.click(screen.getByRole("tab", { name: "Review History" }));
     expect(screen.getByText("No Alignment Reviews have been created yet.")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Feature Contracts" }));
+    expect(await screen.findByRole("heading", { name: "Feature Contracts", level: 2 })).toBeInTheDocument();
+    expect(screen.getByText("No eligible sources exist. Approve an Alignment Review or Decision, or add current Compendium knowledge.")).toBeInTheDocument();
   });
 
   it("opens the bounded AI evaluation harness from the workspace shell", async () => {
@@ -266,6 +284,35 @@ describe("ForgeMind local workspace", () => {
     expect(
       screen.getByRole("button", { name: "Project Interview" }),
     ).toBeInTheDocument();
+  });
+
+  it("returns contextually to Game Wiki after entering Feature Contracts from its summary", async () => {
+    vi.mocked(loadFeatureContracts).mockResolvedValue({
+      formatVersion: 1,
+      projectId: workspace.projectId,
+      updatedAt: "2026-09-21T12:00:00Z",
+      contracts: [{
+        id: "contract-1", createdAt: "2026-09-21T12:00:00Z", updatedAt: "2026-09-21T12:00:00Z",
+        title: "Enemy sound knowledge", goal: "Keep sound uncertain.", currentRealitySummary: "Reality is unverified.",
+        sources: {
+          origin: { sourceType: "COMPENDIUM", sourceId: "knowledge-1", title: "Enemy sound", statement: "Sound stays uncertain.", status: "LOCKED", area: "systems", provenance: "DOCUMENTED" },
+          intent: { sourceType: "COMPENDIUM", sourceId: "knowledge-1", title: "Enemy sound", statement: "Sound stays uncertain.", status: "LOCKED", area: "systems", provenance: "DOCUMENTED" },
+          realityEvidence: [],
+        },
+        affectedSystems: ["Enemy perception"], requiredBehavior: ["No exact coordinates."], outOfScope: ["Vision"], risks: [],
+        acceptanceCriteria: ["Coordinates remain unknown."], deterministicTests: ["Sound-only test."], implementationNotes: "", likelyAffectedEvidenceIds: [],
+        status: "APPROVED", reviewState: "APPROVED", reviewedAt: "2026-09-21T12:01:00Z",
+      }],
+    });
+    const user = userEvent.setup();
+    render(<WorkspaceShell workspace={workspace} onOpen={async () => undefined} />);
+    await user.click(screen.getByRole("button", { name: "Game Wiki" }));
+    await user.click(await screen.findByRole("button", { name: /Systems/ }));
+    await user.click(await screen.findByRole("button", { name: "View Feature Contracts" }));
+    expect(await screen.findByRole("button", { name: "Back to Game Wiki" })).toBeInTheDocument();
+    expect(screen.getByText("0K.2 Feature Contract")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Back to Game Wiki" }));
+    expect(await screen.findByRole("heading", { name: "Game Wiki", level: 2 })).toBeInTheDocument();
   });
 
   it("opens Alignment Review History from the derived Game Wiki summary", async () => {

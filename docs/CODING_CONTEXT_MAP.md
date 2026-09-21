@@ -18,14 +18,17 @@ Always begin with `AGENTS.md`, `ROADMAP.md`, `ARCHITECTURE.md`, and `VALIDATION.
 | Usage metering | `../app/src-tauri/src/usage.rs`, `../app/src/platform/usageMetering.ts` | Usage records, aggregation, privacy, or cost estimates change. |
 | Project Interview | `../app/src-tauri/src/interview.rs`, `../app/src/platform/projectInterview.ts`, `../app/src/InterviewPage.tsx` | Interview prompts, candidates, review, or persistence change. |
 | Specialists | `AI_SPECIALISTS_AND_PRODUCTION.md`, `../app/src-tauri/src/specialists.rs`, `../app/src-tauri/src/specialist_history.rs`, `../app/src/platform/specialists.ts`, `../app/src/SpecialistPage.tsx` | Specialist tasks, selected context, output, budgets, or history change. |
+| Future Studios | `STUDIOS_ROADMAP.md`, `PRODUCT.md`, `AI_SPECIALISTS_AND_PRODUCTION.md`, `UI_DIRECTION.md`, then the owning domain docs and code for the explicitly authorized phase | Planning or implementing a task-oriented Studio, shared Studio framework, Ask ForgeMind routing, Studio result actions, or Studio-specific model evaluation. Treat S0 through S9 as future and not started until `ROADMAP.md` explicitly authorizes a phase. |
 | Validation | `VALIDATION.md`, `../app/package.json`, relevant `*.test.tsx` or Rust test module | Choosing checks, adding regressions, or recording evidence. |
 | Roadmap | `ROADMAP.md` | Confirming milestone status, scope, exit conditions, or stop point. |
 | Frontend shell | `../app/src/App.tsx`, `../app/src/App.test.tsx`, `../app/src/styles.css` | Navigation, shared layout, or workspace-level UI changes. |
+| UI direction and brand | `UI_DIRECTION.md`, `BRANDBOOK.md`, `PRODUCT.md`, `ROADMAP.md`, then the relevant page/tests/styles | Dashboard behavior, information architecture, shared visual system, branding, artwork, copy, or redesign-phase work. Treat UI-1 through UI-5 as future until explicitly authorized. |
 | Native commands | `../app/src-tauri/src/lib.rs`, matching Rust domain, matching `../app/src/platform/*.ts` | A Tauri command or frontend/native contract changes. |
 | Persistence | `DATA_MODEL.md`, matching Rust domain, `../app/src-tauri/src/workspace.rs` | A `.forgemind/` schema, validation, recovery, or file lifecycle changes. |
 | Future Git integration | `ROADMAP.md` section 0H, `ARCHITECTURE.md` Git boundary | Planning explicitly authorized 0H work. Do not implement it early. |
 | Future Unity GroundTruth | `MVP.md`, `DATA_MODEL.md`, `ARCHITECTURE.md`, `ROADMAP.md` section 0I, `../unity/README.md` | Planning explicitly authorized Reality snapshot work. |
 | Future Alignment Engine | `PRODUCT.md`, `MVP.md`, `DATA_MODEL.md`, `WORKFLOWS.md`, `ROADMAP.md` section 0J | Planning explicitly authorized alignment work. |
+| Feature Contracts | `PRODUCT.md`, `DATA_MODEL.md`, `WORKFLOWS.md`, `../app/src-tauri/src/feature_contracts.rs`, `../app/src/platform/featureContracts.ts`, `../app/src/FeatureContractsPage.tsx` | Contract sources, persistence, approval, traceability, or implementation-brief handoff changes. |
 
 Tests beside the target code are part of each context set even when the table does not list them separately.
 
@@ -33,7 +36,7 @@ Tests beside the target code are part of each context set even when the table do
 
 Classify the task before coding:
 
-- **FRONTEND:** target page/component, its tests, relevant styles, and its `platform/` boundary. Read native code only if the contract changes.
+- **FRONTEND:** target page/component, its tests, relevant styles, and its `platform/` boundary. For visual-system, dashboard, navigation, artwork, or branded-copy changes, also read `UI_DIRECTION.md` and `BRANDBOOK.md`. Read native code only if the contract changes.
 - **NATIVE_DOMAIN:** target Rust module, its tests, `lib.rs` integration, `DATA_MODEL.md`, and the frontend boundary only when needed.
 - **PERSISTENCE:** target Rust domain and tests, `workspace.rs`, `DATA_MODEL.md`, and the lifecycle UI/boundary that invokes it.
 - **AI_PROVIDER:** `ai.rs`, model registry, usage metering, relevant AI feature module, AI specialist docs when applicable, and provider/native tests.
