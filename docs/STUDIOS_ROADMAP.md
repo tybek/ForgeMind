@@ -18,6 +18,8 @@ Studios extend that loop only after it is proven. They must preserve the product
 
 The existing [AI Specialists and Content Production Direction](AI_SPECIALISTS_AND_PRODUCTION.md) remains the broader reference for specialist profiles, content-production orchestration, and local model evaluation. This document specifies how those capabilities should converge into consistent user-facing workspaces rather than unrelated agents.
 
+[Context Builder and Task Router Architecture](CONTEXT_AND_ROUTING.md) is the CR-0 shared-infrastructure specification beneath Studios. It defines task classification, Context Plans, authority-preserving selection and compaction, source trace, freshness, model-evaluation evidence, and staged CR-1 through CR-6 work. CR-0 is documentation only and does not start S0, S9, or any Context + Routing implementation phase.
+
 ## Core concept
 
 ForgeMind Studios are task-oriented specialist workspaces over the same Project Brain. They are not separate agents with independent truth stores.
@@ -99,6 +101,9 @@ Specialist-run history may preserve safe working analysis, selected context refe
 - Do not invent implementation facts, file locations, or supported engine behavior.
 - Use project-relative paths wherever a durable path is appropriate.
 - Route providers through replaceable native boundaries.
+- Inherit the shared BYOK credential policy; never store provider keys in project data or invent a Studio-specific key store.
+- Route every external-provider package through the shared Security Preflight and expose the shared AI Data Boundary / Context Preview when implemented.
+- Treat imported, generated, and project content as untrusted data that cannot override product, workflow, or security instructions.
 - Meter explicit requests without making automatic live calls in tests.
 - Keep rejected proposals and generations out of authoritative project content.
 - Do not turn Studio history, Open Questions, or Current Priorities into a task-management system.
@@ -125,6 +130,8 @@ The router connects to Studios; it does not replace their focused workspaces, sc
 **Priority:** prerequisite. **Status:** planned, not started.
 
 Define the reusable Studio contract, proposal/review interaction, context-builder rules, provenance vocabulary, history boundaries, provider capability routing, task-type registry direction, and local evaluation interface. Reuse current Specialist, Project Brain, model registry, usage, and approval infrastructure where it fits; do not generalize prematurely or migrate existing behavior without a separately authorized implementation brief.
+
+Use [Context Builder and Task Router Architecture](CONTEXT_AND_ROUTING.md) as the shared baseline rather than redefining context loading, authority, freshness, provenance, evaluation, or model-routing policy per Studio. S0 remains responsible for the Studio-specific reusable contract and adoption plan; the existence of CR-0 does not mark S0 as started.
 
 S0 should leave each later Studio with a consistent specification and a narrow way to add task-specific behavior without creating independent agents or truth stores.
 
@@ -275,7 +282,7 @@ The Studio should gather art direction and project constraints, suggest a suitab
 
 ### Provider direction
 
-Asset Studio must use provider abstractions rather than hard-code one vendor. Candidate capability categories include:
+Asset Studio must use provider abstractions rather than hard-code one vendor. Every external asset provider inherits [Security and Privacy Architecture](SECURITY_AND_PRIVACY.md): BYOK credentials remain outside project data, selected references and prompts pass through shared Security Preflight, and a Studio does not create its own key store. Candidate capability categories include:
 
 - reasoning and planning through registered language models;
 - 2D and visual generation providers;
@@ -287,7 +294,7 @@ Selection may consider asset type, quality, latency, cost, licensing, topology a
 
 ### Provenance and import safety
 
-Durable asset metadata should eventually capture an asset identifier, generator/provider, model, prompt, source references, creation time, license/source notes, review status, intended use, Unity-relative path after import, and an optional related Feature Contract. Exact schemas and storage belong to a later authorized design task.
+Durable asset metadata should eventually capture an asset identifier, generator/provider, model, prompt, source references, creation time, license/source notes, review status, intended use, Unity-relative path after import, and an optional related Feature Contract. Uploaded reference images or assets must be explicitly selected; unrelated project assets are never auto-uploaded. Prompts, filenames, metadata, and diagnostics must not carry credentials. Exact schemas and storage belong to a later authorized design task.
 
 Generated assets remain candidates. Require explicit approval before import or promotion, identify generated material truthfully, prefer project-relative storage, record available licensing/source information, and never import rejected generations. Do not persist machine-specific absolute paths.
 

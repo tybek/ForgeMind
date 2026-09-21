@@ -2,7 +2,7 @@
 
 ## Current state
 
-0J Alignment is **COMPLETE**. 0K is current: the 0K.1 foundation and 0K.2 production workbench are implemented with manual validation pending. Feature Contracts now combine portable reviewed lifecycle history, explicit AI-assisted proposals, deterministic implementation-brief preview/copy, and compact Game Wiki context. Automatic execution, background generation, monitoring, semantic code analysis, 0L, the consolidated information architecture, additional specialists, team services, and the other post-1.0 concepts below are **NOT IMPLEMENTED**.
+0J Alignment is **COMPLETE**. 0K is current: the 0K.1 foundation and 0K.2 production workbench are implemented with manual validation pending. Feature Contracts now combine portable reviewed lifecycle history, explicit AI-assisted proposals, deterministic implementation-brief preview/copy, and compact Game Wiki context. SEC-0 security/privacy architecture and CR-0 context/routing architecture are documented only; their implementation phases have not started. Automatic execution, background generation, monitoring, semantic code analysis, 0L, the consolidated information architecture, additional specialists, team services, and the other post-1.0 concepts below are **NOT IMPLEMENTED**.
 
 ## Architectural stance
 
@@ -119,6 +119,22 @@ The normalized result separates assumptions from project facts and retains selec
 History is an auxiliary boundary. React loads profile metadata, registry models, Compendium, Decisions, and history independently, so one history failure cannot erase otherwise valid state. Native specialist execution also treats history append failure as a safe warning rather than replacing a valid current result. Explicit recovery archives only the history file and initializes an empty format-version `1` document; it never mutates other `.forgemind` domains.
 
 Provider `INVALID_REQUEST` metadata is reduced to safe HTTP status, provider code/type, rejected parameter when supplied, budget/model context, and request-feature flags. Prompts, raw bodies, headers, reasoning, and credentials do not cross into React or history. `OUTPUT_TRUNCATED` guidance can offer an explicit higher-budget retry only when a known model maximum leaves safe headroom; there is no automatic retry.
+
+### Future Context Builder and Task Router
+
+**CR-0 SPECIFIED; IMPLEMENTATION NOT STARTED.** [Context Builder and Task Router Architecture](CONTEXT_AND_ROUTING.md) defines future shared classification, source-aware context planning, bounded assembly, freshness, traceability, specialist/workflow routing, and task-specific model recommendation. It treats the Project Brain as a logical aggregate over existing owning domains rather than a new persistence store.
+
+The future shared layer preserves explicit selection and direct source links before inferred relevance, keeps Intent, Reality, reviewed Alignment, delivery artifacts, and AI work history distinguishable, and exposes a safe source trace without hidden reasoning. Focused UI actions route deterministically; an AI classifier is reserved for ambiguous natural-language entry. Model recommendation remains advisory, task-specific, and unavailable when local evidence is insufficient.
+
+Current workflows continue to own their task-specific prompts, schemas, review actions, and artifacts. No `ContextPlan`, shared context package, router, evaluation profile, embedding index, RAG system, or automatic model selection exists today. CR-0 changes no current 0K behavior and does not start CR-1, S0, S9, UI-1, or 0L.
+
+### Security and Privacy Boundary
+
+**SEC-0 SPECIFIED; SECURITY IMPLEMENTATION NOT STARTED.** [Security and Privacy Architecture](SECURITY_AND_PRIVACY.md) defines the threat model, BYOK credential policy, AI Data Boundary, future Security Preflight and Context Preview, deterministic Secret Guard direction, safe logging/redaction rules, prompt-injection boundary, data classification, and SEC-1 through SEC-6 roadmap.
+
+Current evidence is narrower. The native Nebius adapter reads `NEBIUS_API_KEY` from its process environment and does not serialize that configured value through the normalized frontend contract, project schemas, provider payload JSON, usage history, or safe errors. Existing AI workflows build bounded task-specific requests; usage and specialist history persist normalized metadata/results rather than raw requests, provider bodies, or reasoning. Tauri grants the frontend no generic filesystem, shell, or network capability. User-authored free text is not scanned universally, so these safeguards do not amount to a shared secret scanner, exact outbound Context Preview, credential-diagnostics surface, centralized redaction layer, or prompt-injection immunity.
+
+Future outbound provider work should share this boundary: Context Builder determines relevant eligible context; Security Preflight determines whether the final assembled package is safe and appropriate to send; the native provider adapter applies provider-specific transport policy. Provider credentials are configuration, never project data. SEC-0 changes no current Feature Contract or provider behavior and does not authorize SEC-1 or later work.
 
 ### Git Integration Boundary
 

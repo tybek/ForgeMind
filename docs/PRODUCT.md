@@ -66,6 +66,7 @@ Decisions should preserve what was decided, why, who proposed and approved it, w
 - **Grow from demonstrated needs.** Avoid speculative services, permissions, and infrastructure.
 - **Scope control is a feature.** Milestones and contracts should make approved boundaries and exclusions visible.
 - **AI-assisted first, manual entry available.** Prefer bounded context-aware proposals and section-level review where they reduce authoring burden, while retaining manual entry as an escape hatch and keeping approval human-controlled.
+- **Privacy is part of context quality.** Keep project data local by default, treat provider credentials as configuration rather than project data, minimize outbound context to the explicit task, and preserve source provenance so users can understand what leaves the project.
 
 ## Team-first direction
 
@@ -133,6 +134,10 @@ ForgeMind may eventually expose specialist game-development role profiles and co
 See [AI Specialists and Content Production Direction](AI_SPECIALISTS_AND_PRODUCTION.md) for potential roles, multi-perspective review, the distinction between simulation and AI scenario reasoning, content-production orchestration, private-project dogfooding boundaries, and the planned model-evaluation approach.
 
 The [ForgeMind Studios Roadmap](STUDIOS_ROADMAP.md) defines how future task-oriented specialist workspaces should share context building, structured proposal review, artifact promotion, provenance, and task-specific model recommendations. Its S0-S9 sequence is planning direction only: no Studio is started, and 0K remains the current milestone with manual validation pending.
+
+The future shared behavior underneath those workspaces is specified in [Context Builder and Task Router Architecture](CONTEXT_AND_ROUTING.md). It defines the Project Brain as a logical aggregate over existing authoritative stores, plans and budgets only task-relevant context, preserves source authority through compaction, routes deterministic actions without unnecessary AI classification, and makes model recommendations only from task-specific evidence. CR-0 is documentation only: no Context Builder, Task Router, model recommender, or natural-language **Ask ForgeMind** route is implemented.
+
+[Security and Privacy Architecture](SECURITY_AND_PRIVACY.md) defines ForgeMind's local-first, BYOK-friendly security stance and the future shared AI Data Boundary, Context Preview, Security Preflight, Secret Guard, and credential diagnostics. SEC-0 is documentation only. Current factual safeguards remain limited to the native environment-backed Nebius credential path, narrow Tauri permissions, bounded workflow-specific requests, and privacy-minimized local histories; SEC-1 through SEC-6 are not implemented.
 
 ## What ForgeMind is not
 
