@@ -2,9 +2,9 @@
 
 ## Status and scope
 
-This document records the agreed future product and interface direction for ForgeMind. It is a design and implementation-planning reference, not a claim about current application behavior.
+This document records the agreed product and interface direction for ForgeMind. It distinguishes implemented presentation foundations from future dashboard and consistency work.
 
-**FUTURE PLANNED WORK — NOT IMPLEMENTED.** The current product milestone remains 0K, with manual validation pending. Do not begin UI-1 or later phases unless a task explicitly authorizes that phase. Do not rewrite working behavior solely to make it fit this direction.
+**UI-1 IS COMPLETE.** Its shared foundation and manual visual pass are complete, and the production SVG brand follow-up is implemented. 0K Feature Contracts is complete. UI-2 and later phases have not started. Do not rewrite working behavior solely to make it fit this direction or treat UI-1 as authorization for future information architecture.
 
 Use this document with the [ForgeMind Brandbook](BRANDBOOK.md), [Product Direction](PRODUCT.md), and [Roadmap](ROADMAP.md). The Brandbook owns visual identity and voice; this document owns information architecture, dashboard behavior, layout, workflow, artwork policy inside the product, and phased UI implementation.
 
@@ -166,32 +166,20 @@ Treat this as a lightweight, derived work queue. It does not introduce sprints, 
 
 ## Long-term information architecture
 
-The future sidebar direction is:
+The future shell direction combines three layers:
 
-### Project
+1. a horizontal Suite switcher for **Project**, **Reality**, **AI Studio**, and **Delivery** above or before the page-title area;
+2. persistent global navigation for **Overview**, **Game Wiki**, **Repository / Git Reality**, **Unity**, and **Alignment**;
+3. a contextual lower sidebar section for the active Suite.
 
-- Overview
-- Game Wiki
-- Decisions
-- Roadmap / Production
+Project may eventually contain Game Design, Narrative, Technical, Roadmap, Decisions, and Project Interview. AI Studio may contain the existing AI Behavior Designer and Model Evaluation entry points plus explicitly authorized future Studios. Delivery may contain Feature Contracts and future Implementation Brief workflows. Reality may later add focused tools while the core Reality shortcuts remain globally available.
 
-### Reality
+The current shell only prepares typed metadata and restrained global/contextual grouping. It does not render a Suite switcher, change routes, or claim that a Studio exists. Existing future placeholders remain explicitly labeled **Planned**. Use an icon plus label for each destination and preserve existing ownership until a scoped phase authorizes more.
 
-- Repository
-- Unity
-- Alignment
+### UI-1 manual findings retained for later phases
 
-### AI
-
-- AI Studio
-- Model Evaluation
-
-### Delivery
-
-- Feature Contracts
-- Implementation Briefs / Workflows
-
-Use an icon plus label for each destination, one consistent line-icon family, and restrained group hierarchy. This grouping is future consolidation, not authorization to migrate the current navigation. Preserve existing routes and ownership until a scoped implementation phase defines migration behavior and regression coverage.
+- Game Wiki remains a legacy, vertically dense surface. Its large derived-summary cards should be compacted only in the future UI-4 consistency pass.
+- Unity's bounded truncation semantics remain correct. A future copy pass may prefer **Partial coverage** and **10,000+ fields indexed** over developer-oriented `BOUNDED / TRUNCATED` wording without changing the underlying coverage classification.
 
 ## AI-assisted workflow direction
 
@@ -226,6 +214,15 @@ Model recommendations should eventually use local task-specific evaluation data,
 - Keep destructive actions explicit, local, and visually distinct; do not place them beside a primary action without separation.
 - Use motion only for quick functional feedback. Never make the user wait for decorative animation.
 
+## Feature Contract follow-up from 0K dogfooding
+
+UI-1 supplies shared styling for the current Feature Contract workbench but does not redesign its information architecture. The following product questions remain for a later explicitly scoped phase:
+
+- The Create Contract source preview should move toward compact stacked metadata instead of consuming a wide horizontal row.
+- The editor, AI Draft Proposal, and Implementation Brief may benefit from focused **Contract**, **AI Draft**, and **Brief** subviews or an equivalent panel model so the transient proposal does not compete with the primary editor.
+- Safe provider rejection must remain enforced. If the native/provider boundary can expose an allowlisted category without raw or sensitive content, the UI should distinguish safety, path, and size rejection more clearly than the current broad message.
+- `SUPERSEDED` and `DEPRECATED` history remains intentionally preserved. A future product decision must choose between an explicit Restore/Reopen action and requiring a successor Draft; UI work must not weaken current lifecycle semantics implicitly.
+
 ## Surface direction
 
 The visual system is defined in the [Brandbook](BRANDBOOK.md). Product layouts should apply it with these constraints:
@@ -259,18 +256,20 @@ When no project image exists, use an abstract dark branded fallback. Home may us
 - Test wide and compact layouts; stacking must preserve workflow order, selection, and local feedback.
 - Respect reduced-motion preferences when motion is introduced.
 
-## Future implementation phases
+## Phased implementation status
 
-These phases are recorded in the [Roadmap](ROADMAP.md) as planned work. They are not started by this document.
+These phases are recorded in the [Roadmap](ROADMAP.md). Only UI-1 is implemented; UI-2 through UI-5 remain planned and not started.
 
-### UI-1 — Brand / Design System Foundation
+### UI-1 — Brand / Design System Foundation — COMPLETE
 
 - establish color tokens;
 - establish typography hierarchy;
-- select one licensed line-icon system;
+- establish one dependency-free line-icon convention;
 - define card, button, badge, spacing, radius, border, focus, and motion tokens;
 - polish the sidebar shell without changing information ownership;
-- integrate original ForgeMind branding and responsive logo configurations.
+- integrate original responsive SVG mark, wordmark, and lockup configurations.
+
+Implementation includes semantic CSS tokens; shared typography, surface, button, badge, loading/feedback, icon-action, and empty-state primitives; original production SVG brand assets; a responsive shell; compact project identity; selected navigation; a consistent page-header pattern; and light adoption in representative existing workflows. Suite-ready metadata now separates persistent global destinations from contextual Project, AI, and Delivery tools without a Suite switcher or new route. It does not build Home or Project Dashboard, implement a Studio, or complete the UI-4 consistency migration.
 
 Exit direction: shared primitives and tokens can be applied without feature-specific color or control drift.
 

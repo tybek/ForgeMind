@@ -2,7 +2,7 @@
 
 ## Current state
 
-0J Alignment is **COMPLETE**. 0K is current: the 0K.1 foundation and 0K.2 production workbench are implemented with manual validation pending. Feature Contracts now combine portable reviewed lifecycle history, explicit AI-assisted proposals, deterministic implementation-brief preview/copy, and compact Game Wiki context. SEC-0 security/privacy architecture and CR-0 context/routing architecture are documented only; their implementation phases have not started. Automatic execution, background generation, monitoring, semantic code analysis, 0L, the consolidated information architecture, additional specialists, team services, and the other post-1.0 concepts below are **NOT IMPLEMENTED**.
+0J Alignment and 0K Feature Contracts are **COMPLETE**. UI-1 is current and implemented with manual visual validation pending. Feature Contracts combine portable reviewed lifecycle history, explicit AI-assisted proposals, deterministic implementation-brief preview/copy, and compact Game Wiki context. The UI-1 frontend foundation adds shared visual tokens and presentational primitives without changing native, persistence, provider, or authority boundaries. SEC-0 security/privacy architecture and CR-0 context/routing architecture are documented only; their implementation phases have not started. Automatic execution, background generation, monitoring, semantic code analysis, UI-2, 0L, the consolidated information architecture, additional specialists, team services, and the other post-1.0 concepts below are **NOT IMPLEMENTED**.
 
 ## Architectural stance
 
@@ -126,7 +126,7 @@ Provider `INVALID_REQUEST` metadata is reduced to safe HTTP status, provider cod
 
 The future shared layer preserves explicit selection and direct source links before inferred relevance, keeps Intent, Reality, reviewed Alignment, delivery artifacts, and AI work history distinguishable, and exposes a safe source trace without hidden reasoning. Focused UI actions route deterministically; an AI classifier is reserved for ambiguous natural-language entry. Model recommendation remains advisory, task-specific, and unavailable when local evidence is insufficient.
 
-Current workflows continue to own their task-specific prompts, schemas, review actions, and artifacts. No `ContextPlan`, shared context package, router, evaluation profile, embedding index, RAG system, or automatic model selection exists today. CR-0 changes no current 0K behavior and does not start CR-1, S0, S9, UI-1, or 0L.
+Current workflows continue to own their task-specific prompts, schemas, review actions, and artifacts. No `ContextPlan`, shared context package, router, evaluation profile, embedding index, RAG system, or automatic model selection exists today. CR-0 changes no current Feature Contract or UI-1 behavior and does not start CR-1, S0, S9, UI-2, or 0L.
 
 ### Security and Privacy Boundary
 

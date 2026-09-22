@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { EmptyState, IconButton, StatusBadge } from "./designSystem";
 import {
   createFeatureContract,
   deleteFeatureContractDraft,
@@ -451,7 +452,7 @@ export function FeatureContractsPage({
           <div className="feature-contract-filters" role="group" aria-label="Contract history filter">
             {(["ACTIVE", "ARCHIVED", "ALL"] as ContractFilter[]).map((filter) => <button className={historyFilter === filter ? "is-selected" : ""} type="button" key={filter} aria-pressed={historyFilter === filter} onClick={() => setHistoryFilter(filter)}>{displayEnum(filter)}</button>)}
           </div>
-          {sortedContracts.length === 0 ? <p>No Feature Contracts yet.</p> : visibleContracts.length === 0 ? <p>No contracts in this view.</p> : visibleContracts.map((contract) => (
+          {sortedContracts.length === 0 ? <EmptyState title="No Feature Contracts yet" description="Create a draft from reviewed Intent using the source controls above." /> : visibleContracts.length === 0 ? <EmptyState title="No contracts in this view" description="Choose another lifecycle filter to review the retained contract history." /> : visibleContracts.map((contract) => (
             <button
               className={contract.id === selectedContractId ? "feature-contract-list-item is-selected" : "feature-contract-list-item"}
               key={contract.id}
@@ -460,7 +461,7 @@ export function FeatureContractsPage({
               onClick={() => { selectContract(contract); setFeedback(null); }}
             >
               <strong>{contract.title}</strong>
-              <span><b>{contract.status}</b> · {displayEnum(contract.sources.origin.sourceType)}</span>
+              <span><StatusBadge status={contract.status} /> · {displayEnum(contract.sources.origin.sourceType)}</span>
               <time dateTime={contract.updatedAt}>Updated {formatTimestamp(contract.updatedAt)}</time>
             </button>
           ))}
@@ -470,7 +471,7 @@ export function FeatureContractsPage({
         <section className="feature-contract-editor" aria-label="Feature Contract editor">
           {!selectedContract ? <p>Select or create a Feature Contract.</p> : <>
             <header className="feature-contract-editor-heading">
-              <div><span className={`wiki-type wiki-type-${selectedContract.status.toLowerCase()}`}>{displayEnum(selectedContract.status)}</span><span>{displayEnum(selectedContract.reviewState)}</span></div>
+              <div><StatusBadge status={selectedContract.status} /><StatusBadge status={selectedContract.reviewState} /></div>
               {selectedContract.status === "DRAFT" ? (
                 <label>Title<input value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} /></label>
               ) : <h3>{selectedContract.title}</h3>}
@@ -491,7 +492,7 @@ export function FeatureContractsPage({
             </section> : null}
 
             {proposal ? <section className="feature-contract-proposal" aria-label="AI proposal review">
-              <header><div><span className="wiki-type wiki-type-ai">AI proposal · non-authoritative · not saved</span><h3>AI Draft Proposal</h3>{proposalRun ? <dl className="feature-contract-run-metadata"><div><dt>Model</dt><dd>{proposalRun.model}</dd></div><div><dt>Latency</dt><dd>{proposalRun.latencyMs} ms</dd></div>{proposalRun.inputTokens !== undefined ? <div><dt>Input</dt><dd>{proposalRun.inputTokens} tokens</dd></div> : null}{proposalRun.outputTokens !== undefined ? <div><dt>Output</dt><dd>{proposalRun.outputTokens} tokens</dd></div> : null}{proposalRun.totalTokens !== undefined ? <div><dt>Total</dt><dd>{proposalRun.totalTokens} tokens</dd></div> : null}</dl> : null}</div>
+              <header><div><StatusBadge status="AI_PROPOSAL" label="AI proposal · non-authoritative · not saved" /><h3>AI Draft Proposal</h3>{proposalRun ? <dl className="feature-contract-run-metadata"><div><dt>Model</dt><dd>{proposalRun.model}</dd></div><div><dt>Latency</dt><dd>{proposalRun.latencyMs} ms</dd></div>{proposalRun.inputTokens !== undefined ? <div><dt>Input</dt><dd>{proposalRun.inputTokens} tokens</dd></div> : null}{proposalRun.outputTokens !== undefined ? <div><dt>Output</dt><dd>{proposalRun.outputTokens} tokens</dd></div> : null}{proposalRun.totalTokens !== undefined ? <div><dt>Total</dt><dd>{proposalRun.totalTokens} tokens</dd></div> : null}</dl> : null}</div>
                 <div className="feature-contract-proposal-actions"><button className="primary-button" type="button" onClick={applyAllProposal}>Apply all</button><button className="outline-button compact-action" type="button" onClick={() => { setProposal(null); setProposalRun(null); localFeedback("ai", "AI proposal discarded. The draft was not changed."); }}>Discard proposal</button>{feedbackFor("applyAll")}</div>
               </header>
               <p className="scope-note">Captured source facts and Reality evidence remain separate in the review panel. Suggested systems are proposal scope, not verified Reality. Applying changes only the unsaved editor.</p>
@@ -556,7 +557,7 @@ export function FeatureContractsPage({
               <h3>Implementation Brief</h3>
               <p>{approvalMissing.length === 0 ? "All approval-required sections are present." : `${approvalMissing.length} approval-required section${approvalMissing.length === 1 ? " is" : "s are"} incomplete.`}</p>
               <div className="feature-contract-local-action"><button className="outline-button" type="button" onClick={() => setPreviewOpen((open) => !open)}>{previewOpen ? "Hide Implementation Brief" : "Preview Implementation Brief"}</button></div>
-              {previewOpen ? <div className="feature-contract-brief-preview-wrap"><div className="feature-contract-brief-preview-heading"><strong>{selectedContract.status === "DRAFT" ? "Draft Implementation Brief" : "Implementation Brief"}</strong><button className="outline-button compact-action" type="button" aria-label="Copy Implementation Brief" onClick={() => void copyBrief()}>Copy</button></div><pre className="feature-contract-brief-preview">{briefText}</pre>{feedbackFor("copy")}</div> : null}
+              {previewOpen ? <div className="feature-contract-brief-preview-wrap"><div className="feature-contract-brief-preview-heading"><strong>{selectedContract.status === "DRAFT" ? "Draft Implementation Brief" : "Implementation Brief"}</strong><IconButton icon="copy" label="Copy Implementation Brief" onClick={() => void copyBrief()} /></div><pre className="feature-contract-brief-preview">{briefText}</pre>{feedbackFor("copy")}</div> : null}
             </section>
           </>}
         </aside>

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 446 48" role="img" aria-labelledby="title desc">
+  <title id="title">ForgeMind wordmark</title>
+  <desc id="desc">FORGE in white and MIND in orange geometric lettering.</desc>
+  <g fill="#F2F2F2">
+    <path d="M0 4h40v8H10v10h25v8H10v14H0V4Z"/>
+    <path fill-rule="evenodd" d="M50 4h40v40H50V4Zm10 8v24h20V12H60Z"/>
+    <path fill-rule="evenodd" d="M100 4h40v24h-8l10 16h-12l-10-16h-10v16h-10V4Zm10 8v8h20v-8h-20Z"/>
+    <path d="M152 4h40v8h-30v24h20v-7h-12v-8h22v23h-40V4Z"/>
+    <path d="M202 4h40v8h-30v8h25v8h-25v8h30v8h-40V4Z"/>
+  </g>
+  <g fill="#FF9A2B">
+    <path d="M256 4h10l14 15 14-15h10v40h-10V18l-14 15-14-15v26h-10V4Z"/>
+    <path d="M316 4h10v40h-10V4Z"/>
+    <path d="M338 4h10l22 25V4h10v40h-10l-22-25v25h-10V4Z"/>
+    <path fill-rule="evenodd" d="M392 4h31l19 19v2l-19 19h-31V4Zm10 8v24h17l12-12-12-12h-17Z"/>
+  </g>
+</svg>

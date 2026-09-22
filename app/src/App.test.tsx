@@ -176,6 +176,10 @@ const requiredAreas = [
   "Feature Contracts",
 ];
 
+function navigationName(area: string): string {
+  return ["Narrative", "Technical", "Roadmap"].includes(area) ? `${area}, Planned` : area;
+}
+
 describe("ForgeMind local workspace", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -188,7 +192,8 @@ describe("ForgeMind local workspace", () => {
   it("renders the welcome screen with the Open Project action", () => {
     render(<App />);
 
-    expect(screen.getByRole("heading", { name: "ForgeMind" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Turn ideas into playable worlds." })).toBeInTheDocument();
+    expect(screen.getByLabelText("ForgeMind, AI for Game Development")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Open Project" })).toBeEnabled();
   });
 
@@ -252,8 +257,18 @@ describe("ForgeMind local workspace", () => {
     expect(screen.queryByRole("button", { name: "Initialize Workspace" })).not.toBeInTheDocument();
 
     for (const area of requiredAreas) {
-      expect(screen.getByRole("button", { name: area })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: navigationName(area) })).toBeInTheDocument();
     }
+
+    expect(screen.getByRole("button", { name: "Overview" })).toHaveAttribute("aria-current", "page");
+    expect(screen.queryByText(workspace.name, { selector: ".page-header .type-eyebrow" })).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Global", level: 2 })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Project tools", level: 2 })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "AI tools", level: 2 })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Delivery", level: 2 })).toBeInTheDocument();
+    expect(screen.getAllByText("Planned")).toHaveLength(3);
+    expect(screen.queryByText("WIP")).not.toBeInTheDocument();
+    expect(screen.getByText("Project identity and the capabilities available in this local workspace.")).toBeVisible();
 
     expect(screen.getByText("Evaluation and local usage")).toBeInTheDocument();
     expect(screen.getByText("GroundTruth page")).toBeInTheDocument();
@@ -266,6 +281,8 @@ describe("ForgeMind local workspace", () => {
 
     await user.click(screen.getByRole("button", { name: "Feature Contracts" }));
     expect(await screen.findByRole("heading", { name: "Feature Contracts", level: 2 })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Feature Contracts" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByText("0K · Complete")).toBeVisible();
     expect(screen.getByText("No eligible sources exist. Approve an Alignment Review or Decision, or add current Compendium knowledge.")).toBeInTheDocument();
   });
 
@@ -310,7 +327,7 @@ describe("ForgeMind local workspace", () => {
     await user.click(await screen.findByRole("button", { name: /Systems/ }));
     await user.click(await screen.findByRole("button", { name: "View Feature Contracts" }));
     expect(await screen.findByRole("button", { name: "Back to Game Wiki" })).toBeInTheDocument();
-    expect(screen.getByText("0K.3 Feature Contract")).toBeInTheDocument();
+    expect(screen.getByText("0K · Complete")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Back to Game Wiki" }));
     expect(await screen.findByRole("heading", { name: "Game Wiki", level: 2 })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Systems", level: 3 })).toBeInTheDocument();
@@ -444,7 +461,7 @@ describe("ForgeMind local workspace", () => {
     expect(await screen.findByRole("heading", { name: "Unity GroundTruth", level: 2 })).toBeInTheDocument();
     expect(screen.getByText("Not detected")).toBeInTheDocument();
     expect(inspectUnityGroundTruth).toHaveBeenCalledWith(workspace.path);
-    expect(screen.getByText("0I.2 Unity GroundTruth")).toBeInTheDocument();
+    expect(screen.getByText("0I · Complete")).toBeInTheDocument();
   });
 
   it("shows invalid metadata honestly without offering initialization", async () => {
@@ -488,11 +505,12 @@ describe("ForgeMind local workspace", () => {
       const user = userEvent.setup();
       render(<WorkspaceShell workspace={workspace} onOpen={async () => undefined} />);
 
-      await user.click(screen.getByRole("button", { name: area }));
+      await user.click(screen.getByRole("button", { name: `${area}, Planned` }));
 
       expect(screen.getByRole("heading", { name: area, level: 2 })).toBeInTheDocument();
       expect(screen.getByText(`${area} workspace is not implemented yet.`)).toBeInTheDocument();
       expect(screen.queryByText(`${area} workspace is implemented.`)).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: `${area}, Planned` })).toHaveAttribute("aria-current", "page");
     },
   );
 });

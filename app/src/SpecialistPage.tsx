@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import { IconButton } from "./designSystem";
 import { loadDecisions, type Decision } from "./platform/decisions";
 import { loadModelRegistry, type ModelEntry } from "./platform/modelRegistry";
 import {
@@ -247,9 +248,7 @@ function CopyAction({
   const localFeedback = feedback?.key === feedbackKey ? feedback : null;
   return (
     <span className="specialist-copy-control">
-      <button className="specialist-icon-button" type="button" aria-label={label} title={label} onClick={onCopy}>
-        <span aria-hidden="true">&#x2398;</span>
-      </button>
+      <IconButton className="specialist-icon-button" icon="copy" label={label} onClick={onCopy} />
       {localFeedback ? <span className={localFeedback.succeeded ? "specialist-copy-feedback" : "specialist-copy-feedback specialist-copy-feedback-failed"} role="status">{localFeedback.succeeded ? "Copied" : "Copy failed"}</span> : null}
     </span>
   );

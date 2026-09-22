@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Button } from "./designSystem";
 import {
   inspectUnityGroundTruth,
   type GroundTruthCategory,
@@ -139,9 +140,9 @@ export function UnityGroundTruthPage({ workspace }: { workspace: UnityWorkspace 
           <h2>Unity GroundTruth</h2>
           <p>Read-only implementation evidence from the active workspace and an optional project-owned export. ForgeMind does not modify the Unity project.</p>
         </div>
-        <button className="outline-button" type="button" disabled={loading} onClick={() => void refresh()}>
-          {loading ? "Inspecting..." : "Refresh evidence"}
-        </button>
+        <Button icon="refresh" loading={loading} loadingLabel="Inspecting..." onClick={() => void refresh()}>
+          Refresh evidence
+        </Button>
       </section>
 
       <section className="evidence-legend" aria-label="Evidence authority legend">

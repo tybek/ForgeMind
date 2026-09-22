@@ -9,6 +9,13 @@ import { RepositoryPage } from "./RepositoryPage";
 import { UnityGroundTruthPage } from "./UnityGroundTruthPage";
 import { AlignmentPage } from "./AlignmentPage";
 import { FeatureContractsPage } from "./FeatureContractsPage";
+import {
+  BrandLockup,
+  EmptyState,
+  LineIcon,
+  PageHeader,
+  type IconName,
+} from "./designSystem";
 import type { FeatureContractSourceType } from "./platform/featureContracts";
 import type { KnowledgeArea, KnowledgeEntry } from "./platform/projectKnowledge";
 import {
@@ -36,6 +43,85 @@ const workspaceAreas = [
 
 type WorkspaceArea = (typeof workspaceAreas)[number];
 type WorkspaceView = WorkspaceArea | "Project Interview" | "AI Behavior Designer" | "AI Evaluation";
+
+type NavigationSuite = "PROJECT" | "AI_STUDIO" | "DELIVERY";
+
+interface NavigationGroup {
+  label: string;
+  suite?: NavigationSuite;
+  items: readonly WorkspaceView[];
+}
+
+const navigationGroups: readonly NavigationGroup[] = [
+  {
+    label: "Global",
+    items: ["Overview", "Game Wiki", "Repository / Git Reality", "Unity", "Alignment"],
+  },
+  {
+    label: "Project tools",
+    suite: "PROJECT",
+    items: ["Game Design", "Narrative", "Technical", "Roadmap", "Decisions", "Project Interview"],
+  },
+  {
+    label: "AI tools",
+    suite: "AI_STUDIO",
+    items: ["AI Behavior Designer", "AI Evaluation"],
+  },
+  {
+    label: "Delivery",
+    suite: "DELIVERY",
+    items: ["Feature Contracts"],
+  },
+];
+
+const plannedNavigationItems = new Set<WorkspaceView>(["Narrative", "Technical", "Roadmap"]);
+
+const workspaceAreaIcons: Record<WorkspaceView, IconName> = {
+  Overview: "home",
+  "Repository / Git Reality": "branch",
+  "Game Wiki": "book",
+  "Game Design": "document",
+  Narrative: "document",
+  Technical: "code",
+  Unity: "cube",
+  Roadmap: "route",
+  Decisions: "check-document",
+  Alignment: "target",
+  "Feature Contracts": "clipboard",
+  "Project Interview": "message",
+  "AI Behavior Designer": "ai",
+  "AI Evaluation": "gauge",
+};
+
+const workspaceAreaDescriptions: Record<WorkspaceView, string> = {
+  Overview: "Project identity and the capabilities available in this local workspace.",
+  "Repository / Git Reality": "Read-only Git evidence from the active project repository.",
+  "Game Wiki": "Browse project knowledge while keeping each source and authority visible.",
+  "Game Design": "Maintain reviewed Compendium knowledge for the game design.",
+  Narrative: "Narrative workspace planning remains outside the current milestone.",
+  Technical: "Technical workspace planning remains outside the current milestone.",
+  Unity: "Inspect read-only Unity project evidence and exported GroundTruth coverage.",
+  Roadmap: "Roadmap workspace planning remains outside the current milestone.",
+  Decisions: "Review durable project decisions, rationale, and lifecycle history.",
+  Alignment: "Compare documented Intent with selected Reality evidence for human review.",
+  "Feature Contracts": "Turn approved context into cited, implementation-ready delivery scope.",
+  "Project Interview": "Draft initial Compendium knowledge for explicit human review.",
+  "AI Behavior Designer": "Run bounded, non-authoritative game-behavior analysis.",
+  "AI Evaluation": "Evaluate configured models through the explicit provider boundary.",
+};
+
+function milestoneFor(area: WorkspaceView): string {
+  if (area === "Project Interview") return "0E · Complete";
+  if (area === "AI Behavior Designer") return "0G · Specialist";
+  if (area === "Game Wiki") return "0G.8 · Implemented";
+  if (area === "Repository / Git Reality") return "0H · Implemented";
+  if (area === "Unity") return "0I · Complete";
+  if (area === "Alignment") return "0J · Complete";
+  if (area === "Feature Contracts") return "0K · Complete";
+  if (area === "AI Evaluation") return "0D.1 · Model Lab";
+  if (area === "Game Design" || area === "Decisions") return "0F · Project Intent";
+  return "0C · Local Workspace";
+}
 
 export interface Workspace extends ProjectMetadata {
   path: string;
@@ -73,9 +159,9 @@ export function WelcomeScreen({ onOpen }: { onOpen: () => Promise<void> }) {
   return (
     <main className="welcome-shell">
       <section className="welcome-card" aria-labelledby="welcome-title">
-        <div className="product-mark" aria-hidden="true">FM</div>
-        <p className="eyebrow">AI Game Development Workspace</p>
-        <h1 id="welcome-title">ForgeMind</h1>
+        <BrandLockup />
+        <p className="eyebrow">Local-first game development workspace</p>
+        <h1 id="welcome-title">Turn ideas into playable worlds.</h1>
         <p className="welcome-copy">
           Open a local game project. ForgeMind checks only its own metadata and
           will ask before initializing an unrecognized directory.
@@ -177,6 +263,7 @@ function LoadingWorkspace({ path }: { path: string }) {
         <p className="eyebrow">ForgeMind workspace</p>
         <h1>Inspecting workspace</h1>
         <p className="workspace-path">{path}</p>
+        <p className="type-secondary" role="status"><span className="inline-spinner" aria-hidden="true" /> Loading local project identity</p>
       </section>
     </main>
   );
@@ -190,7 +277,6 @@ function Overview({ workspace }: { workspace: Workspace }) {
     ["Git", "Repository Reality page"],
   ];
   const details = [
-    ["Project Name", workspace.name],
     ["Project ID", workspace.projectId],
     ["Project Path", workspace.path],
     ["Created At", workspace.createdAt],
@@ -200,9 +286,9 @@ function Overview({ workspace }: { workspace: Workspace }) {
   return (
     <div className="page-stack">
       <section className="overview-card">
-        <span className="section-label">Persistent project identity</span>
+        <span className="section-label">Project metadata</span>
         <h2>{workspace.name}</h2>
-        <dl className="project-details">
+        <dl className="project-details project-details--secondary">
           {details.map(([label, value]) => (
             <div key={label}>
               <dt>{label}</dt>
@@ -228,11 +314,10 @@ function Overview({ workspace }: { workspace: Workspace }) {
 
 function Placeholder({ area }: { area: Exclude<WorkspaceArea, "Overview" | "Repository / Git Reality" | "Game Wiki" | "Unity" | "Alignment"> }) {
   return (
-    <section className="placeholder-card">
-      <span className="section-label">Planned workspace area</span>
-      <h2>{area}</h2>
-      <p>{area} workspace is not implemented yet.</p>
-    </section>
+    <EmptyState
+      title={area}
+      description={`${area} workspace is not implemented yet.`}
+    />
   );
 }
 
@@ -306,11 +391,7 @@ export function WorkspaceShell({
     <div className="workspace-shell">
       <aside className="sidebar">
         <div className="sidebar-brand">
-          <div className="product-mark product-mark-small" aria-hidden="true">FM</div>
-          <div>
-            <strong>ForgeMind</strong>
-            <span>Local workspace</span>
-          </div>
+          <BrandLockup compact />
         </div>
 
         <div className="sidebar-project" title={workspace.path}>
@@ -320,45 +401,26 @@ export function WorkspaceShell({
         </div>
 
         <nav aria-label="Workspace areas">
-          {workspaceAreas.map((area) => (
-            <button
-              className={activeArea === area ? "nav-item nav-item-active" : "nav-item"}
-              key={area}
-              type="button"
-              aria-current={activeArea === area ? "page" : undefined}
-              onClick={() => openArea(area)}
-            >
-              {area}
-            </button>
+          {navigationGroups.map((group) => (
+            <section className="nav-group" data-suite={group.suite} key={group.label} aria-labelledby={`nav-${group.label.replaceAll(" ", "-").toLowerCase()}`}>
+              <h2 className="nav-group__label" id={`nav-${group.label.replaceAll(" ", "-").toLowerCase()}`}>{group.label}</h2>
+              {group.items.map((area) => (
+                <button
+                  className={activeArea === area ? "nav-item nav-item-active" : "nav-item"}
+                  key={area}
+                  type="button"
+                  aria-label={plannedNavigationItems.has(area) ? `${area}, Planned` : area}
+                  aria-current={activeArea === area ? "page" : undefined}
+                  onClick={() => openArea(area)}
+                >
+                  <LineIcon name={workspaceAreaIcons[area]} />
+                  <span className="nav-item__label">{area}</span>
+                  {plannedNavigationItems.has(area) ? <span className="nav-item__status">Planned</span> : null}
+                </button>
+              ))}
+            </section>
           ))}
         </nav>
-
-        <button
-          className={activeArea === "Project Interview" ? "nav-item nav-item-active interview-nav" : "nav-item interview-nav"}
-          type="button"
-          aria-current={activeArea === "Project Interview" ? "page" : undefined}
-          onClick={() => openArea("Project Interview")}
-        >
-          Project Interview
-        </button>
-
-        <button
-          className={activeArea === "AI Behavior Designer" ? "nav-item nav-item-active specialist-nav" : "nav-item specialist-nav"}
-          type="button"
-          aria-current={activeArea === "AI Behavior Designer" ? "page" : undefined}
-          onClick={() => openArea("AI Behavior Designer")}
-        >
-          AI Behavior Designer
-        </button>
-
-        <button
-          className={activeArea === "AI Evaluation" ? "nav-item nav-item-active evaluation-nav" : "nav-item evaluation-nav"}
-          type="button"
-          aria-current={activeArea === "AI Evaluation" ? "page" : undefined}
-          onClick={() => openArea("AI Evaluation")}
-        >
-          AI Evaluation
-        </button>
 
         <button className="change-project-button" type="button" onClick={() => void onOpen()}>
           Open another project
@@ -366,33 +428,12 @@ export function WorkspaceShell({
       </aside>
 
       <main className="workspace-main">
-        <header className="workspace-header">
-          <div>
-            <span className="eyebrow">{workspace.name}</span>
-            <h1>{activeArea}</h1>
-          </div>
-          <span className="milestone-badge">
-            {activeArea === "Project Interview"
-              ? "0E Project Interview"
-              : activeArea === "AI Behavior Designer"
-                ? "0G Specialist Profile"
-              : activeArea === "Game Wiki"
-                ? "0G.8 Unified Knowledge"
-              : activeArea === "Repository / Git Reality"
-                ? "0H Git Reality"
-              : activeArea === "Unity"
-                ? "0I.2 Unity GroundTruth"
-              : activeArea === "Alignment"
-                ? "0J Alignment · Complete"
-              : activeArea === "Feature Contracts"
-                ? "0K.3 Feature Contract"
-              : activeArea === "AI Evaluation"
-                ? "0D.1 Model Lab"
-                : activeArea === "Game Design" || activeArea === "Decisions"
-                  ? "0F Project Intent"
-                  : "0C Local Workspace"}
-          </span>
-        </header>
+        <PageHeader
+          eyebrow={activeArea === "Overview" ? undefined : workspace.name}
+          title={activeArea}
+          description={workspaceAreaDescriptions[activeArea]}
+          status={milestoneFor(activeArea)}
+        />
 
         <div className="workspace-content">
           {activeArea === "Project Interview" ? (

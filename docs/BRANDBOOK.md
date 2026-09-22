@@ -2,13 +2,13 @@
 
 ## Status and relationship
 
-This document records the agreed ForgeMind brand foundation for future design and implementation. It does not claim that the current application, website, icon, or assets already conform to this direction.
+This document records the agreed ForgeMind brand foundation and the bounded UI-1 integration state. It does not claim that the website, app icon, or reference images are final production assets.
 
-**FUTURE PLANNED WORK — NOT IMPLEMENTED.** Brand integration begins only when a scoped UI phase is authorized. See [ForgeMind UI Direction](UI_DIRECTION.md) for dashboard behavior, information architecture, artwork use inside the application, and the UI-1 through UI-5 plan.
+**UI-1 COMPLETE.** The application uses the core palette, semantic presentation tokens, shared typography/surface/control patterns, restrained shell styling, and production SVG brand assets. The UI-1 manual visual pass is recorded in [Validation](VALIDATION.md). UI-2 and later phases have not started. See [ForgeMind UI Direction](UI_DIRECTION.md) for dashboard behavior, information architecture, artwork use inside the application, and phased status.
 
 ## Concept / visual-direction references
 
-The images below are **concept and visual-direction references**, not final production logo assets, trademark-safe vector artwork, or implemented UI specifications. The final ForgeMind app icon and FM monogram should be recreated later as controlled, original SVG/vector artwork with deliberate geometry, clear-space rules, small-size testing, and legal review where appropriate. Generated mockups must not be treated as pixel-accurate UI requirements. Product implementation should follow this Brandbook together with [ForgeMind UI Direction](UI_DIRECTION.md), preserve existing product behavior and authority boundaries, and use the images only to understand the intended atmosphere and hierarchy.
+The images below are **concept and visual-direction references**, not application assets, trademark-safe vector artwork, or implemented UI specifications. Generated mockups must not be treated as pixel-accurate UI requirements. The controlled SVGs in `app/src/assets/brand/` are the application-facing source assets; they use original, manually maintained geometry rather than traced or mechanically vectorized reference pixels. Product implementation should follow this Brandbook together with [ForgeMind UI Direction](UI_DIRECTION.md), preserve existing product behavior and authority boundaries, and use the PNG boards only to understand the intended atmosphere and hierarchy.
 
 ### Brand system reference
 
@@ -87,10 +87,18 @@ The monogram should carry the identity without a brain, game controller, robot, 
 
 The monogram should remain legible at application-icon, sidebar, favicon, and watermark sizes.
 
+The production source configurations are:
+
+- `app/src/assets/brand/forgemind-mark.svg` — compact FM mark on a deep-dark tile;
+- `app/src/assets/brand/forgemind-wordmark.svg` — font-independent FORGE/MIND vector wordmark;
+- `app/src/assets/brand/forgemind-lockup.svg` — horizontal mark and wordmark lockup.
+
+The descriptor remains live application text beside the lockup so it stays readable and accessible. Use the mark alone for compact icon surfaces, mark plus wordmark in the sidebar, and the full lockup plus descriptor on pre-project surfaces. Do not use the concept PNGs as runtime assets. Operating-system executable icon rasterization and packaging remain a separate follow-up.
+
 ### Minimum-size direction
 
-- FM app icon: approximately 24 px minimum in product UI.
-- Wordmark: approximately 120 px minimum before removing the descriptor.
+- FM app icon: approximately 24 px minimum in product UI; the sidebar currently gives it more room for recognition.
+- Wordmark: approximately 120 px minimum before removing the descriptor; use the mark alone below that threshold.
 - At small sizes, remove the descriptor before compromising wordmark legibility.
 
 These are starting guidelines for UI-1 validation, not finalized print-production specifications.
@@ -168,6 +176,8 @@ Possible concepts include:
 - Settings: gear.
 
 Do not mix emojis, random Unicode symbols, filled and outlined styles, or icons from unrelated families. Primary navigation should retain text labels rather than depending on icon recognition alone.
+
+UI-1 uses one internal dependency-free line-icon component with a `1.75px` stroke, `24px` view box, rounded joins/caps, and text labels for navigation and unfamiliar actions. Future icons should extend that component or replace the complete set through one explicitly chosen licensed family; pages must not introduce competing icon packages or Unicode action glyphs.
 
 ## Product surfaces
 

@@ -3787,3 +3787,480 @@ button:focus-visible {
     max-height: calc(100vh - 20px);
   }
 }
+
+/* UI-1 design-system adoption. Feature-specific rules above remain in place
+   while shared tokens and primitives replace the shell and representative surfaces. */
+html,
+body,
+#root {
+  min-width: 360px;
+}
+
+body {
+  color: var(--color-text-primary);
+  background: var(--color-background);
+  font-family: var(--font-ui);
+  font-size: var(--type-body-size);
+}
+
+.eyebrow,
+.section-label {
+  color: var(--color-text-muted);
+  font-size: var(--type-label-size);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
+
+.welcome-shell {
+  padding: var(--page-padding);
+  background:
+    radial-gradient(circle at 50% -20%, rgb(255 154 43 / 10%), transparent 42%),
+    var(--color-background);
+}
+
+.welcome-card {
+  border-color: var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-elevated);
+}
+
+.welcome-card .brand-lockup + .eyebrow {
+  margin-top: var(--space-6);
+}
+
+.welcome-card h1 {
+  color: var(--color-text-primary);
+  font-size: clamp(2rem, 5vw, 2.65rem);
+  letter-spacing: -0.025em;
+}
+
+.welcome-copy,
+.workspace-path,
+.placeholder-card p,
+.scope-note {
+  color: var(--color-text-secondary);
+}
+
+.primary-button,
+.ds-button--primary {
+  border-color: var(--color-accent);
+  color: #17120c;
+  background: var(--color-accent);
+}
+
+.primary-button:hover:not(:disabled),
+.ds-button--primary:hover:not(:disabled) {
+  border-color: var(--color-accent-hover);
+  color: #17120c;
+  background: var(--color-accent-hover);
+}
+
+.secondary-button,
+.outline-button,
+.change-project-button,
+.ds-button--secondary {
+  border-color: var(--color-border-strong);
+  color: var(--color-text-primary);
+  background: var(--color-surface);
+}
+
+.secondary-button:hover:not(:disabled),
+.outline-button:hover:not(:disabled),
+.change-project-button:hover:not(:disabled),
+.ds-button--secondary:hover:not(:disabled) {
+  border-color: #526176;
+  color: var(--color-text-primary);
+  background: var(--color-surface-elevated);
+}
+
+.secondary-button:disabled,
+.primary-button:disabled,
+.outline-button:disabled,
+.ds-button:disabled {
+  color: var(--color-text-muted);
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.text-button {
+  color: var(--color-info);
+}
+
+.danger-button {
+  border-color: #914653;
+  color: var(--color-text-primary);
+  background: #74303b;
+}
+
+.ds-icon-button,
+.specialist-icon-button {
+  width: 2.25rem;
+  min-height: 2.25rem;
+  padding: 0;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-secondary);
+  background: var(--color-surface);
+}
+
+.workspace-shell {
+  grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+  background: var(--color-background);
+}
+
+.sidebar {
+  padding: var(--space-5) var(--space-3) var(--space-4);
+  border-color: var(--color-border);
+  background: #0e141a;
+}
+
+.sidebar-brand {
+  padding: 0 var(--space-2) var(--space-5);
+}
+
+.sidebar-project {
+  margin: 0 0 var(--space-4);
+  padding: var(--space-3);
+  border-color: var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.sidebar-brand span,
+.sidebar-project span,
+.sidebar-project small {
+  color: var(--color-text-muted);
+}
+
+.sidebar nav {
+  gap: var(--space-1);
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.nav-group {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding: var(--space-3) 0 0;
+  border: 0;
+}
+
+.nav-group + .nav-group {
+  margin-top: var(--space-2);
+  border-top: 1px solid var(--color-border);
+}
+
+.nav-group__label {
+  margin: 0;
+  padding: 0 var(--space-3) var(--space-1);
+  color: var(--color-text-muted);
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.nav-item {
+  min-height: 2.45rem;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 0.62rem var(--space-3);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-secondary);
+}
+
+.nav-item .ds-icon {
+  color: var(--color-text-muted);
+}
+
+.nav-item__label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nav-item__status {
+  margin-left: auto;
+  padding: 0.16rem 0.38rem;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  color: var(--color-text-muted);
+  background: var(--color-surface-elevated);
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.nav-item:hover {
+  color: var(--color-text-primary);
+  background: var(--color-surface);
+}
+
+.nav-item-active {
+  border-color: #524029;
+  color: var(--color-text-primary);
+  background: var(--color-surface-selected);
+  box-shadow: inset 3px 0 0 var(--color-accent);
+}
+
+.nav-item-active .ds-icon {
+  color: var(--color-accent);
+}
+
+.interview-nav {
+  margin-top: var(--space-3);
+  padding-top: 0.62rem;
+  border-top-color: var(--color-border);
+}
+
+.change-project-button {
+  margin-top: var(--space-4);
+}
+
+.workspace-content {
+  width: 100%;
+  max-width: var(--content-max-width);
+  padding: var(--page-padding);
+}
+
+.page-stack {
+  gap: var(--section-gap);
+}
+
+.overview-card,
+.placeholder-card,
+.status-card,
+.knowledge-card,
+.knowledge-error,
+.knowledge-notice,
+.knowledge-filters,
+.evaluation-card,
+.interview-card,
+.specialist-card,
+.repository-card,
+.unity-card {
+  border-color: var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.status-card {
+  gap: var(--space-1);
+  padding: var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
+.status-card span {
+  color: var(--color-text-muted);
+}
+
+.project-details--secondary {
+  color: var(--color-text-secondary);
+  font-size: var(--type-secondary-size);
+}
+
+.feature-contract-intro,
+.feature-contract-create,
+.feature-contract-list,
+.feature-contract-editor,
+.feature-contract-inspector {
+  border-color: var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.feature-contract-source-preview,
+.feature-contract-trace,
+.feature-contract-reality,
+.feature-contract-evidence-selection,
+.feature-contract-brief,
+.feature-contract-field-group,
+.feature-contract-proposal-grid article {
+  border-color: var(--color-border);
+  border-radius: var(--radius-md);
+  background: #10161d;
+}
+
+.feature-contract-ai,
+.feature-contract-proposal {
+  border-color: #554982;
+  border-radius: var(--radius-md);
+  background: var(--color-ai-surface);
+}
+
+.feature-contract-list-item,
+.feature-contract-trace-row,
+.feature-contract-brief-preview {
+  border-color: var(--color-border);
+  background: #0f151c;
+}
+
+.feature-contract-list-item.is-selected,
+.feature-contract-evidence-selection label.is-selected,
+.feature-contract-filters button.is-selected {
+  border-color: #8c642f;
+  background: var(--color-surface-selected);
+}
+
+.feature-contract-list-item .status-badge,
+.feature-contract-editor-heading .status-badge {
+  color: var(--color-text-secondary);
+  font-size: var(--type-label-size);
+}
+
+.feature-contract-editor-heading > div {
+  flex-wrap: wrap;
+}
+
+.feature-contract-list .empty-state {
+  min-height: 8rem;
+  padding: var(--space-3);
+}
+
+.feature-contract-list .empty-state h2 {
+  font-size: 0.9rem;
+}
+
+.feature-contract-list .empty-state p {
+  font-size: var(--type-meta-size);
+}
+
+.action-feedback {
+  color: var(--color-success);
+}
+
+.action-feedback.is-error,
+.danger-text {
+  color: var(--color-danger);
+}
+
+.success-banner {
+  border-color: #3d7855;
+  color: #bce8cc;
+  background: var(--color-success-surface);
+}
+
+.problem-message,
+.error-banner,
+.knowledge-error {
+  border-color: #82404a;
+  color: #f4b0b6;
+  background: var(--color-danger-surface);
+}
+
+@media (max-width: 980px) {
+  .workspace-shell {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sidebar {
+    position: static;
+    height: auto;
+    display: grid;
+    grid-template-columns: auto minmax(12rem, 1fr) auto;
+    gap: var(--space-3);
+    align-items: center;
+    padding: var(--space-3);
+    border-right: 0;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .sidebar-brand,
+  .sidebar-project,
+  .change-project-button {
+    margin: 0;
+    padding-block: var(--space-2);
+  }
+
+  .sidebar-brand {
+    padding-bottom: var(--space-2);
+  }
+
+  .sidebar nav {
+    grid-column: 1 / -1;
+    display: flex;
+    gap: var(--space-1);
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: var(--space-1);
+  }
+
+  .nav-group {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: var(--space-1);
+    margin: 0;
+    padding: 0;
+  }
+
+  .nav-group + .nav-group {
+    margin: 0 0 0 var(--space-2);
+    padding-left: var(--space-2);
+    border-top: 0;
+    border-left: 1px solid var(--color-border);
+  }
+
+  .nav-group__label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
+
+  .nav-item {
+    width: auto;
+    flex: 0 0 auto;
+  }
+
+  .interview-nav {
+    margin-top: 0;
+    border-top: 1px solid transparent;
+    border-left: 1px solid var(--color-border);
+  }
+}
+
+@media (max-width: 680px) {
+  .sidebar {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .sidebar-project {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .sidebar-project small {
+    display: none;
+  }
+
+  .sidebar nav {
+    grid-row: 3;
+  }
+
+  .change-project-button {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .feature-contract-intro,
+  .repository-intro,
+  .unity-intro {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .welcome-card {
+    padding: var(--space-6);
+  }
+}

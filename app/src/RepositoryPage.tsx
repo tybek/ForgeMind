@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Button } from "./designSystem";
 import {
   inspectRepositoryReality,
   type ChangedFile,
@@ -127,9 +128,9 @@ export function RepositoryPage({ workspace }: { workspace: RepositoryWorkspace }
           <h2>Git / Repository</h2>
           <p>Read-only implementation evidence from the active workspace repository. File changes do not prove that a feature is implemented.</p>
         </div>
-        <button className="outline-button" type="button" disabled={loading} onClick={() => void refresh()}>
-          {loading ? "Inspecting..." : "Refresh snapshot"}
-        </button>
+        <Button icon="refresh" loading={loading} loadingLabel="Inspecting..." onClick={() => void refresh()}>
+          Refresh snapshot
+        </Button>
       </section>
       {error ? <div className="repository-state repository-state-error" role="alert">{error}</div> : null}
       {!error && loading && result === null ? <p aria-live="polite">Inspecting Repository Reality...</p> : null}
