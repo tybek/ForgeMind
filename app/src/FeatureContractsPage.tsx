@@ -9,6 +9,7 @@ import {
   setFeatureContractStatus,
   updateFeatureContract,
   type FeatureContract,
+  type FeatureContractAiDraftResult,
   type FeatureContractDraftProposal,
   type FeatureContractEditableFields,
   type FeatureContractSourceOption,
@@ -37,7 +38,8 @@ interface FormState {
 }
 
 type ProposalSection = Exclude<keyof FeatureContractDraftProposal, never>;
-type ActionKey = "create" | "save" | "approve" | "copy" | "delete" | "ai" | "status";
+type ActionKey = "create" | "save" | "approve" | "copy" | "delete" | "ai" | "applyAll" | "status";
+type ContractFilter = "ACTIVE" | "ARCHIVED" | "ALL";
 
 interface ActionFeedback {
   action: ActionKey;
@@ -146,7 +148,9 @@ export function FeatureContractsPage({
   const [selectedContractId, setSelectedContractId] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm);
   const [proposal, setProposal] = useState<FeatureContractDraftProposal | null>(null);
-  const [proposalModel, setProposalModel] = useState<string | null>(null);
+  const [proposalRun, setProposalRun] = useState<Omit<FeatureContractAiDraftResult, "proposal"> | null>(null);
+  const [historyFilter, setHistoryFilter] = useState<ContractFilter>("ACTIVE");
+  const [aiElapsedSeconds, setAiElapsedSeconds] = useState(0);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [deleteConfirming, setDeleteConfirming] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -165,7 +169,9 @@ export function FeatureContractsPage({
         setSources(catalog.sources);
         setSelectedSourceKey(catalog.sources[0] ? sourceKey(catalog.sources[0]) : "");
         setDocument(contracts);
-        const initialContract = contracts?.contracts.at(-1) ?? null;
+        const initialContract = [...(contracts?.contracts ?? [])].reverse().find(
+          (contract) => contract.status === "DRAFT" || contract.status === "APPROVED",
+        ) ?? contracts?.contracts.at(-1) ?? null;
         setSelectedContractId(initialContract?.id ?? null);
         setForm(initialContract ? formFromContract(initialContract) : emptyForm);
         setModels(enabledModels);
@@ -180,12 +186,27 @@ export function FeatureContractsPage({
     return () => { active = false; };
   }, [workspace.path]);
 
+  useEffect(() => {
+    if (workingAction !== "ai") {
+      setAiElapsedSeconds(0);
+      return;
+    }
+    const startedAt = Date.now();
+    const timer = window.setInterval(() => setAiElapsedSeconds(Math.floor((Date.now() - startedAt) / 1_000)), 1_000);
+    return () => window.clearInterval(timer);
+  }, [workingAction]);
+
   const selectedSource = sources.find((source) => sourceKey(source) === selectedSourceKey) ?? null;
   const selectedContract = document?.contracts.find((contract) => contract.id === selectedContractId) ?? null;
   const sortedContracts = useMemo(
     () => [...(document?.contracts ?? [])].sort((left, right) => right.updatedAt.localeCompare(left.updatedAt)),
     [document],
   );
+  const visibleContracts = useMemo(() => sortedContracts.filter((contract) => {
+    if (historyFilter === "ALL") return true;
+    const active = contract.status === "DRAFT" || contract.status === "APPROVED";
+    return historyFilter === "ACTIVE" ? active : !active;
+  }), [historyFilter, sortedContracts]);
   const likelyAffectedEvidence = selectedContract?.sources.realityEvidence.filter(
     (evidence) => evidence.source === "UNITY" || evidence.evidenceId.startsWith("git:file:"),
   ) ?? [];
@@ -194,7 +215,7 @@ export function FeatureContractsPage({
     setSelectedContractId(contract?.id ?? null);
     setForm(contract ? formFromContract(contract) : emptyForm);
     setProposal(null);
-    setProposalModel(null);
+    setProposalRun(null);
     setPreviewOpen(false);
     setDeleteConfirming(false);
   }
@@ -204,9 +225,7 @@ export function FeatureContractsPage({
     const missing: string[] = [];
     if (!fields.title) missing.push("title");
     if (!fields.goal) missing.push("goal");
-    if (fields.affectedSystems.length === 0) missing.push("affected systems");
     if (fields.requiredBehavior.length === 0) missing.push("required behavior");
-    if (fields.outOfScope.length === 0) missing.push("out of scope");
     if (fields.acceptanceCriteria.length === 0) missing.push("acceptance criteria");
     if (fields.deterministicTests.length === 0) missing.push("deterministic tests");
     return missing;
@@ -233,9 +252,15 @@ export function FeatureContractsPage({
     setFeedback(null);
     try {
       const next = await createFeatureContract(workspace.path, workspace.projectId, selectedSource.sourceType, selectedSource.sourceId);
+      const created = next.contracts.at(-1) ?? null;
+      if (!created
+        || created.sources.origin.sourceType !== selectedSource.sourceType
+        || created.sources.origin.sourceId !== selectedSource.sourceId) {
+        throw new Error("The created draft did not preserve the selected source. Reload Feature Contracts before continuing.");
+      }
       setDocument(next);
-      selectContract(next.contracts.at(-1) ?? null);
-      localFeedback("create", "Draft created from captured source facts.");
+      selectContract(created);
+      localFeedback("create", `Draft created from ${displayEnum(created.sources.origin.sourceType)} with its captured source trace intact.`);
     } catch (error) {
       localFeedback("create", messageFromError(error), true);
     } finally {
@@ -283,7 +308,10 @@ export function FeatureContractsPage({
     try {
       const next = await deleteFeatureContractDraft(workspace.path, workspace.projectId, selectedContract.id);
       setDocument(next);
-      selectContract(next.contracts.at(-1) ?? null);
+      const nextActive = [...next.contracts].reverse().find(
+        (contract) => contract.status === "DRAFT" || contract.status === "APPROVED",
+      ) ?? next.contracts.at(-1) ?? null;
+      selectContract(nextActive);
       localFeedback("delete", "Draft deleted. Approved and historical contracts were not changed.");
     } catch (error) {
       localFeedback("delete", messageFromError(error), true);
@@ -299,6 +327,7 @@ export function FeatureContractsPage({
     try {
       const next = await setFeatureContractStatus(workspace.path, workspace.projectId, selectedContract.id, status);
       setDocument(next);
+      setHistoryFilter("ARCHIVED");
       localFeedback("status", `Contract marked ${displayEnum(status)}.`);
     } catch (error) {
       localFeedback("status", messageFromError(error), true);
@@ -312,6 +341,7 @@ export function FeatureContractsPage({
     setWorkingAction("ai");
     setFeedback(null);
     setProposal(null);
+    setProposalRun(null);
     try {
       const result = await draftFeatureContractWithAi(
         workspace.path,
@@ -321,7 +351,13 @@ export function FeatureContractsPage({
         editableFields(form),
       );
       setProposal(result.proposal);
-      setProposalModel(result.model);
+      setProposalRun({
+        model: result.model,
+        latencyMs: result.latencyMs,
+        inputTokens: result.inputTokens,
+        outputTokens: result.outputTokens,
+        totalTokens: result.totalTokens,
+      });
       localFeedback("ai", "AI proposal is ready for review. Nothing was applied, saved, or approved.");
     } catch (error) {
       localFeedback("ai", messageFromError(error), true);
@@ -352,13 +388,13 @@ export function FeatureContractsPage({
       }
     });
     setForm(next);
-    localFeedback("ai", skipped.length > 0
+    localFeedback("applyAll", skipped.length > 0
       ? `Applied suggestions to empty sections only. Preserved human text in: ${skipped.join(", ")}.`
       : "Applied all suggestions to the unsaved draft. Review and save explicitly when ready.");
   }
 
   async function copyBrief() {
-    if (!selectedContract || selectedContract.status !== "APPROVED") return;
+    if (!selectedContract) return;
     try {
       await navigator.clipboard.writeText(briefText);
       localFeedback("copy", "Implementation Brief copied from the same content shown in Preview.");
@@ -385,23 +421,17 @@ export function FeatureContractsPage({
       <details className="feature-contract-create">
         <summary>Create a new contract</summary>
         <div className="feature-contract-create-content">
-          <div>
-            <span className="section-label">Captured source</span>
-            <h3>Create from approved or authoritative source</h3>
-            <p>Approved Alignment is preferred because it already binds Intent to selected Reality evidence.</p>
-          </div>
           {sources.length === 0 ? (
             <p>No eligible sources exist. Approve an Alignment Review or Decision, or add current Compendium knowledge.</p>
           ) : (
             <>
               <label>Source<select value={selectedSourceKey} onChange={(event) => setSelectedSourceKey(event.target.value)}>
-                {sources.map((source) => <option key={sourceKey(source)} value={sourceKey(source)}>{source.preferred ? "Preferred · " : ""}{displayEnum(source.sourceType)} · {source.title}</option>)}
+                {sources.map((source) => <option key={sourceKey(source)} value={sourceKey(source)}>{source.preferred ? "Preferred · " : ""}{displayEnum(source.sourceType)} · {displayEnum(source.status)} · {source.title}</option>)}
               </select></label>
               {selectedSource ? <div className="feature-contract-source-preview" aria-label="Selected source facts">
-                <span className="wiki-type">{displayEnum(selectedSource.sourceType)}</span>
-                <strong>{selectedSource.title}</strong>
+                <div><span className="wiki-type">{displayEnum(selectedSource.sourceType)}</span><strong>{selectedSource.title}</strong></div>
                 <p>{selectedSource.statement}</p>
-                <small>{displayEnum(selectedSource.status)} · {displayEnum(selectedSource.provenance)} · {selectedSource.realityEvidence.length} Reality references</small>
+                <small>{displayEnum(selectedSource.status)} · {displayEnum(selectedSource.provenance)} · {selectedSource.realityEvidence.length} captured Reality reference{selectedSource.realityEvidence.length === 1 ? "" : "s"}</small>
                 {selectedSource.alignmentRationale ? <p>Alignment rationale: {selectedSource.alignmentRationale}</p> : null}
               </div> : null}
               <div className="feature-contract-local-action">
@@ -417,8 +447,11 @@ export function FeatureContractsPage({
 
       <div className="feature-contract-workbench">
         <aside className="feature-contract-list" aria-label="Feature Contract list">
-          <div className="feature-contract-panel-heading"><h3>Contracts</h3><span>{sortedContracts.length}</span></div>
-          {sortedContracts.length === 0 ? <p>No Feature Contracts yet.</p> : sortedContracts.map((contract) => (
+          <div className="feature-contract-panel-heading"><h3>Contracts</h3><span>{visibleContracts.length} / {sortedContracts.length}</span></div>
+          <div className="feature-contract-filters" role="group" aria-label="Contract history filter">
+            {(["ACTIVE", "ARCHIVED", "ALL"] as ContractFilter[]).map((filter) => <button className={historyFilter === filter ? "is-selected" : ""} type="button" key={filter} aria-pressed={historyFilter === filter} onClick={() => setHistoryFilter(filter)}>{displayEnum(filter)}</button>)}
+          </div>
+          {sortedContracts.length === 0 ? <p>No Feature Contracts yet.</p> : visibleContracts.length === 0 ? <p>No contracts in this view.</p> : visibleContracts.map((contract) => (
             <button
               className={contract.id === selectedContractId ? "feature-contract-list-item is-selected" : "feature-contract-list-item"}
               key={contract.id}
@@ -450,21 +483,23 @@ export function FeatureContractsPage({
               </select></label>
               <div className="feature-contract-local-action">
                 <button className="outline-button" type="button" disabled={!modelId || Boolean(workingAction)} onClick={() => void requestAiDraft()}>
-                  {workingAction === "ai" ? "Drafting..." : "Draft with AI"}
+                  {workingAction === "ai" ? <><span className="inline-spinner" aria-hidden="true" /> Drafting with {models.find((model) => model.modelId === modelId)?.displayName ?? modelId}…</> : "Draft with AI"}
                 </button>
+                {workingAction === "ai" ? <small role="status">Provider request running · {aiElapsedSeconds}s elapsed</small> : null}
                 {feedbackFor("ai")}
               </div>
             </section> : null}
 
             {proposal ? <section className="feature-contract-proposal" aria-label="AI proposal review">
-              <header><div><span className="wiki-type wiki-type-ai">AI suggestion · not saved</span><h3>Review proposed sections</h3>{proposalModel ? <small>{proposalModel}</small> : null}</div>
-                <div className="feature-contract-proposal-actions"><button className="primary-button" type="button" onClick={applyAllProposal}>Apply all</button><button className="text-button" type="button" onClick={() => { setProposal(null); setProposalModel(null); localFeedback("ai", "AI proposal discarded. The draft was not changed."); }}>Discard</button></div>
+              <header><div><span className="wiki-type wiki-type-ai">AI proposal · non-authoritative · not saved</span><h3>AI Draft Proposal</h3>{proposalRun ? <dl className="feature-contract-run-metadata"><div><dt>Model</dt><dd>{proposalRun.model}</dd></div><div><dt>Latency</dt><dd>{proposalRun.latencyMs} ms</dd></div>{proposalRun.inputTokens !== undefined ? <div><dt>Input</dt><dd>{proposalRun.inputTokens} tokens</dd></div> : null}{proposalRun.outputTokens !== undefined ? <div><dt>Output</dt><dd>{proposalRun.outputTokens} tokens</dd></div> : null}{proposalRun.totalTokens !== undefined ? <div><dt>Total</dt><dd>{proposalRun.totalTokens} tokens</dd></div> : null}</dl> : null}</div>
+                <div className="feature-contract-proposal-actions"><button className="primary-button" type="button" onClick={applyAllProposal}>Apply all</button><button className="outline-button compact-action" type="button" onClick={() => { setProposal(null); setProposalRun(null); localFeedback("ai", "AI proposal discarded. The draft was not changed."); }}>Discard proposal</button>{feedbackFor("applyAll")}</div>
               </header>
-              <p className="scope-note">Captured source facts remain in the Source Trace. These are AI suggestions; applying them changes only the unsaved editor.</p>
+              <p className="scope-note">Captured source facts and Reality evidence remain separate in the review panel. Suggested systems are proposal scope, not verified Reality. Applying changes only the unsaved editor.</p>
               <div className="feature-contract-proposal-grid">{proposalSections.map(({ key, label }) => {
                 const currentValue = form[key];
                 const hasHumanText = typeof currentValue === "string" && currentValue.trim().length > 0;
-                return <article key={key}><h4>{label}</h4><pre>{proposalValue(proposal, key) || "No suggestion."}</pre><button className="outline-button compact-action" type="button" onClick={() => applyProposalSection(key)}>{hasHumanText ? "Review & replace section" : "Apply section"}</button></article>;
+                const applied = typeof currentValue === "string" && currentValue === proposalValue(proposal, key);
+                return <article key={key}><h4>{label}</h4>{key === "affectedSystems" ? <small>Proposed system scope · not verified Reality</small> : null}<pre>{proposalValue(proposal, key) || "No suggestion."}</pre><button className="outline-button compact-action" type="button" disabled={applied} onClick={() => applyProposalSection(key)}>{applied ? "Applied ✓" : hasHumanText ? "Replace with AI proposal" : "Apply"}</button></article>;
               })}</div>
             </section> : null}
 
@@ -511,7 +546,7 @@ export function FeatureContractsPage({
               {selectedContract.sources.alignment ? <button className="feature-contract-trace-row" type="button" onClick={() => onOpenSource?.("ALIGNMENT", selectedContract.sources.alignment!.alignmentId)}><strong>Alignment · {displayEnum(selectedContract.sources.alignment.status)}</strong><span>{selectedContract.sources.alignment.rationale}</span></button> : null}
               {selectedContract.sources.realityEvidence.map((evidence) => <button className="feature-contract-trace-row" type="button" key={evidence.evidenceId} onClick={() => onOpenReality?.(evidence.source)}><strong>{displayEnum(evidence.source)} · {displayEnum(evidence.provenance)}</strong><span>{evidence.summary}</span></button>)}
             </section>
-            <section className="feature-contract-reality" aria-label="Current Reality summary"><h3>Current Reality</h3><p>{selectedContract.currentRealitySummary}</p></section>
+            <section className="feature-contract-reality" aria-label="Current Reality summary"><span className="section-label">Verified Reality where evidence supports it</span><h3>Reality assessment</h3><p>{selectedContract.currentRealitySummary}</p></section>
             <fieldset className="feature-contract-evidence-selection" disabled={selectedContract.status !== "DRAFT"}>
               <legend>Likely affected evidence <small>optional</small></legend>
               <p>Only captured Git file or Unity evidence can be selected. Unselected evidence remains source context.</p>
@@ -521,8 +556,7 @@ export function FeatureContractsPage({
               <h3>Implementation Brief</h3>
               <p>{approvalMissing.length === 0 ? "All approval-required sections are present." : `${approvalMissing.length} approval-required section${approvalMissing.length === 1 ? " is" : "s are"} incomplete.`}</p>
               <div className="feature-contract-local-action"><button className="outline-button" type="button" onClick={() => setPreviewOpen((open) => !open)}>{previewOpen ? "Hide Implementation Brief" : "Preview Implementation Brief"}</button></div>
-              {previewOpen ? <pre className="feature-contract-brief-preview">{briefText}</pre> : null}
-              {selectedContract.status === "APPROVED" ? <div className="feature-contract-local-action"><button className="primary-button" type="button" onClick={() => void copyBrief()}>Copy Implementation Brief</button>{feedbackFor("copy")}</div> : <small>Copy becomes available after explicit approval.</small>}
+              {previewOpen ? <div className="feature-contract-brief-preview-wrap"><div className="feature-contract-brief-preview-heading"><strong>{selectedContract.status === "DRAFT" ? "Draft Implementation Brief" : "Implementation Brief"}</strong><button className="outline-button compact-action" type="button" aria-label="Copy Implementation Brief" onClick={() => void copyBrief()}>Copy</button></div><pre className="feature-contract-brief-preview">{briefText}</pre>{feedbackFor("copy")}</div> : null}
             </section>
           </>}
         </aside>

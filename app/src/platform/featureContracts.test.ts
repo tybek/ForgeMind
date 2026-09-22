@@ -85,6 +85,7 @@ describe("Feature Contracts platform boundary", () => {
 
   it("renders an implementation brief from captured facts and user-authored scope", () => {
     const brief = implementationBrief(contract);
+    expect(brief).toMatch(/^DRAFT — NOT APPROVED/);
     expect(brief).toContain("## Goal\n\nKeep enemy sound knowledge uncertain.");
     expect(brief).toContain("Approved Alignment UNVERIFIED: Component presence does not prove runtime knowledge handling.");
     expect(brief).toContain("Evidence-supported location: Unity component type HearingPerception is present");
@@ -97,10 +98,12 @@ describe("Feature Contracts platform boundary", () => {
     const brief = implementationBrief({
       ...contract,
       affectedSystems: [],
+      outOfScope: [],
       sources: { ...contract.sources, alignment: undefined, realityEvidence: [] },
       likelyAffectedEvidenceIds: [],
     });
     expect(brief).toContain("No file or component location is established by current Reality evidence.");
+    expect(brief).toContain("## Non-goals\n\n- Not specified.");
     expect(brief).not.toMatch(/[A-Z]:\\/);
     expect(brief).not.toContain("src/");
   });

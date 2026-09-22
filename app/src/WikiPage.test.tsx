@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { WikiPage } from "./WikiPage";
 import { loadDecisions } from "./platform/decisions";
-import { loadCompendium } from "./platform/projectKnowledge";
+import { loadCompendium, type KnowledgeArea } from "./platform/projectKnowledge";
 import { loadSpecialistRuns } from "./platform/specialists";
 import { inspectRepositoryReality } from "./platform/repositoryReality";
 import { inspectUnityGroundTruth } from "./platform/unityGroundTruth";
@@ -62,7 +62,7 @@ const featureContract: FeatureContract = {
   status: "APPROVED", reviewState: "APPROVED", reviewedAt: "2026-09-21T12:01:00Z",
 };
 
-async function renderWiki(onEditKnowledge?: (entryId: string) => void, onViewAlignmentHistory?: () => void, onViewFeatureContracts?: () => void) {
+async function renderWiki(onEditKnowledge?: (entryId: string) => void, onViewAlignmentHistory?: () => void, onViewFeatureContracts?: (area: KnowledgeArea) => void) {
   const user = userEvent.setup();
   render(<WikiPage workspace={workspace} onEditKnowledge={onEditKnowledge} onViewAlignmentHistory={onViewAlignmentHistory} onViewFeatureContracts={onViewFeatureContracts} />);
   await screen.findByRole("heading", { name: "Game Wiki" });
@@ -151,6 +151,7 @@ describe("Game Wiki", () => {
     const user = await renderWiki(undefined, onViewAlignmentHistory);
     await user.click(screen.getByRole("button", { name: "View Alignment History" }));
     expect(onViewAlignmentHistory).toHaveBeenCalledOnce();
+    expect(screen.getByRole("button", { name: "View Alignment History" })).toHaveClass("outline-button", "compact-action");
   });
 
   it("shows a compact read-only Feature Contract summary without changing Wiki entry counts", async () => {
@@ -163,7 +164,8 @@ describe("Game Wiki", () => {
     expect(within(summary).getByText(/editing remains in the Feature Contracts workspace/)).toBeInTheDocument();
     expect(within(summary).queryByRole("textbox")).not.toBeInTheDocument();
     await user.click(within(summary).getByRole("button", { name: "View Feature Contracts" }));
-    expect(onViewFeatureContracts).toHaveBeenCalledOnce();
+    expect(onViewFeatureContracts).toHaveBeenCalledWith("systems");
+    expect(within(summary).getByRole("button", { name: "View Feature Contracts" })).toHaveClass("outline-button", "compact-action");
   });
 
   it("keeps specialist analysis visibly non-authoritative", async () => {

@@ -53,16 +53,18 @@ function relevantAnalysisAreas(
 
 export function WikiPage({
   workspace,
+  initialArea = "overview",
   onEditKnowledge,
   onViewAlignmentHistory,
   onViewFeatureContracts,
 }: {
   workspace: WikiWorkspace;
+  initialArea?: KnowledgeArea;
   onEditKnowledge?: (entryId: string) => void;
   onViewAlignmentHistory?: () => void;
-  onViewFeatureContracts?: () => void;
+  onViewFeatureContracts?: (area: KnowledgeArea) => void;
 }) {
-  const [activeArea, setActiveArea] = useState<KnowledgeArea>("overview");
+  const [activeArea, setActiveArea] = useState<KnowledgeArea>(initialArea);
   const [query, setQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<WikiTypeFilter>("ALL");
   const [knowledge, setKnowledge] = useState<KnowledgeEntry[]>([]);
@@ -239,7 +241,7 @@ export function WikiPage({
                 <div><dt>Total reviews</dt><dd>{areaAlignments.length}</dd></div>
               </dl>
               <p>Alignment remains a derived, evidence-backed interpretation; reviews are not counted as Wiki entries.</p>
-              {onViewAlignmentHistory ? <button className="text-button wiki-alignment-history-action" type="button" onClick={onViewAlignmentHistory}>View Alignment History</button> : null}
+              {onViewAlignmentHistory ? <button className="outline-button compact-action wiki-summary-action" type="button" onClick={onViewAlignmentHistory}>View Alignment History</button> : null}
             </aside>
           ) : null}
           {areaFeatureContracts.length > 0 ? (
@@ -255,7 +257,7 @@ export function WikiPage({
                 <div><dt>Total contracts</dt><dd>{areaFeatureContracts.length}</dd></div>
               </dl>
               <p>Compact read-only handoff status; contract editing remains in the Feature Contracts workspace.</p>
-              {onViewFeatureContracts ? <button className="text-button wiki-alignment-history-action" type="button" onClick={onViewFeatureContracts}>View Feature Contracts</button> : null}
+              {onViewFeatureContracts ? <button className="outline-button compact-action wiki-summary-action" type="button" onClick={() => onViewFeatureContracts(activeArea)}>View Feature Contracts</button> : null}
             </aside>
           ) : null}
           {areaKnowledge.length === 0 && areaDecisions.length === 0 && areaRuns.length === 0 ? (

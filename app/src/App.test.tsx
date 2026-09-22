@@ -310,9 +310,11 @@ describe("ForgeMind local workspace", () => {
     await user.click(await screen.findByRole("button", { name: /Systems/ }));
     await user.click(await screen.findByRole("button", { name: "View Feature Contracts" }));
     expect(await screen.findByRole("button", { name: "Back to Game Wiki" })).toBeInTheDocument();
-    expect(screen.getByText("0K.2 Feature Contract")).toBeInTheDocument();
+    expect(screen.getByText("0K.3 Feature Contract")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Back to Game Wiki" }));
     expect(await screen.findByRole("heading", { name: "Game Wiki", level: 2 })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Systems", level: 3 })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Systems/ })).toHaveAttribute("aria-current", "page");
   });
 
   it("opens Alignment Review History from the derived Game Wiki summary", async () => {

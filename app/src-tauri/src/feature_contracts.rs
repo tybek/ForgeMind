@@ -664,16 +664,15 @@ fn reality_summary(trace: &FeatureContractTrace) -> String {
 }
 
 fn validate_ready_for_approval(contract: &FeatureContract) -> Result<(), FeatureContractError> {
-    if contract.goal.trim().is_empty()
-        || contract.affected_systems.is_empty()
+    if contract.title.trim().is_empty()
+        || contract.goal.trim().is_empty()
         || contract.required_behavior.is_empty()
-        || contract.out_of_scope.is_empty()
         || contract.acceptance_criteria.is_empty()
         || contract.deterministic_tests.is_empty()
     {
         return Err(FeatureContractError::new(
             "FEATURE_CONTRACT_INCOMPLETE",
-            "Complete the goal, affected systems, required behavior, out of scope, acceptance criteria, and deterministic tests before approval.",
+            "Complete the title, goal, required behavior, acceptance criteria, and deterministic tests before approval.",
         ));
     }
     Ok(())
@@ -1146,6 +1145,7 @@ mod tests {
     #[test]
     fn approved_alignment_is_preferred_and_creates_fact_only_draft() {
         let fixture = fixture();
+        let alignment_before = fs::read(fixture.directory.path().join(".forgemind/alignment.json")).unwrap();
         let catalog = sources(fixture.directory.path()).unwrap();
         assert_eq!(catalog.sources[0].source_type, FeatureContractSourceType::Alignment);
         assert!(catalog.sources[0].preferred);
@@ -1157,9 +1157,37 @@ mod tests {
         assert!(contract.current_reality_summary.contains("UNVERIFIED"));
         assert!(contract.current_reality_summary.contains("Component presence does not prove"));
         assert_eq!(contract.sources.reality_evidence.len(), 1);
+        assert_eq!(contract.sources.origin.source_type, FeatureContractSourceType::Alignment);
+        assert_eq!(contract.sources.origin.source_id, fixture.alignment_id);
+        assert_eq!(contract.sources.intent.source_id, fixture.knowledge_id);
+        assert_eq!(contract.sources.alignment.as_ref().unwrap().review_state, AlignmentReviewState::Approved);
+        assert_eq!(contract.sources.reality_evidence[0].provenance, AlignmentProvenance::VerifiedFromUnity);
         assert!(contract.required_behavior.is_empty());
         assert!(contract.acceptance_criteria.is_empty());
         assert!(contract.implementation_notes.is_empty());
+        let reloaded = load(fixture.directory.path()).unwrap().unwrap();
+        assert_eq!(reloaded.contracts[0].sources, contract.sources);
+        assert_eq!(reloaded.contracts[0].current_reality_summary, contract.current_reality_summary);
+        assert_eq!(fs::read(fixture.directory.path().join(".forgemind/alignment.json")).unwrap(), alignment_before);
+    }
+
+    #[test]
+    fn approval_requires_only_core_delivery_fields() {
+        let fixture = fixture();
+        let created = create(create_request(&fixture, FeatureContractSourceType::Alignment, &fixture.alignment_id)).unwrap();
+        let mut update_request = complete_update(&fixture, &created.contracts[0]);
+        update_request.affected_systems.clear();
+        update_request.out_of_scope.clear();
+        update_request.risks.clear();
+        update_request.implementation_notes.clear();
+        let updated = update(update_request).unwrap();
+        let approved = set_status(SetFeatureContractStatusRequest {
+            root_path: fixture.directory.path().display().to_string(), project_id: fixture.project_id.clone(),
+            contract_id: updated.contracts[0].id.clone(), status: FeatureContractStatus::Approved,
+        }).unwrap();
+        assert_eq!(approved.contracts[0].status, FeatureContractStatus::Approved);
+        assert!(approved.contracts[0].affected_systems.is_empty());
+        assert!(approved.contracts[0].out_of_scope.is_empty());
     }
 
     #[test]

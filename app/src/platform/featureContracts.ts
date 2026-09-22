@@ -206,7 +206,7 @@ export function implementationBrief(contract: FeatureContract): string {
     ...contract.affectedSystems.map((system) => `User-scoped system: ${system}`),
     ...selectedEvidence.map((evidence) => `Evidence-supported location: ${evidence.summary}`),
   ];
-  return [
+  const brief = [
     "# Task",
     "",
     contract.title,
@@ -261,4 +261,5 @@ export function implementationBrief(contract: FeatureContract): string {
     "",
     "Stop when the required behavior and acceptance criteria are satisfied by the deterministic tests. Do not broaden scope, perform autonomous follow-on work, or treat this brief as approval to change unrelated systems.",
   ].join("\n");
+  return contract.status === "DRAFT" ? `DRAFT — NOT APPROVED\n\n${brief}` : brief;
 }
