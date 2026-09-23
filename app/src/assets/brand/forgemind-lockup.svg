@@ -1,10 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 540 72" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 120" role="img" aria-labelledby="title desc">
   <title id="title">ForgeMind lockup</title>
   <desc id="desc">The ForgeMind FM mark with the white and orange wordmark.</desc>
-  <rect width="72" height="72" rx="14" fill="#0B0F14"/>
-  <path fill="#F2F2F2" d="m24 31 16 16 22-22v30L51 66V46L40 57 23 40V32l1-1Z"/>
-  <path fill="#FF9A2B" d="M9 20 21 8h40L50 19H28v9h15l10 11H28v12L9 68V20Z"/>
-  <g transform="translate(92 12)">
+  <rect x="4" y="4" width="112" height="112" rx="24" fill="#0B0F14"/>
+  <svg x="2.6" y="-2.6" width="116" height="116" viewBox="0 0 100 100">
+    <polygon fill="#FF9A2B" points="10,18 63,18 52,30 30,30 30,42 55,42 67,54 30,54 30,76 10,90"/>
+    <polygon fill="#F2F2F2" points="38,43 48,43 60,55 79,35 89,35 89,82 76,82 76,58 60,73 44,58 44,82 32,82 32,49"/>
+  </svg>
+  <g transform="translate(153.333 20) scale(1.666667)">
     <g fill="#F2F2F2">
       <path d="M0 4h40v8H10v10h25v8H10v14H0V4Z"/>
       <path fill-rule="evenodd" d="M50 4h40v40H50V4Zm10 8v24h20V12H60Z"/>
