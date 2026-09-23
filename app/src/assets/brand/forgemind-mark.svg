@@ -3,7 +3,8 @@
   <desc id="desc">An original interlocked orange F and white M on a deep-dark tile.</desc>
   <rect x="4" y="4" width="112" height="112" rx="24" fill="#0B0F14"/>
   <svg x="2.6" y="-2.6" width="116" height="116" viewBox="0 0 100 100">
-    <polygon fill="#FF9A2B" points="10,18 63,18 52,30 30,30 30,42 55,42 67,54 30,54 30,76 10,90"/>
+    <polygon fill="#FF9A2B" points="10,18 63,18 52,30 30,30 30,42 47,42 59,54 30,54 30,76 10,90"/>
     <polygon fill="#F2F2F2" points="38,43 48,43 60,55 79,35 89,35 89,82 76,82 76,58 60,73 44,58 44,82 32,82 32,49"/>
+    <polygon fill="#FF9A2B" points="30,42 47,42 59,54 30,54"/>
   </svg>
 </svg>
