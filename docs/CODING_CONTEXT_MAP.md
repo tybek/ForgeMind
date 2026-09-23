@@ -12,6 +12,7 @@ Always begin with `AGENTS.md`, `ROADMAP.md`, `ARCHITECTURE.md`, and `VALIDATION.
 | Architecture | `ARCHITECTURE.md`, `../app/src-tauri/src/lib.rs` | Responsibilities, trust boundaries, or cross-layer wiring may change. |
 | Workspace/project model | `DATA_MODEL.md`, `../app/src-tauri/src/workspace.rs`, `../app/src/platform/workspaceDirectory.ts` | Project identity, workspace initialization, or portable file rules change. |
 | Existing project rebaseline | `PROJECT_REBASELINE.md`, `WORKFLOWS.md`, `ROADMAP.md`, then each explicitly affected owning domain | Planning a Reality-first re-onboarding, knowledge classification, archival/exclusion, focused missing-Intent interview, or clean derived baseline. This workflow is future and not implemented. |
+| New Project Creator and next steps | `NEW_PROJECT_CREATOR.md`, `PRODUCT.md`, `WORKFLOWS.md`, `UI_DIRECTION.md`, `ROADMAP.md`, then only the explicitly affected owning domains | Planning or implementing beginner onboarding, Project Foundation review/initialization, foundation readiness, deterministic recommendations, Home/Overview recommendation integration, or optional AI refinement. NPC-0 is specification only; NPC-1 through NPC-3 and NEXT-1 through NEXT-3 require explicit roadmap authorization. |
 | Compendium | `../app/src-tauri/src/compendium.rs`, `../app/src/platform/projectKnowledge.ts`, `../app/src/CompendiumPage.tsx` | Knowledge import, CRUD, status, provenance, or UI changes. |
 | Decisions | `../app/src-tauri/src/decisions.rs`, `../app/src/platform/decisions.ts`, `../app/src/DecisionsPage.tsx` | Decision lifecycle, approval, relationships, or supersession changes. |
 | AI provider | `../app/src-tauri/src/ai.rs`, `../app/src/platform/aiProvider.ts` | Provider requests, normalization, credentials, or safe errors change. |
@@ -44,7 +45,7 @@ Classify the task before coding:
 - **PERSISTENCE:** target Rust domain and tests, `workspace.rs`, `DATA_MODEL.md`, and the lifecycle UI/boundary that invokes it.
 - **AI_PROVIDER:** `ai.rs`, model registry, usage metering, relevant AI feature module, AI specialist docs when applicable, and provider/native tests.
 - **AI_PRODUCT:** target AI page, platform boundary, native feature module, related product/workflow section, tests, and selected AI documentation.
-- **DOCUMENTATION:** requested documents plus direct links needed for consistency. Do not crawl implementation unless a claim requires verification.
+- **DOCUMENTATION:** requested documents plus direct links needed for consistency. For New Project Creator, Project Foundation, or Recommended Next Steps direction, include `NEW_PROJECT_CREATOR.md`. Do not crawl implementation unless a claim requires verification.
 - **CROSS_LAYER:** both relevant frontend and native files, the platform contract, data model when persistence changes, and focused tests. Do not crawl unrelated features.
 
 For every pack, the four always-read files named at the top still apply.

@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 72 72" role="img" aria-labelledby="title desc">
   <title id="title">ForgeMind FM mark</title>
-  <desc id="desc">An original geometric orange F and white M on a deep-dark tile.</desc>
+  <desc id="desc">An original interlocked orange F and white M on a deep-dark tile.</desc>
   <rect width="72" height="72" rx="14" fill="#0B0F14"/>
-  <path fill="#FF9A2B" d="M14 13h39l-9 9H25v9h17l8 8H25v17L14 66V13Z"/>
-  <path fill="#F2F2F2" d="m31 40 9 9 18-18v25L47 66V52l-7 7-18-18v-9l9 8Z"/>
+  <path fill="#F2F2F2" d="m24 31 16 16 22-22v30L51 66V46L40 57 23 40V32l1-1Z"/>
+  <path fill="#FF9A2B" d="M9 20 21 8h40L50 19H28v9h15l10 11H28v12L9 68V20Z"/>
 </svg>

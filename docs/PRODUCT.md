@@ -2,7 +2,7 @@
 
 ## Status
 
-This document defines the product direction. **CURRENT:** 0K Feature Contract. 0K.1 and 0K.2 are implemented with manual validation pending. The local workspace includes Project Interview, Compendium knowledge, Decisions, one bounded specialist profile, Game Wiki aggregation, Repository Reality, completed Unity GroundTruth and Alignment workflows, plus the reviewed Feature Contract workbench, explicit AI-assisted drafting proposals, and coding-agent handoff workflow. Everything described as future or post-1.0 direction below is **NOT IMPLEMENTED** unless explicitly identified otherwise.
+This document defines the product direction. **CURRENT:** 0K Feature Contract and UI-1 are complete; UI-2 has not started. The local workspace includes Project Interview, Compendium knowledge, Decisions, one bounded specialist profile, Game Wiki aggregation, Repository Reality, completed Unity GroundTruth and Alignment workflows, plus the reviewed Feature Contract workbench, explicit AI-assisted drafting proposals, and coding-agent handoff workflow. The New Project Creator and Recommended Next Steps direction is specified in [New Project Creator and Recommended Next Steps](NEW_PROJECT_CREATOR.md), but no related behavior is implemented. Everything described as future direction below is **NOT IMPLEMENTED** unless explicitly identified otherwise.
 
 ## Problem
 
@@ -82,11 +82,11 @@ Accounts, permissions, role-based access control, cloud synchronization, and rea
 
 ## New and existing project onboarding
 
-ForgeMind should eventually support two equal paths. Both are **FUTURE DIRECTION**, not current behavior.
+ForgeMind should support two equal paths. Both remain **FUTURE DIRECTION**, not current behavior; the detailed new-project and recommendation contract is in [New Project Creator and Recommended Next Steps](NEW_PROJECT_CREATOR.md).
 
-**New project:** Create Project -> Project Interview -> Game Vision -> Player Experience -> Core Loop -> Systems -> Constraints -> initial Wiki / Compendium -> initial Decisions -> Open Questions -> first Feature Contracts. AI may actively help structure early Intent, but people approve durable truth.
+**New project:** Idea -> guided Creator -> AI-assisted structured Project Foundation -> human review -> Project Brain -> Recommended Next Steps. AI may help structure Game Vision, Player Experience, Core Loop, Pillars, World / Tone, Constraints, and Open Questions, but people approve durable truth. AI suggestions do not create approved Decisions.
 
-**Existing project:** Open Existing Project -> detect Git -> detect Unity -> GroundTruth scan -> import available documentation -> identify implementation evidence -> interview only missing or uncertain Intent -> build the Wiki -> surface undocumented systems, unknowns, and conflicts.
+**Existing project:** Repository / Unity / documents -> Reality -> import and document review -> focused missing-Intent questions -> Project Brain -> Recommended Next Steps. The [Rebaseline Existing Project](PROJECT_REBASELINE.md) direction defines the non-destructive, Reality-first path for an existing workspace.
 
 Existing-project import must keep `VERIFIED FROM REALITY`, `DOCUMENTED`, `AI INFERRED`, and `UNRESOLVED` visibly distinct. AI inference must never be imported as approved truth automatically.
 
@@ -104,14 +104,14 @@ Existing-project import must keep `VERIFIED FROM REALITY`, `DOCUMENTED`, `AI INF
 
 These are product concepts, not commitments to separate technical services or storage systems.
 
-The long-term UI should consolidate those concepts into four clearer groups:
+The long-term product journey should consolidate those concepts into four clearer groups:
 
-- **Project:** Overview, Game Wiki, Decisions, and Roadmap / Production.
-- **Reality:** Repository, Unity, and Alignment.
-- **AI Studio:** Specialists and Model Evaluation / Model Lab.
+- **Project:** define what the game is and why through the Foundation, Overview, Game Wiki, Decisions, and Roadmap / Production.
+- **AI Studio:** expand and review it through project-aware Specialists and Model Evaluation / Model Lab.
+- **Reality:** connect Repository, Unity, and Alignment evidence.
 - **Delivery:** Feature Contracts and Implementation Briefs.
 
-This is **FUTURE UI CONSOLIDATION DIRECTION**, not the current navigation. The Game Wiki should become the main human-facing knowledge surface by aggregating authoritative stores such as Compendium, Decisions, Specialist analyses, Feature Contracts, GroundTruth, Alignment results, and technical documentation. A future topic such as Enemy AI may bring those sources together as Overview, Intent, Decisions, Behavior Contracts, Reality, Alignment, AI Analyses, and Open Questions. The Wiki remains a view over those sources and must not create a competing `wiki.json` source of truth.
+This is **FUTURE UI CONSOLIDATION DIRECTION**, not the current navigation or a rigid waterfall; users may move between Suites freely. The Game Wiki should become the main human-facing knowledge surface by aggregating authoritative stores such as Compendium, Decisions, Specialist analyses, Feature Contracts, GroundTruth, Alignment results, and technical documentation. A future topic such as Enemy AI may bring those sources together as Overview, Intent, Decisions, Behavior Contracts, Reality, Alignment, AI Analyses, and Open Questions. The Wiki remains a view over those sources and must not create a competing `wiki.json` source of truth.
 
 The detailed dashboard, layout, workflow, artwork, and phased redesign plan lives in [ForgeMind UI Direction](UI_DIRECTION.md). The original visual identity, messaging, logo, color, typography, icon, voice, motion, and marketing guidance lives in the [ForgeMind Brandbook](BRANDBOOK.md). Both are future planning references; neither changes the current 0K milestone state or current application behavior.
 
@@ -133,7 +133,7 @@ ForgeMind may eventually expose specialist game-development role profiles and co
 
 See [AI Specialists and Content Production Direction](AI_SPECIALISTS_AND_PRODUCTION.md) for potential roles, multi-perspective review, the distinction between simulation and AI scenario reasoning, content-production orchestration, private-project dogfooding boundaries, and the planned model-evaluation approach.
 
-The [ForgeMind Studios Roadmap](STUDIOS_ROADMAP.md) defines how future task-oriented specialist workspaces should share context building, structured proposal review, artifact promotion, provenance, and task-specific model recommendations. Its S0-S9 sequence is planning direction only: no Studio is started, and 0K remains the current milestone with manual validation pending.
+The [ForgeMind Studios Roadmap](STUDIOS_ROADMAP.md) defines how future task-oriented specialist workspaces should share context building, structured proposal review, artifact promotion, provenance, and task-specific model recommendations. Its S0-S9 sequence is planning direction only: no Studio is started. 0K and UI-1 are complete, while UI-2 has not started.
 
 The future shared behavior underneath those workspaces is specified in [Context Builder and Task Router Architecture](CONTEXT_AND_ROUTING.md). It defines the Project Brain as a logical aggregate over existing authoritative stores, plans and budgets only task-relevant context, preserves source authority through compaction, routes deterministic actions without unnecessary AI classification, and makes model recommendations only from task-specific evidence. CR-0 is documentation only: no Context Builder, Task Router, model recommender, or natural-language **Ask ForgeMind** route is implemented.
 

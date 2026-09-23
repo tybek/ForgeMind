@@ -2,8 +2,8 @@
   <title id="title">ForgeMind lockup</title>
   <desc id="desc">The ForgeMind FM mark with the white and orange wordmark.</desc>
   <rect width="72" height="72" rx="14" fill="#0B0F14"/>
-  <path fill="#FF9A2B" d="M14 13h39l-9 9H25v9h17l8 8H25v17L14 66V13Z"/>
-  <path fill="#F2F2F2" d="m31 40 9 9 18-18v25L47 66V52l-7 7-18-18v-9l9 8Z"/>
+  <path fill="#F2F2F2" d="m24 31 16 16 22-22v30L51 66V46L40 57 23 40V32l1-1Z"/>
+  <path fill="#FF9A2B" d="M9 20 21 8h40L50 19H28v9h15l10 11H28v12L9 68V20Z"/>
   <g transform="translate(92 12)">
     <g fill="#F2F2F2">
       <path d="M0 4h40v8H10v10h25v8H10v14H0V4Z"/>

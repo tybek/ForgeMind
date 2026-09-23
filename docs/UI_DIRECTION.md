@@ -95,7 +95,7 @@ Primary actions are **Open project**, **View all**, and **Open another project**
 
 ### Recommended Next Steps
 
-Show approximately three to five contextual actions derived from current project state. Initial logic should be deterministic; AI is not required for the first implementation.
+Show approximately three to five contextual actions derived from current project state. Initial logic should be deterministic; AI is not required for the first implementation. The rule layers, recommendation fields, beginner onboarding relationship, and authority boundaries are specified in [New Project Creator and Recommended Next Steps](NEW_PROJECT_CREATOR.md).
 
 Examples include:
 
@@ -106,7 +106,7 @@ Examples include:
 - Review new AI analysis.
 - Generate an Implementation Brief.
 
-Each recommendation should state why it appears and route to the owning workflow. Avoid generic productivity advice, automatic execution, hidden ranking, or an unbounded task feed.
+Each recommendation should state why it appears, expose its source signals, and route to the owning workflow. It remains derived guidance rather than a task or new source of truth. Avoid generic productivity advice, automatic execution, hidden ranking, or an unbounded task feed.
 
 ## Project Overview Dashboard
 
@@ -168,11 +168,11 @@ Treat this as a lightweight, derived work queue. It does not introduce sprints, 
 
 The future shell direction combines three layers:
 
-1. a horizontal Suite switcher for **Project**, **Reality**, **AI Studio**, and **Delivery** above or before the page-title area;
+1. a horizontal Suite switcher expressing the journey **Project**, **AI Studio**, **Reality**, and **Delivery** above or before the page-title area;
 2. persistent global navigation for **Overview**, **Game Wiki**, **Repository / Git Reality**, **Unity**, and **Alignment**;
 3. a contextual lower sidebar section for the active Suite.
 
-Project may eventually contain Game Design, Narrative, Technical, Roadmap, Decisions, and Project Interview. AI Studio may contain the existing AI Behavior Designer and Model Evaluation entry points plus explicitly authorized future Studios. Delivery may contain Feature Contracts and future Implementation Brief workflows. Reality may later add focused tools while the core Reality shortcuts remain globally available.
+Project may eventually contain the guided Creator, Project Foundation, Game Design, Narrative, Technical, Roadmap, Decisions, and Project Interview. AI Studio may contain the existing AI Behavior Designer and Model Evaluation entry points plus explicitly authorized future Studios. Reality may later add focused tools while the core Reality shortcuts remain globally available. Delivery may contain Feature Contracts and future Implementation Brief workflows. This order suggests movement from idea toward implementation, not a rigid waterfall; users may move between Suites freely.
 
 The current shell only prepares typed metadata and restrained global/contextual grouping. It does not render a Suite switcher, change routes, or claim that a Studio exists. Existing future placeholders remain explicitly labeled **Planned**. Use an icon plus label for each destination and preserve existing ownership until a scoped phase authorizes more.
 
@@ -279,6 +279,8 @@ Exit direction: shared primitives and tokens can be applied without feature-spec
 - recent project cards with approved image sources and branded fallbacks;
 - deterministic recommended next steps;
 - improved project selection and open-another-project flow.
+
+Coordinate the recommendation region with NEXT-1/NEXT-2 in [New Project Creator and Recommended Next Steps](NEW_PROJECT_CREATOR.md). UI-2 does not by itself authorize Creator persistence, an AI recommendation call, or a new task store.
 
 Exit direction: Home answers current project, project state, and next action without emphasizing filesystem paths.
 
