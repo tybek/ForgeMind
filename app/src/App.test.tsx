@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import App, { WorkspaceShell, type Workspace } from "./App";
@@ -301,6 +301,26 @@ describe("ForgeMind local workspace", () => {
     expect(
       screen.getByRole("button", { name: "Project Interview" }),
     ).toBeInTheDocument();
+  });
+
+  it("keeps the sidebar project summary compact and exposes the full project name", () => {
+    const longName = "A Very Long ForgeMind Project Name That Must Stay Within The Sidebar";
+    const { container } = render(
+      <WorkspaceShell workspace={{ ...workspace, name: longName }} onOpen={async () => undefined} />,
+    );
+
+    const sidebar = container.querySelector<HTMLElement>(".sidebar");
+    const brand = sidebar?.querySelector<HTMLElement>(":scope > .sidebar-brand");
+    const projectCard = sidebar?.querySelector<HTMLElement>(":scope > .sidebar-project");
+    const navigation = sidebar?.querySelector<HTMLElement>(":scope > .sidebar-navigation");
+    const projectAction = sidebar?.querySelector<HTMLElement>(":scope > .change-project-button");
+
+    expect(sidebar).not.toBeNull();
+    expect([brand, projectCard, navigation, projectAction]).toEqual(Array.from(sidebar!.children));
+    expect(projectCard).toHaveAttribute("title", longName);
+    expect(within(projectCard!).getByText("Project")).toBeVisible();
+    expect(within(projectCard!).getByText(longName)).toBeVisible();
+    expect(projectCard).not.toHaveTextContent(workspace.path);
   });
 
   it("returns contextually to Game Wiki after entering Feature Contracts from its summary", async () => {

@@ -2,13 +2,13 @@
 
 ## Status and relationship
 
-This document records the agreed ForgeMind brand foundation and the bounded UI-1 integration state. It does not claim that the website, app icon, or reference images are final production assets.
+This document records the agreed ForgeMind brand foundation and the bounded UI-1 integration state. It does not claim that the website or concept-reference images are final production assets.
 
 **UI-1 COMPLETE.** The application uses the core palette, semantic presentation tokens, shared typography/surface/control patterns, restrained shell styling, and production SVG brand assets. The UI-1 manual visual pass is recorded in [Validation](VALIDATION.md). UI-2 and later phases have not started. See [ForgeMind UI Direction](UI_DIRECTION.md) for dashboard behavior, information architecture, artwork use inside the application, and phased status.
 
 ## Concept / visual-direction references
 
-The images below are **concept and visual-direction references**, not application assets, trademark-safe vector artwork, or implemented UI specifications. Generated mockups must not be treated as pixel-accurate UI requirements. The controlled SVGs in `app/src/assets/brand/` are the application-facing source assets; they use original, manually maintained geometry rather than traced or mechanically vectorized reference pixels. Product implementation should follow this Brandbook together with [ForgeMind UI Direction](UI_DIRECTION.md), preserve existing product behavior and authority boundaries, and use the PNG boards only to understand the intended atmosphere and hierarchy.
+The images below are **concept and visual-direction references**, not application assets, trademark-cleared artwork, or implemented UI specifications. Generated brandboard and mockup PNGs remain concept references and must not be treated as pixel-accurate UI requirements. The controlled SVGs in `app/src/assets/brand/` are the application-facing source assets; they use original, manually maintained geometry rather than traced or mechanically vectorized reference pixels. Product implementation should follow this Brandbook together with [ForgeMind UI Direction](UI_DIRECTION.md), preserve existing product behavior and authority boundaries, and use the PNG boards only to understand the intended atmosphere and hierarchy.
 
 ### Brand system reference
 
@@ -89,11 +89,11 @@ The monogram should remain legible at application-icon, sidebar, favicon, and wa
 
 The production source configurations are:
 
-- `app/src/assets/brand/forgemind-mark.svg` — compact FM mark on a deep-dark tile;
+- `app/src/assets/brand/forgemind-mark.svg` — the approved MVP master vector mark, with the compact FM geometry on a deep-dark tile;
 - `app/src/assets/brand/forgemind-wordmark.svg` — font-independent FORGE/MIND vector wordmark;
 - `app/src/assets/brand/forgemind-lockup.svg` — horizontal mark and wordmark lockup.
 
-The descriptor remains live application text beside the lockup so it stays readable and accessible. Use the mark alone for compact icon surfaces, mark plus wordmark in the sidebar, and the full lockup plus descriptor on pre-project surfaces. Do not use the concept PNGs as runtime assets. Operating-system executable icon rasterization and packaging remain a separate follow-up.
+The approved master mark geometry is frozen for the MVP and must not be redesigned in derived assets. The descriptor remains live application text beside the lockup so it stays readable and accessible. Use the mark alone for compact icon surfaces, mark plus wordmark in the sidebar, and the full lockup plus descriptor on pre-project surfaces. Do not use the concept PNGs as runtime assets. Desktop PNG, ICO, and ICNS application icons are generated from the master SVG through the repository's Tauri tooling.
 
 ### Minimum-size direction
 

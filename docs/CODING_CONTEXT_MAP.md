@@ -25,6 +25,7 @@ Always begin with `AGENTS.md`, `ROADMAP.md`, `ARCHITECTURE.md`, and `VALIDATION.
 | Future Studios | `STUDIOS_ROADMAP.md`, `PRODUCT.md`, `AI_SPECIALISTS_AND_PRODUCTION.md`, `UI_DIRECTION.md`, then the owning domain docs and code for the explicitly authorized phase | Planning or implementing a task-oriented Studio, shared Studio framework, Ask ForgeMind routing, Studio result actions, or Studio-specific model evaluation. Treat S0 through S9 as future and not started until `ROADMAP.md` explicitly authorizes a phase. |
 | Validation | `VALIDATION.md`, `../app/package.json`, relevant `*.test.tsx` or Rust test module | Choosing checks, adding regressions, or recording evidence. |
 | Roadmap | `ROADMAP.md` | Confirming milestone status, scope, exit conditions, or stop point. |
+| Hackathon submission | `HACKATHON_SUBMISSION.md`, `ROADMAP.md`, `VALIDATION.md`, `SECURITY_AND_PRIVACY.md`, root `../README.md` | Devpost requirements or copy, Nebius/NVIDIA feedback, evaluation evidence, public-repository readiness, demo video, submission safety, or final QA. |
 | Frontend shell | `../app/src/App.tsx`, `../app/src/App.test.tsx`, `../app/src/styles.css` | Navigation, shared layout, or workspace-level UI changes. |
 | UI direction and brand | `UI_DIRECTION.md`, `BRANDBOOK.md`, `PRODUCT.md`, `ROADMAP.md`, then the relevant page/tests/styles | Dashboard behavior, information architecture, shared visual system, branding, artwork, copy, or redesign-phase work. Treat UI-1 through UI-5 as future until explicitly authorized. |
 | Native commands | `../app/src-tauri/src/lib.rs`, matching Rust domain, matching `../app/src/platform/*.ts` | A Tauri command or frontend/native contract changes. |
@@ -46,6 +47,7 @@ Classify the task before coding:
 - **AI_PROVIDER:** `ai.rs`, model registry, usage metering, relevant AI feature module, AI specialist docs when applicable, and provider/native tests.
 - **AI_PRODUCT:** target AI page, platform boundary, native feature module, related product/workflow section, tests, and selected AI documentation.
 - **DOCUMENTATION:** requested documents plus direct links needed for consistency. For New Project Creator, Project Foundation, or Recommended Next Steps direction, include `NEW_PROJECT_CREATOR.md`. Do not crawl implementation unless a claim requires verification.
+- **HACKATHON_SUBMISSION:** `HACKATHON_SUBMISSION.md` plus only the directly affected public README, Roadmap, Validation, Security/Privacy, or evidence source. Re-check the official Devpost overview and rules before changing a requirement. Do not expose credentials/private project data, claim planned behavior, spend provider credits, publish a repository/video, or start a product milestone without explicit authorization.
 - **CROSS_LAYER:** both relevant frontend and native files, the platform contract, data model when persistence changes, and focused tests. Do not crawl unrelated features.
 
 For every pack, the four always-read files named at the top still apply.

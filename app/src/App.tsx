@@ -394,13 +394,12 @@ export function WorkspaceShell({
           <BrandLockup compact />
         </div>
 
-        <div className="sidebar-project" title={workspace.path}>
+        <div className="sidebar-project" title={workspace.name}>
           <span>Project</span>
           <strong>{workspace.name}</strong>
-          <small>{workspace.path}</small>
         </div>
 
-        <nav aria-label="Workspace areas">
+        <nav className="sidebar-navigation" aria-label="Workspace areas">
           {navigationGroups.map((group) => (
             <section className="nav-group" data-suite={group.suite} key={group.label} aria-labelledby={`nav-${group.label.replaceAll(" ", "-").toLowerCase()}`}>
               <h2 className="nav-group__label" id={`nav-${group.label.replaceAll(" ", "-").toLowerCase()}`}>{group.label}</h2>

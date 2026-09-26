@@ -684,6 +684,7 @@ button:focus-visible {
 
 .sidebar-brand {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   gap: 11px;
   padding: 0 8px 20px;
@@ -695,15 +696,15 @@ button:focus-visible {
 }
 
 .sidebar-brand span,
-.sidebar-project span,
-.sidebar-project small {
+.sidebar-project span {
   color: #858c99;
   font-size: 11px;
 }
 
 .sidebar-project {
   display: grid;
-  gap: 5px;
+  flex-shrink: 0;
+  gap: 8px;
   margin: 0 4px 18px;
   padding: 14px;
   border: 1px solid #2b3038;
@@ -712,16 +713,27 @@ button:focus-visible {
   overflow: hidden;
 }
 
-.sidebar-project strong,
-.sidebar-project small {
+.sidebar-project span {
+  line-height: 1.2;
+}
+
+.sidebar-project strong {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  line-height: 1.35;
 }
 
-.sidebar nav {
+.sidebar-navigation {
+  min-width: 0;
+  min-height: 0;
   display: grid;
+  flex: 1 1 auto;
+  align-content: start;
   gap: 3px;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .nav-item {
@@ -757,6 +769,7 @@ button:focus-visible {
 }
 
 .change-project-button {
+  flex-shrink: 0;
   margin-top: auto;
   border: 1px solid #30353e;
   color: #aeb4bf;
@@ -3928,15 +3941,12 @@ body {
 }
 
 .sidebar-brand span,
-.sidebar-project span,
-.sidebar-project small {
+.sidebar-project span {
   color: var(--color-text-muted);
 }
 
-.sidebar nav {
+.sidebar-navigation {
   gap: var(--space-1);
-  min-height: 0;
-  overflow-y: auto;
   scrollbar-width: thin;
 }
 
@@ -4238,10 +4248,6 @@ body {
   .sidebar-project {
     grid-column: 1 / -1;
     grid-row: 2;
-  }
-
-  .sidebar-project small {
-    display: none;
   }
 
   .sidebar nav {
