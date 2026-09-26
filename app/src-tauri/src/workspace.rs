@@ -6,6 +6,8 @@ use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use uuid::Uuid;
 
+use crate::compendium::{self, ProjectFoundationInput};
+
 const CURRENT_FORMAT_VERSION: i64 = 1;
 const METADATA_DIRECTORY: &str = ".forgemind";
 const PROJECT_FILE: &str = "project.json";
@@ -73,6 +75,13 @@ impl WorkspaceError {
                 .to_string(),
         }
     }
+
+    fn foundation(message: impl Into<String>) -> Self {
+        Self {
+            code: "FOUNDATION_INITIALIZATION_FAILED",
+            message: message.into(),
+        }
+    }
 }
 
 pub fn inspect(root: &Path) -> Result<WorkspaceInspection, WorkspaceError> {
@@ -127,18 +136,64 @@ pub fn inspect(root: &Path) -> Result<WorkspaceInspection, WorkspaceError> {
 }
 
 pub fn initialize(root: &Path) -> Result<WorkspaceInspection, WorkspaceError> {
+    initialize_named(root, None)
+}
+
+pub fn initialize_with_foundation(
+    root: &Path,
+    foundation: &ProjectFoundationInput,
+) -> Result<WorkspaceInspection, WorkspaceError> {
+    ensure_directory(root)?;
+    compendium::validate_foundation(foundation)
+        .map_err(|error| WorkspaceError::foundation(error.message))?;
+
+    let metadata_directory = root.join(METADATA_DIRECTORY);
+    let metadata_directory_preexisting = metadata_directory.is_dir();
+    let compendium_path = metadata_directory.join("compendium.json");
+    if compendium_path.exists() {
+        return Err(WorkspaceError::foundation(
+            "Existing ForgeMind Compendium data was not overwritten.",
+        ));
+    }
+
+    let inspection = initialize_named(root, Some(&foundation.working_title))?;
+    let WorkspaceInspection::Valid { ref project, .. } = inspection else {
+        return Err(WorkspaceError::foundation(
+            "ForgeMind could not create the Project Foundation.",
+        ));
+    };
+
+    if let Err(error) = compendium::initialize_foundation(root, &project.project_id, foundation) {
+        let _ = fs::remove_file(&compendium_path);
+        let _ = fs::remove_file(metadata_path(root));
+        if !metadata_directory_preexisting {
+            let _ = fs::remove_dir(&metadata_directory);
+        }
+        return Err(WorkspaceError::foundation(error.message));
+    }
+
+    Ok(inspection)
+}
+
+fn initialize_named(
+    root: &Path,
+    name_override: Option<&str>,
+) -> Result<WorkspaceInspection, WorkspaceError> {
     ensure_directory(root)?;
 
-    let name = root
-        .file_name()
-        .and_then(|name| name.to_str())
-        .filter(|name| !name.trim().is_empty())
-        .ok_or_else(|| {
-            WorkspaceError::initialization(
-                "ForgeMind could not derive a project name from the selected directory.",
-            )
-        })?
-        .to_string();
+    let name = match name_override.map(str::trim).filter(|name| !name.is_empty()) {
+        Some(name) => name.to_owned(),
+        None => root
+            .file_name()
+            .and_then(|name| name.to_str())
+            .filter(|name| !name.trim().is_empty())
+            .ok_or_else(|| {
+                WorkspaceError::initialization(
+                    "ForgeMind could not derive a project name from the selected directory.",
+                )
+            })?
+            .to_string(),
+    };
 
     let metadata_directory = root.join(METADATA_DIRECTORY);
     match fs::create_dir(&metadata_directory) {
@@ -236,6 +291,7 @@ fn is_valid_project(project: &ProjectMetadata) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::compendium::{FoundationPillar, KnowledgeArea, KnowledgeProvenance, KnowledgeSource, KnowledgeStatus};
     use std::collections::BTreeSet;
     use tempfile::TempDir;
 
@@ -257,6 +313,32 @@ mod tests {
         let directory = root.join(METADATA_DIRECTORY);
         fs::create_dir(&directory).unwrap();
         fs::write(directory.join(PROJECT_FILE), contents).unwrap();
+    }
+
+    fn foundation() -> ProjectFoundationInput {
+        ProjectFoundationInput {
+            working_title: "Ashfall Courier".to_owned(),
+            genre: "Narrative survival".to_owned(),
+            mode: "Single-player".to_owned(),
+            perspective: String::new(),
+            target_platform: String::new(),
+            pitch: "Carry fragile messages through a changing volcanic frontier.".to_owned(),
+            player_experience: "Become a trusted courier under pressure.".to_owned(),
+            core_loop: "Plan a route, cross the frontier, and deliver a message.".to_owned(),
+            setting: "A volcanic frontier.".to_owned(),
+            tone: "Tense but hopeful.".to_owned(),
+            inspirations: "Road stories.".to_owned(),
+            anti_inspirations: "Not a power fantasy.".to_owned(),
+            pillars: vec![FoundationPillar {
+                title: "Meaningful routes".to_owned(),
+                explanation: "Every path changes risk and story.".to_owned(),
+            }],
+            engine: "Unity".to_owned(),
+            team_size: "Solo".to_owned(),
+            expected_scope: "Playable prototype".to_owned(),
+            major_constraints: "Part-time development".to_owned(),
+            open_questions: vec!["Which platform should the game target first?".to_owned()],
+        }
     }
 
     #[test]
@@ -296,6 +378,58 @@ mod tests {
         assert_eq!(project.name, "ExampleGame");
         assert!(Uuid::parse_str(&project.project_id).is_ok());
         assert!(DateTime::parse_from_rfc3339(&project.created_at).is_ok());
+    }
+
+    #[test]
+    fn creator_initialization_uses_project_title_and_existing_compendium_store() {
+        let directory = TempDir::new().unwrap();
+        let initialized = initialize_with_foundation(directory.path(), &foundation()).unwrap();
+        let WorkspaceInspection::Valid { project, .. } = initialized else {
+            panic!("expected a valid workspace");
+        };
+
+        assert_eq!(project.name, "Ashfall Courier");
+        let compendium = compendium::load(directory.path()).unwrap().unwrap();
+        assert_eq!(compendium.project_id, project.project_id);
+        assert!(compendium.entries.iter().any(|entry| {
+            entry.area == KnowledgeArea::GameVision
+                && entry.title == "Game vision"
+                && entry.provenance == KnowledgeProvenance::UserStated
+                && entry.source == KnowledgeSource::NewProjectCreator
+                && entry.status == KnowledgeStatus::Direction
+        }));
+        assert!(compendium.entries.iter().any(|entry| {
+            entry.area == KnowledgeArea::OpenQuestions
+                && entry.status == KnowledgeStatus::Tbd
+                && entry.provenance == KnowledgeProvenance::Unresolved
+        }));
+        assert!(crate::decisions::load(directory.path()).unwrap().is_none());
+    }
+
+    #[test]
+    fn creator_initialization_refuses_orphaned_compendium_without_creating_project_identity() {
+        let directory = TempDir::new().unwrap();
+        fs::create_dir(directory.path().join(METADATA_DIRECTORY)).unwrap();
+        let compendium_path = directory.path().join(METADATA_DIRECTORY).join("compendium.json");
+        fs::write(&compendium_path, "preserve me").unwrap();
+
+        let error = initialize_with_foundation(directory.path(), &foundation()).unwrap_err();
+
+        assert_eq!(error.code, "FOUNDATION_INITIALIZATION_FAILED");
+        assert_eq!(fs::read_to_string(compendium_path).unwrap(), "preserve me");
+        assert!(!metadata_path(directory.path()).exists());
+    }
+
+    #[test]
+    fn invalid_creator_foundation_creates_no_workspace_files() {
+        let directory = TempDir::new().unwrap();
+        let mut invalid = foundation();
+        invalid.pitch = "short".to_owned();
+
+        let error = initialize_with_foundation(directory.path(), &invalid).unwrap_err();
+
+        assert_eq!(error.code, "FOUNDATION_INITIALIZATION_FAILED");
+        assert_eq!(fs::read_dir(directory.path()).unwrap().count(), 0);
     }
 
     #[test]

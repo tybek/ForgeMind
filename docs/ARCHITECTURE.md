@@ -2,7 +2,7 @@
 
 ## Current state
 
-0J Alignment and 0K Feature Contracts are **COMPLETE**. UI-1 is current and implemented with manual visual validation pending. Feature Contracts combine portable reviewed lifecycle history, explicit AI-assisted proposals, deterministic implementation-brief preview/copy, and compact Game Wiki context. The UI-1 frontend foundation adds shared visual tokens and presentational primitives without changing native, persistence, provider, or authority boundaries. SEC-0 security/privacy architecture and CR-0 context/routing architecture are documented only; their implementation phases have not started. Automatic execution, background generation, monitoring, semantic code analysis, UI-2, 0L, the consolidated information architecture, additional specialists, team services, and the other post-1.0 concepts below are **NOT IMPLEMENTED**.
+0J Alignment and 0K Feature Contracts are **COMPLETE**. UI-1 and UI-2 are complete. NPC-1 is implemented and headless-validated with manual validation pending. Feature Contracts combine portable reviewed lifecycle history, explicit AI-assisted proposals, deterministic implementation-brief preview/copy, and compact Game Wiki context. The UI foundation adds shared presentation primitives and Workspace Home; NPC-1 adds a deterministic manual-first Creator over the existing workspace and Compendium boundaries. NPC-2 AI Assistance, Recommended Next Steps, automatic execution, background generation, monitoring, semantic code analysis, UI-3, 0L, the consolidated information architecture, additional specialists, team services, and the other post-1.0 concepts below are **NOT IMPLEMENTED**.
 
 ## Architectural stance
 
@@ -17,6 +17,12 @@ The boundaries below describe responsibilities, not services, deployable process
 ### Desktop UI
 
 Provides local workspace selection, navigation, discussion, evidence inspection, comparisons, and explicit review/save/approval actions. It presents distinctions such as draft versus durable knowledge and evidence versus inference.
+
+UI-2 adds a pre-project Workspace Home over the existing directory selection, native inspection, and explicit initialization flow. Its recent-project registry is launcher metadata stored in the Tauri webview's application-local storage, never in a project's `.forgemind` directory. The format-version `1` registry is bounded to six entries and stores only project path, portable project ID, display name, and last-opened timestamp. Opening or initializing a valid workspace updates recency; duplicate paths or project IDs collapse to one entry; malformed data resets safely; and an inaccessible recent path is removed without blocking Home. The page renders at most the three most recent cards with neutral CSS/line-icon fallback artwork. It does not duplicate project content, scan folders, generate thumbnails, or create a new native filesystem capability.
+
+NPC-1 keeps the full Creator draft in React application memory. **Start New Project** enters the Creator without invoking the directory picker, while **Open Existing Project** retains the existing picker/inspection behavior. Back/Next/review editing preserve the draft; cancellation creates nothing; and a failed initialization keeps the draft and selected-directory context available for retry during the session.
+
+After reviewed creation, the UI supplies one typed `ProjectFoundationInput` to the existing `initialize_workspace` command. The native layer validates the entire foundation before creating files, uses the working title for portable project identity, and writes user-authored Intent into the existing format-version `1` Compendium. It refuses existing project metadata and existing orphaned Compendium data. If the Compendium write fails after new project metadata was created, it removes only the files created by that operation. This boundary does not expose generic filesystem access, invoke a provider, create a Decision, or introduce `creator.json` / `wiki.json`.
 
 ### Local Workspace Metadata
 

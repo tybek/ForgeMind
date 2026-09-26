@@ -10,6 +10,10 @@ import { UnityGroundTruthPage } from "./UnityGroundTruthPage";
 import { AlignmentPage } from "./AlignmentPage";
 import { FeatureContractsPage } from "./FeatureContractsPage";
 import {
+  emptyProjectFoundation,
+  NewProjectCreator,
+} from "./NewProjectCreator";
+import {
   BrandLockup,
   EmptyState,
   LineIcon,
@@ -19,10 +23,17 @@ import {
 import type { FeatureContractSourceType } from "./platform/featureContracts";
 import type { KnowledgeArea, KnowledgeEntry } from "./platform/projectKnowledge";
 import {
+  loadRecentProjects,
+  recordRecentProject,
+  removeRecentProject,
+  type RecentProject,
+} from "./platform/recentProjects";
+import {
   getDevelopmentWorkspacePath,
   initializeWorkspace,
   inspectWorkspace,
   selectWorkspaceDirectory,
+  type ProjectFoundationInput,
   type ProjectMetadata,
   type WorkspaceInspection,
 } from "./platform/workspaceDirectory";
@@ -129,6 +140,7 @@ export interface Workspace extends ProjectMetadata {
 
 type AppView =
   | { kind: "welcome" }
+  | { kind: "creator" }
   | { kind: "loading"; path: string }
   | { kind: "uninitialized"; path: string }
   | { kind: "valid"; workspace: Workspace }
@@ -155,26 +167,112 @@ function messageFromError(error: unknown, fallback: string): string {
   return fallback;
 }
 
-export function WelcomeScreen({ onOpen }: { onOpen: () => Promise<void> }) {
+function formatLastOpened(value: string): string {
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(value));
+}
+
+export function WelcomeScreen({
+  recentProjects,
+  onStart,
+  onOpen,
+  onOpenRecent,
+}: {
+  recentProjects: RecentProject[];
+  onStart: () => Promise<void>;
+  onOpen: () => Promise<void>;
+  onOpenRecent: (project: RecentProject) => Promise<void>;
+}) {
   return (
-    <main className="welcome-shell">
-      <section className="welcome-card" aria-labelledby="welcome-title">
-        <BrandLockup />
-        <p className="eyebrow">Local-first game development workspace</p>
-        <h1 id="welcome-title">Turn ideas into playable worlds.</h1>
-        <p className="welcome-copy">
-          Open a local game project. ForgeMind checks only its own metadata and
-          will ask before initializing an unrecognized directory.
-        </p>
-        <div className="welcome-actions">
-          <button className="primary-button" type="button" onClick={() => void onOpen()}>
-            Open Project
-          </button>
-          <button className="secondary-button" type="button" disabled title="Planned for a later milestone">
-            New Project - Future
-          </button>
-        </div>
-      </section>
+    <main className="workspace-home">
+      <header className="home-topbar">
+        <BrandLockup compact />
+        <span>Local workspace</span>
+      </header>
+
+      <div className="home-content">
+        <section className="home-hero" aria-labelledby="welcome-title">
+          <div className="home-hero-copy">
+            <p className="eyebrow">Welcome back.</p>
+            <h1 id="welcome-title">Turn ideas into playable worlds.</h1>
+            <p>
+              Start with a local project or return to a workspace already in progress.
+            </p>
+          </div>
+          <div className="home-primary-actions" aria-label="Project actions">
+            <button className="primary-button" type="button" onClick={() => void onStart()}>
+              <LineIcon name="document" />
+              Start New Project
+            </button>
+            <button className="outline-button" type="button" onClick={() => void onOpen()}>
+              <LineIcon name="folder" />
+              Open Existing Project
+            </button>
+          </div>
+        </section>
+
+        <section className="home-section" aria-labelledby="recent-projects-title">
+          <div className="home-section-heading">
+            <div>
+              <p className="eyebrow">Your workspace</p>
+              <h2 id="recent-projects-title">Recent Projects</h2>
+            </div>
+            {recentProjects.length > 0 ? (
+              <button className="text-button" type="button" onClick={() => void onOpen()}>
+                Open another project
+              </button>
+            ) : null}
+          </div>
+
+          {recentProjects.length > 0 ? (
+            <div className="recent-project-grid">
+              {recentProjects.slice(0, 3).map((project) => (
+                <button
+                  className="recent-project-card"
+                  type="button"
+                  key={`${project.projectId}:${project.path}`}
+                  onClick={() => void onOpenRecent(project)}
+                  aria-label={`Open ${project.name}`}
+                >
+                  <span className="recent-project-art" aria-hidden="true">
+                    <span className="recent-project-art-grid" />
+                    <LineIcon name="cube" />
+                  </span>
+                  <span className="recent-project-copy">
+                    <strong title={project.name}>{project.name}</strong>
+                    <time dateTime={project.lastOpenedAt}>
+                      Last opened {formatLastOpened(project.lastOpenedAt)}
+                    </time>
+                    <span className="recent-project-path" title={project.path}>{project.path}</span>
+                  </span>
+                  <LineIcon name="arrow-right" />
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="home-empty-state">
+              <div>
+                <h3>No recent projects yet</h3>
+                <p>
+                  Start New Project or Open Existing Project to add a local workspace here.
+                </p>
+              </div>
+            </div>
+          )}
+        </section>
+
+        <section className="home-next-steps" aria-labelledby="next-steps-title">
+          <div className="home-next-steps-icon" aria-hidden="true"><LineIcon name="route" /></div>
+          <div>
+            <p className="eyebrow">Project-aware guidance</p>
+            <h2 id="next-steps-title">Recommended Next Steps</h2>
+            <p>Open a project to get project-aware next steps.</p>
+          </div>
+          <span className="home-preview-label">Preview</span>
+        </section>
+      </div>
     </main>
   );
 }
@@ -323,9 +421,11 @@ function Placeholder({ area }: { area: Exclude<WorkspaceArea, "Overview" | "Repo
 
 export function WorkspaceShell({
   workspace,
+  onHome,
   onOpen,
 }: {
   workspace: Workspace;
+  onHome: () => void;
   onOpen: () => Promise<void>;
 }) {
   const [activeArea, setActiveArea] = useState<WorkspaceView>("Overview");
@@ -393,6 +493,11 @@ export function WorkspaceShell({
         <div className="sidebar-brand">
           <BrandLockup compact />
         </div>
+
+        <button className="workspace-home-action" type="button" onClick={onHome}>
+          <LineIcon name="home" />
+          <span>Home</span>
+        </button>
 
         <div className="sidebar-project" title={workspace.name}>
           <span>Project</span>
@@ -473,6 +578,10 @@ export function WorkspaceShell({
 
 export default function App() {
   const [view, setView] = useState<AppView>({ kind: "welcome" });
+  const [recentProjects, setRecentProjects] = useState<RecentProject[]>(loadRecentProjects);
+  const [creatorDraft, setCreatorDraft] = useState<ProjectFoundationInput>(emptyProjectFoundation);
+  const [creatorDirectory, setCreatorDirectory] = useState<string | null>(null);
+  const [creatorError, setCreatorError] = useState<string | null>(null);
   const [isInitializing, setIsInitializing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -482,6 +591,7 @@ export default function App() {
         setView({ kind: "uninitialized", path: inspection.rootPath });
         break;
       case "VALID":
+        setRecentProjects(recordRecentProject(inspection.rootPath, inspection.project));
         setView({ kind: "valid", workspace: workspaceFromInspection(inspection) });
         break;
       case "INVALID":
@@ -498,11 +608,17 @@ export default function App() {
     }
   }
 
-  async function loadWorkspace(path: string) {
+  async function loadWorkspace(path: string, fromRecent = false) {
     setView({ kind: "loading", path });
     try {
       applyInspection(await inspectWorkspace(path));
     } catch (inspectionError) {
+      if (fromRecent) {
+        setRecentProjects(removeRecentProject(path));
+        setView({ kind: "welcome" });
+        setError("That recent project is no longer available and was removed from the list.");
+        return;
+      }
       setView({
         kind: "access-error",
         path,
@@ -528,12 +644,12 @@ export default function App() {
     };
   }, []);
 
-  async function openProject() {
+  async function chooseProject(purpose: "open" | "create" = "open") {
     setError(null);
     let selected: string | null;
 
     try {
-      selected = await selectWorkspaceDirectory();
+      selected = await selectWorkspaceDirectory(purpose);
     } catch {
       setError("The directory picker could not be opened.");
       return;
@@ -544,6 +660,75 @@ export default function App() {
     }
 
     await loadWorkspace(selected);
+  }
+
+  async function openRecentProject(project: RecentProject) {
+    setError(null);
+    await loadWorkspace(project.path, true);
+  }
+
+  function returnHome() {
+    setError(null);
+    setView({ kind: "welcome" });
+  }
+
+  function startNewProject() {
+    setError(null);
+    setCreatorError(null);
+    setCreatorDirectory(null);
+    setCreatorDraft(emptyProjectFoundation);
+    setView({ kind: "creator" });
+  }
+
+  function cancelCreator() {
+    setCreatorDraft(emptyProjectFoundation);
+    setCreatorDirectory(null);
+    setCreatorError(null);
+    setView({ kind: "welcome" });
+  }
+
+  async function chooseCreatorDirectory() {
+    setCreatorError(null);
+    let selected: string | null;
+    try {
+      selected = await selectWorkspaceDirectory("create");
+    } catch {
+      setCreatorError("The directory picker could not be opened.");
+      return;
+    }
+    if (selected === null) return;
+
+    try {
+      const inspection = await inspectWorkspace(selected);
+      if (inspection.status === "UNINITIALIZED") {
+        setCreatorDirectory(inspection.rootPath);
+      } else if (inspection.status === "VALID") {
+        setCreatorDirectory(null);
+        setCreatorError("That directory is already a ForgeMind workspace. Open it from Home or choose another directory.");
+      } else {
+        setCreatorDirectory(null);
+        setCreatorError(inspection.message);
+      }
+    } catch (inspectionError) {
+      setCreatorDirectory(null);
+      setCreatorError(messageFromError(inspectionError, "ForgeMind could not access the selected directory."));
+    }
+  }
+
+  async function initializeCreatorProject(foundation: ProjectFoundationInput) {
+    if (!creatorDirectory) return;
+    setCreatorError(null);
+    setIsInitializing(true);
+    try {
+      const inspection = await initializeWorkspace(creatorDirectory, foundation);
+      setCreatorDraft(emptyProjectFoundation);
+      setCreatorDirectory(null);
+      applyInspection(inspection);
+    } catch (initializationError) {
+      setCreatorError(messageFromError(initializationError, "ForgeMind could not initialize the Project Foundation."));
+    } finally {
+      setIsInitializing(false);
+    }
   }
 
   async function initializeSelectedWorkspace() {
@@ -571,7 +756,29 @@ export default function App() {
   let content;
   switch (view.kind) {
     case "welcome":
-      content = <WelcomeScreen onOpen={openProject} />;
+      content = (
+        <WelcomeScreen
+          recentProjects={recentProjects}
+          onStart={async () => startNewProject()}
+          onOpen={() => chooseProject("open")}
+          onOpenRecent={openRecentProject}
+        />
+      );
+      break;
+    case "creator":
+      content = (
+        <NewProjectCreator
+          draft={creatorDraft}
+          onChange={setCreatorDraft}
+          onChooseDirectory={chooseCreatorDirectory}
+          selectedDirectory={creatorDirectory}
+          onInitialize={initializeCreatorProject}
+          isInitializing={isInitializing}
+          creationError={creatorError}
+          onClearDirectory={() => { setCreatorDirectory(null); setCreatorError(null); }}
+          onCancel={cancelCreator}
+        />
+      );
       break;
     case "loading":
       content = <LoadingWorkspace path={view.path} />;
@@ -582,12 +789,18 @@ export default function App() {
           path={view.path}
           isInitializing={isInitializing}
           onInitialize={initializeSelectedWorkspace}
-          onOpen={openProject}
+          onOpen={() => chooseProject("open")}
         />
       );
       break;
     case "valid":
-      content = <WorkspaceShell workspace={view.workspace} onOpen={openProject} />;
+      content = (
+        <WorkspaceShell
+          workspace={view.workspace}
+          onHome={returnHome}
+          onOpen={() => chooseProject("open")}
+        />
+      );
       break;
     case "invalid":
       content = (
@@ -596,7 +809,7 @@ export default function App() {
           path={view.path}
           message={view.message}
           detail="The existing .forgemind/project.json file was not changed."
-          onOpen={openProject}
+          onOpen={() => chooseProject("open")}
         />
       );
       break;
@@ -607,7 +820,7 @@ export default function App() {
           path={view.path}
           message={view.message}
           detail="The existing .forgemind/project.json file was not changed."
-          onOpen={openProject}
+          onOpen={() => chooseProject("open")}
         />
       );
       break;
@@ -617,7 +830,7 @@ export default function App() {
           title="Directory access failed"
           path={view.path}
           message={view.message}
-          onOpen={openProject}
+          onOpen={() => chooseProject("open")}
         />
       );
       break;

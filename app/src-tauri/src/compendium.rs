@@ -53,6 +53,54 @@ pub enum KnowledgeSource {
     ManualEntry,
     Decision,
     SpecialistAnalysis,
+    NewProjectCreator,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct FoundationPillar {
+    pub title: String,
+    #[serde(default)]
+    pub explanation: String,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ProjectFoundationInput {
+    pub working_title: String,
+    #[serde(default)]
+    pub genre: String,
+    #[serde(default)]
+    pub mode: String,
+    #[serde(default)]
+    pub perspective: String,
+    #[serde(default)]
+    pub target_platform: String,
+    pub pitch: String,
+    #[serde(default)]
+    pub player_experience: String,
+    #[serde(default)]
+    pub core_loop: String,
+    #[serde(default)]
+    pub setting: String,
+    #[serde(default)]
+    pub tone: String,
+    #[serde(default)]
+    pub inspirations: String,
+    #[serde(default)]
+    pub anti_inspirations: String,
+    #[serde(default)]
+    pub pillars: Vec<FoundationPillar>,
+    #[serde(default)]
+    pub engine: String,
+    #[serde(default)]
+    pub team_size: String,
+    #[serde(default)]
+    pub expected_scope: String,
+    #[serde(default)]
+    pub major_constraints: String,
+    #[serde(default)]
+    pub open_questions: Vec<String>,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
@@ -182,6 +230,263 @@ pub fn create_entry(request: CreateKnowledgeEntryRequest) -> Result<CompendiumDo
         updated_at: now,
     });
     save(root, document)
+}
+
+pub fn initialize_foundation(
+    root: &Path,
+    project_id: &str,
+    foundation: &ProjectFoundationInput,
+) -> Result<CompendiumDocument, CompendiumError> {
+    verify_project(root, project_id)?;
+    let path = compendium_path(root);
+    if path.exists() {
+        return Err(CompendiumError::new(
+            "COMPENDIUM_ALREADY_EXISTS",
+            "Existing ForgeMind Compendium data was not overwritten.",
+        ));
+    }
+
+    validate_foundation(foundation)?;
+    let mut document = empty_document(project_id);
+    let now = timestamp();
+
+    push_foundation_entry(
+        &mut document,
+        KnowledgeArea::Overview,
+        "Project identity",
+        &identity_statement(foundation),
+        KnowledgeStatus::Direction,
+        KnowledgeProvenance::UserStated,
+        &now,
+    );
+    push_foundation_entry(
+        &mut document,
+        KnowledgeArea::GameVision,
+        "Game vision",
+        &foundation.pitch,
+        KnowledgeStatus::Direction,
+        KnowledgeProvenance::UserStated,
+        &now,
+    );
+    push_optional_foundation_entry(
+        &mut document,
+        KnowledgeArea::PlayerExperience,
+        "Player experience",
+        &foundation.player_experience,
+        &now,
+    );
+    push_optional_foundation_entry(
+        &mut document,
+        KnowledgeArea::CoreLoop,
+        "Core loop",
+        &foundation.core_loop,
+        &now,
+    );
+
+    for pillar in &foundation.pillars {
+        let statement = if pillar.explanation.trim().is_empty() {
+            pillar.title.trim().to_owned()
+        } else {
+            pillar.explanation.trim().to_owned()
+        };
+        push_foundation_entry(
+            &mut document,
+            KnowledgeArea::GameVision,
+            &format!("Design pillar: {}", pillar.title.trim()),
+            &statement,
+            KnowledgeStatus::Direction,
+            KnowledgeProvenance::UserStated,
+            &now,
+        );
+    }
+
+    push_optional_foundation_entry(
+        &mut document,
+        KnowledgeArea::WorldNarrative,
+        "World setting",
+        &foundation.setting,
+        &now,
+    );
+    push_optional_foundation_entry(
+        &mut document,
+        KnowledgeArea::WorldNarrative,
+        "Desired tone",
+        &foundation.tone,
+        &now,
+    );
+    push_optional_foundation_entry(
+        &mut document,
+        KnowledgeArea::WorldNarrative,
+        "Inspirations",
+        &foundation.inspirations,
+        &now,
+    );
+    push_optional_foundation_entry(
+        &mut document,
+        KnowledgeArea::WorldNarrative,
+        "Anti-inspirations",
+        &foundation.anti_inspirations,
+        &now,
+    );
+    push_combined_foundation_entry(
+        &mut document,
+        KnowledgeArea::Constraints,
+        "Practical constraints",
+        &[
+            ("Engine", foundation.engine.as_str()),
+            ("Team size", foundation.team_size.as_str()),
+            ("Target platform", foundation.target_platform.as_str()),
+            ("Expected scope", foundation.expected_scope.as_str()),
+            ("Major constraints", foundation.major_constraints.as_str()),
+        ],
+        &now,
+    );
+
+    for question in &foundation.open_questions {
+        push_foundation_entry(
+            &mut document,
+            KnowledgeArea::OpenQuestions,
+            "Open question",
+            question,
+            KnowledgeStatus::Tbd,
+            KnowledgeProvenance::Unresolved,
+            &now,
+        );
+    }
+
+    save_new(root, document)
+}
+
+pub fn validate_foundation(foundation: &ProjectFoundationInput) -> Result<(), CompendiumError> {
+    validate_text(&foundation.working_title, 1, 120)?;
+    validate_text(&foundation.pitch, 10, 2_000)?;
+    if foundation.pillars.len() > 6 || foundation.open_questions.len() > 8 {
+        return Err(CompendiumError::new(
+            "INVALID_PROJECT_FOUNDATION",
+            "The Project Foundation failed validation.",
+        ));
+    }
+
+    for value in [
+        &foundation.genre,
+        &foundation.mode,
+        &foundation.perspective,
+        &foundation.target_platform,
+        &foundation.player_experience,
+        &foundation.core_loop,
+        &foundation.setting,
+        &foundation.tone,
+        &foundation.inspirations,
+        &foundation.anti_inspirations,
+        &foundation.engine,
+        &foundation.team_size,
+        &foundation.expected_scope,
+        &foundation.major_constraints,
+    ] {
+        if value.trim().chars().count() > 2_000 {
+            return Err(CompendiumError::new(
+                "INVALID_PROJECT_FOUNDATION",
+                "The Project Foundation failed validation.",
+            ));
+        }
+    }
+
+    for pillar in &foundation.pillars {
+        validate_text(&pillar.title, 1, 80)?;
+        if pillar.explanation.trim().chars().count() > 400 {
+            return Err(CompendiumError::new(
+                "INVALID_PROJECT_FOUNDATION",
+                "The Project Foundation failed validation.",
+            ));
+        }
+    }
+    for question in &foundation.open_questions {
+        validate_text(question, 1, 200)?;
+    }
+    Ok(())
+}
+
+fn identity_statement(foundation: &ProjectFoundationInput) -> String {
+    [
+        ("Working title", foundation.working_title.as_str()),
+        ("Genre / subgenre", foundation.genre.as_str()),
+        ("Mode", foundation.mode.as_str()),
+        ("Perspective", foundation.perspective.as_str()),
+        ("Target platform", foundation.target_platform.as_str()),
+    ]
+    .into_iter()
+    .filter(|(_, value)| !value.trim().is_empty())
+    .map(|(label, value)| format!("{label}: {}", value.trim()))
+    .collect::<Vec<_>>()
+    .join("\n")
+}
+
+fn push_optional_foundation_entry(
+    document: &mut CompendiumDocument,
+    area: KnowledgeArea,
+    title: &str,
+    statement: &str,
+    now: &str,
+) {
+    if !statement.trim().is_empty() {
+        push_foundation_entry(
+            document,
+            area,
+            title,
+            statement,
+            KnowledgeStatus::Direction,
+            KnowledgeProvenance::UserStated,
+            now,
+        );
+    }
+}
+
+fn push_combined_foundation_entry(
+    document: &mut CompendiumDocument,
+    area: KnowledgeArea,
+    title: &str,
+    fields: &[(&str, &str)],
+    now: &str,
+) {
+    let statement = fields
+        .iter()
+        .filter(|(_, value)| !value.trim().is_empty())
+        .map(|(label, value)| format!("{label}: {}", value.trim()))
+        .collect::<Vec<_>>()
+        .join("\n");
+    if !statement.is_empty() {
+        push_foundation_entry(
+            document,
+            area,
+            title,
+            &statement,
+            KnowledgeStatus::Direction,
+            KnowledgeProvenance::UserStated,
+            now,
+        );
+    }
+}
+
+fn push_foundation_entry(
+    document: &mut CompendiumDocument,
+    area: KnowledgeArea,
+    title: &str,
+    statement: &str,
+    status: KnowledgeStatus,
+    provenance: KnowledgeProvenance,
+    now: &str,
+) {
+    document.entries.push(KnowledgeEntry {
+        id: Uuid::new_v4().to_string(),
+        area,
+        title: title.trim().to_owned(),
+        statement: statement.trim().to_owned(),
+        status,
+        provenance,
+        source: KnowledgeSource::NewProjectCreator,
+        created_at: now.to_owned(),
+        updated_at: now.to_owned(),
+    });
 }
 
 pub fn update_entry(request: UpdateKnowledgeEntryRequest) -> Result<CompendiumDocument, CompendiumError> {
@@ -340,6 +645,27 @@ fn save(root: &Path, mut document: CompendiumDocument) -> Result<CompendiumDocum
         .map_err(|_| CompendiumError::new("COMPENDIUM_WRITE_FAILED", "ForgeMind could not save Compendium knowledge."))?;
     file.write_all(&contents)
         .map_err(|_| CompendiumError::new("COMPENDIUM_WRITE_FAILED", "ForgeMind could not save Compendium knowledge."))?;
+    Ok(document)
+}
+
+fn save_new(root: &Path, mut document: CompendiumDocument) -> Result<CompendiumDocument, CompendiumError> {
+    document.updated_at = timestamp();
+    validate_document(&document, &document.project_id)?;
+    let mut contents = serde_json::to_vec_pretty(&document)
+        .map_err(|_| CompendiumError::new("COMPENDIUM_WRITE_FAILED", "ForgeMind could not prepare Compendium knowledge."))?;
+    contents.push(b'\n');
+    let path = compendium_path(root);
+    let mut file = fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(path)
+        .map_err(|_| CompendiumError::new("COMPENDIUM_WRITE_FAILED", "ForgeMind could not create Compendium knowledge."))?;
+    if file.write_all(&contents).and_then(|_| file.sync_all()).is_err() {
+        return Err(CompendiumError::new(
+            "COMPENDIUM_WRITE_FAILED",
+            "ForgeMind could not save Compendium knowledge.",
+        ));
+    }
     Ok(document)
 }
 

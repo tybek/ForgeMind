@@ -2,7 +2,7 @@
 
 ## Scope
 
-This model establishes shared language and relationships. It is not a database schema or API contract. Milestone 0C serializes minimal Project identity in `.forgemind/project.json`; 0E adds approved onboarding evidence in `.forgemind/interview.json`; 0F adds separate versioned Compendium and Decision documents; 0G.3 adds non-authoritative specialist work history in `.forgemind/specialist-runs.json`; 0J.1 adds derived, reviewable Alignment history in `.forgemind/alignment.json`; and 0K adds reviewed delivery artifacts in `.forgemind/feature-contracts.json`.
+This model establishes shared language and relationships. It is not a database schema or API contract. Milestone 0C serializes minimal Project identity in `.forgemind/project.json`; 0E adds approved onboarding evidence in `.forgemind/interview.json`; 0F adds separate versioned Compendium and Decision documents; 0G.3 adds non-authoritative specialist work history in `.forgemind/specialist-runs.json`; 0J.1 adds derived, reviewable Alignment history in `.forgemind/alignment.json`; 0K adds reviewed delivery artifacts in `.forgemind/feature-contracts.json`; and NPC-1 maps a reviewed manual Project Foundation into the existing Project and Compendium documents without a new truth store.
 
 ## Core entities
 
@@ -16,7 +16,7 @@ A stable category used to organize knowledge, such as Overview, Game Design, Nar
 
 ### KnowledgeEntry
 
-An addressable statement about current project intent. The 0F schema contains stable `id`, bounded `area`, `title`, `statement`, `status`, `provenance`, `source`, `createdAt`, and `updatedAt` fields. Knowledge status is `DIRECTION`, `LOCKED`, `TBD`, or `DEPRECATED`; provenance is `USER_STATED`, `AI_INFERRED`, `MANUAL`, or the preserved interview value `UNRESOLVED`; source is `project_interview`, `manual_entry`, `decision`, or `specialist_analysis`. Entries are stored in `.forgemind/compendium.json`.
+An addressable statement about current project intent. The 0F schema contains stable `id`, bounded `area`, `title`, `statement`, `status`, `provenance`, `source`, `createdAt`, and `updatedAt` fields. Knowledge status is `DIRECTION`, `LOCKED`, `TBD`, or `DEPRECATED`; provenance is `USER_STATED`, `AI_INFERRED`, `MANUAL`, or `UNRESOLVED`; source is `project_interview`, `manual_entry`, `decision`, `specialist_analysis`, or the additive NPC-1 value `new_project_creator`. Entries are stored in `.forgemind/compendium.json`.
 
 ### InterviewCandidate
 
@@ -143,6 +143,7 @@ Approval answers whether a person has accepted an artifact; it does not replace 
 - Files contain no absolute workspace path, credentials, provider response metadata, or machine identity.
 - Compendium and Decisions remain distinct: knowledge does not become a Decision automatically, and promoting knowledge creates only a proposed Decision.
 - Interview evidence remains in `.forgemind/interview.json` after import.
+- NPC-1 foundation entries remain in the same Compendium format version. User-entered fields are `DIRECTION` / `USER_STATED` / `new_project_creator`; deterministic missing-field questions are `TBD` / `UNRESOLVED` / `new_project_creator`. Existing projects require no migration.
 
 ## 0G.3 specialist-history invariants
 

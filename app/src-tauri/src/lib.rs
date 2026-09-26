@@ -25,7 +25,7 @@ use alignment::{
 use compendium::{
     CompendiumDocument, CompendiumError, CreateKnowledgeEntryRequest,
     ImportInterviewRequest, InterviewImportResult, KnowledgeEntryActionRequest,
-    PromoteSpecialistFindingRequest, UpdateKnowledgeEntryRequest,
+    ProjectFoundationInput, PromoteSpecialistFindingRequest, UpdateKnowledgeEntryRequest,
 };
 use decisions::{
     CreateDecisionRequest, DecisionActionRequest, DecisionError, DecisionsDocument,
@@ -412,8 +412,14 @@ fn inspect_workspace(path: String) -> Result<WorkspaceInspection, WorkspaceError
 }
 
 #[tauri::command]
-fn initialize_workspace(path: String) -> Result<WorkspaceInspection, WorkspaceError> {
-    workspace::initialize(Path::new(&path))
+fn initialize_workspace(
+    path: String,
+    foundation: Option<ProjectFoundationInput>,
+) -> Result<WorkspaceInspection, WorkspaceError> {
+    match foundation {
+        Some(foundation) => workspace::initialize_with_foundation(Path::new(&path), &foundation),
+        None => workspace::initialize(Path::new(&path)),
+    }
 }
 
 #[tauri::command]

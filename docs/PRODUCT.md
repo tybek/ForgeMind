@@ -2,7 +2,7 @@
 
 ## Status
 
-This document defines the product direction. **CURRENT:** 0K Feature Contract and UI-1 are complete; UI-2 has not started. The local workspace includes Project Interview, Compendium knowledge, Decisions, one bounded specialist profile, Game Wiki aggregation, Repository Reality, completed Unity GroundTruth and Alignment workflows, plus the reviewed Feature Contract workbench, explicit AI-assisted drafting proposals, and coding-agent handoff workflow. The New Project Creator and Recommended Next Steps direction is specified in [New Project Creator and Recommended Next Steps](NEW_PROJECT_CREATOR.md), but no related behavior is implemented. Everything described as future direction below is **NOT IMPLEMENTED** unless explicitly identified otherwise.
+This document defines the product direction. **CURRENT:** 0K Feature Contracts, UI-1, and UI-2 are complete. NPC-1 is implemented and headless-validated with manual validation pending. The local workspace includes Project Interview, Compendium knowledge, Decisions, one bounded specialist profile, Game Wiki aggregation, Repository Reality, completed Unity GroundTruth and Alignment workflows, the reviewed Feature Contract workbench, and the deterministic manual-first New Project Creator. NPC-2 AI Assistance and Recommended Next Steps remain unimplemented. Everything described as future direction below is **NOT IMPLEMENTED** unless explicitly identified otherwise.
 
 ## Problem
 
@@ -82,9 +82,9 @@ Accounts, permissions, role-based access control, cloud synchronization, and rea
 
 ## New and existing project onboarding
 
-ForgeMind should support two equal paths. Both remain **FUTURE DIRECTION**, not current behavior; the detailed new-project and recommendation contract is in [New Project Creator and Recommended Next Steps](NEW_PROJECT_CREATOR.md).
+ForgeMind supports the new-project path through the NPC-1 manual-first Creator and the existing-project path through the unchanged open/inspection flow. The detailed onboarding and future recommendation contract is in [New Project Creator and Recommended Next Steps](NEW_PROJECT_CREATOR.md).
 
-**New project:** Idea -> guided Creator -> AI-assisted structured Project Foundation -> human review -> Project Brain -> Recommended Next Steps. AI may help structure Game Vision, Player Experience, Core Loop, Pillars, World / Tone, Constraints, and Open Questions, but people approve durable truth. AI suggestions do not create approved Decisions.
+**New project:** Idea -> guided Creator -> structured Project Foundation -> human review -> explicit local initialization -> Project Brain. NPC-1 is deterministic and user-authored. Future NPC-2 AI may help structure Game Vision, Player Experience, Core Loop, Pillars, World / Tone, Constraints, and Open Questions, but people approve durable truth. AI suggestions do not create approved Decisions.
 
 **Existing project:** Repository / Unity / documents -> Reality -> import and document review -> focused missing-Intent questions -> Project Brain -> Recommended Next Steps. The [Rebaseline Existing Project](PROJECT_REBASELINE.md) direction defines the non-destructive, Reality-first path for an existing workspace.
 
@@ -133,7 +133,7 @@ ForgeMind may eventually expose specialist game-development role profiles and co
 
 See [AI Specialists and Content Production Direction](AI_SPECIALISTS_AND_PRODUCTION.md) for potential roles, multi-perspective review, the distinction between simulation and AI scenario reasoning, content-production orchestration, private-project dogfooding boundaries, and the planned model-evaluation approach.
 
-The [ForgeMind Studios Roadmap](STUDIOS_ROADMAP.md) defines how future task-oriented specialist workspaces should share context building, structured proposal review, artifact promotion, provenance, and task-specific model recommendations. Its S0-S9 sequence is planning direction only: no Studio is started. 0K and UI-1 are complete, while UI-2 has not started.
+The [ForgeMind Studios Roadmap](STUDIOS_ROADMAP.md) defines how future task-oriented specialist workspaces should share context building, structured proposal review, artifact promotion, provenance, and task-specific model recommendations. Its S0-S9 sequence is planning direction only: no Studio is started. 0K, UI-1, and UI-2 are complete; NPC-1 does not start any Studio phase.
 
 The future shared behavior underneath those workspaces is specified in [Context Builder and Task Router Architecture](CONTEXT_AND_ROUTING.md). It defines the Project Brain as a logical aggregate over existing authoritative stores, plans and budgets only task-relevant context, preserves source authority through compaction, routes deterministic actions without unnecessary AI classification, and makes model recommendations only from task-specific evidence. CR-0 is documentation only: no Context Builder, Task Router, model recommender, or natural-language **Ask ForgeMind** route is implemented.
 

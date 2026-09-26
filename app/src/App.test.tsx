@@ -3,6 +3,8 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import App, { WorkspaceShell, type Workspace } from "./App";
 import { loadCompendium } from "./platform/projectKnowledge";
+import { runInterviewTurn } from "./platform/projectInterview";
+import { runSpecialistAnalysis } from "./platform/specialists";
 import {
   getDevelopmentWorkspacePath,
   initializeWorkspace,
@@ -12,6 +14,7 @@ import {
 import { inspectUnityGroundTruth } from "./platform/unityGroundTruth";
 import { loadAlignmentResults } from "./platform/alignment";
 import { loadFeatureContracts } from "./platform/featureContracts";
+import { loadRecentProjects, recordRecentProject } from "./platform/recentProjects";
 
 vi.mock("./platform/workspaceDirectory", () => ({
   getDevelopmentWorkspacePath: vi.fn(),
@@ -183,18 +186,153 @@ function navigationName(area: string): string {
 describe("ForgeMind local workspace", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.clear();
     vi.mocked(getDevelopmentWorkspacePath).mockResolvedValue(null);
     vi.mocked(loadCompendium).mockResolvedValue(null);
     vi.mocked(loadAlignmentResults).mockResolvedValue(null);
     vi.mocked(loadFeatureContracts).mockResolvedValue(null);
   });
 
-  it("renders the welcome screen with the Open Project action", () => {
+  it("renders Workspace Home with project actions and an honest next-steps preview", () => {
     render(<App />);
 
     expect(screen.getByRole("heading", { name: "Turn ideas into playable worlds." })).toBeInTheDocument();
     expect(screen.getByLabelText("ForgeMind, AI for Game Development")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Open Project" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Start New Project" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Open Existing Project" })).toBeEnabled();
+    expect(screen.getByRole("heading", { name: "Recent Projects" })).toBeInTheDocument();
+    expect(screen.getByText("No recent projects yet")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Recommended Next Steps" })).toBeInTheDocument();
+    expect(screen.getByText("Open a project to get project-aware next steps.")).toBeInTheDocument();
+    expect(screen.queryByText("Fix combat system")).not.toBeInTheDocument();
+  });
+
+  it("opens the guided Creator before any directory selection", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole("button", { name: "Start New Project" }));
+
+    expect(screen.getByRole("heading", { name: "Give your game a starting identity." })).toBeInTheDocument();
+    expect(screen.getByLabelText("New Project Creator progress")).toBeInTheDocument();
+    expect(selectWorkspaceDirectory).not.toHaveBeenCalled();
+    expect(inspectWorkspace).not.toHaveBeenCalled();
+    expect(initializeWorkspace).not.toHaveBeenCalled();
+  });
+
+  it("selects a directory only after Review and initializes through the existing boundary", async () => {
+    vi.mocked(selectWorkspaceDirectory).mockResolvedValue(selectedPath);
+    vi.mocked(inspectWorkspace).mockResolvedValue({ status: "UNINITIALIZED", rootPath: selectedPath });
+    vi.mocked(initializeWorkspace).mockResolvedValue(validInspection);
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole("button", { name: "Start New Project" }));
+    await user.type(screen.getByLabelText("Working title"), "Ashfall Courier");
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    await user.type(screen.getByLabelText("Game pitch"), "Carry fragile messages through a changing volcanic frontier.");
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    for (let step = 0; step < 5; step += 1) {
+      await user.click(screen.getByRole("button", { name: "Continue" }));
+    }
+
+    expect(screen.getByRole("heading", { name: "Your Game Foundation" })).toBeInTheDocument();
+    expect(selectWorkspaceDirectory).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("button", { name: "Create Project" }));
+
+    expect(selectWorkspaceDirectory).toHaveBeenCalledWith("create");
+    expect(inspectWorkspace).toHaveBeenCalledWith(selectedPath);
+    expect(await screen.findByRole("button", { name: "Initialize Project" })).toBeInTheDocument();
+    expect(initializeWorkspace).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "Initialize Project" }));
+
+    expect(initializeWorkspace).toHaveBeenCalledWith(selectedPath, expect.objectContaining({
+      workingTitle: "Ashfall Courier",
+      pitch: "Carry fragile messages through a changing volcanic frontier.",
+      openQuestions: expect.arrayContaining(["What will players do again and again?"]),
+    }));
+    expect(runInterviewTurn).not.toHaveBeenCalled();
+    expect(runSpecialistAnalysis).not.toHaveBeenCalled();
+    expect(await screen.findByRole("heading", { name: "Overview" })).toBeInTheDocument();
+    expect(loadRecentProjects()).toEqual(expect.arrayContaining([expect.objectContaining({ projectId: workspace.projectId })]));
+  });
+
+  it("preserves the reviewed Creator draft when initialization fails", async () => {
+    vi.mocked(selectWorkspaceDirectory).mockResolvedValue(selectedPath);
+    vi.mocked(inspectWorkspace).mockResolvedValue({ status: "UNINITIALIZED", rootPath: selectedPath });
+    vi.mocked(initializeWorkspace).mockRejectedValue(new Error("The Project Foundation could not be saved."));
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole("button", { name: "Start New Project" }));
+    await user.type(screen.getByLabelText("Working title"), "Ashfall Courier");
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    await user.type(screen.getByLabelText("Game pitch"), "Carry fragile messages through a changing volcanic frontier.");
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    for (let step = 0; step < 5; step += 1) await user.click(screen.getByRole("button", { name: "Continue" }));
+    await user.click(screen.getByRole("button", { name: "Create Project" }));
+    await user.click(await screen.findByRole("button", { name: "Initialize Project" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("could not be saved");
+    expect(screen.getByRole("heading", { name: "Your Game Foundation" })).toBeInTheDocument();
+    expect(screen.getByText("Ashfall Courier")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Initialize Project" })).toBeEnabled();
+  });
+
+  it("does not overwrite an existing ForgeMind workspace selected from Creator", async () => {
+    vi.mocked(selectWorkspaceDirectory).mockResolvedValue(selectedPath);
+    vi.mocked(inspectWorkspace).mockResolvedValue(validInspection);
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole("button", { name: "Start New Project" }));
+    await user.type(screen.getByLabelText("Working title"), "Ashfall Courier");
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    await user.type(screen.getByLabelText("Game pitch"), "Carry fragile messages through a changing volcanic frontier.");
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    for (let step = 0; step < 5; step += 1) await user.click(screen.getByRole("button", { name: "Continue" }));
+    await user.click(screen.getByRole("button", { name: "Create Project" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("already a ForgeMind workspace");
+    expect(initializeWorkspace).not.toHaveBeenCalled();
+    expect(screen.getByRole("heading", { name: "Your Game Foundation" })).toBeInTheDocument();
+  });
+
+  it("renders persisted recent projects and opens one through the existing inspection flow", async () => {
+    recordRecentProject(selectedPath, validInspection.project, "2026-09-25T18:30:00.000Z");
+    vi.mocked(inspectWorkspace).mockResolvedValue(validInspection);
+    const user = userEvent.setup();
+    render(<App />);
+
+    const recentProject = screen.getByRole("button", { name: `Open ${workspace.name}` });
+    expect(recentProject).toHaveTextContent(workspace.name);
+    expect(within(recentProject).getByText(selectedPath)).toHaveAttribute("title", selectedPath);
+    expect(within(recentProject).getByText(/Last opened/)).toHaveAttribute(
+      "dateTime",
+      "2026-09-25T18:30:00.000Z",
+    );
+
+    await user.click(recentProject);
+
+    expect(inspectWorkspace).toHaveBeenCalledWith(selectedPath);
+    expect(await screen.findByText(workspace.projectId)).toBeInTheDocument();
+  });
+
+  it("removes an unavailable recent project without leaving Home", async () => {
+    recordRecentProject(selectedPath, validInspection.project, "2026-09-25T18:30:00.000Z");
+    vi.mocked(inspectWorkspace).mockRejectedValue(new Error("Directory not found"));
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole("button", { name: `Open ${workspace.name}` }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "That recent project is no longer available and was removed from the list.",
+    );
+    expect(screen.getByRole("heading", { name: "Recent Projects" })).toBeInTheDocument();
+    expect(screen.getByText("No recent projects yet")).toBeInTheDocument();
+    expect(loadRecentProjects()).toEqual([]);
   });
 
   it("loads a debug-configured workspace through the normal inspection path without opening the picker", async () => {
@@ -216,7 +354,7 @@ describe("ForgeMind local workspace", () => {
     const user = userEvent.setup();
     render(<App />);
 
-    await user.click(screen.getByRole("button", { name: "Open Project" }));
+    await user.click(screen.getByRole("button", { name: "Open Existing Project" }));
 
     expect(await screen.findByText("This directory is not yet a ForgeMind workspace.")).toBeInTheDocument();
     expect(screen.getByText(selectedPath)).toBeInTheDocument();
@@ -235,7 +373,7 @@ describe("ForgeMind local workspace", () => {
     const user = userEvent.setup();
     render(<App />);
 
-    await user.click(screen.getByRole("button", { name: "Open Project" }));
+    await user.click(screen.getByRole("button", { name: "Open Existing Project" }));
     await user.click(await screen.findByRole("button", { name: "Initialize Workspace" }));
 
     expect(initializeWorkspace).toHaveBeenCalledWith(selectedPath);
@@ -248,19 +386,21 @@ describe("ForgeMind local workspace", () => {
     const user = userEvent.setup();
     render(<App />);
 
-    await user.click(screen.getByRole("button", { name: "Open Project" }));
+    await user.click(screen.getByRole("button", { name: "Open Existing Project" }));
 
     expect(await screen.findAllByText(workspace.name)).not.toHaveLength(0);
     expect(screen.getByText(workspace.projectId)).toBeInTheDocument();
     expect(screen.getByText(workspace.createdAt)).toBeInTheDocument();
     expect(screen.getByText(String(workspace.formatVersion))).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Initialize Workspace" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Home" })).toBeInTheDocument();
 
     for (const area of requiredAreas) {
       expect(screen.getByRole("button", { name: navigationName(area) })).toBeInTheDocument();
     }
 
     expect(screen.getByRole("button", { name: "Overview" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("button", { name: "Home" })).not.toHaveAttribute("aria-current");
     expect(screen.queryByText(workspace.name, { selector: ".page-header .type-eyebrow" })).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Global", level: 2 })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Project tools", level: 2 })).toBeInTheDocument();
@@ -286,9 +426,39 @@ describe("ForgeMind local workspace", () => {
     expect(screen.getByText("No eligible sources exist. Approve an Alignment Review or Decision, or add current Compendium knowledge.")).toBeInTheDocument();
   });
 
+  it("returns Home without changing the project and reopens it from Recent Projects", async () => {
+    vi.mocked(selectWorkspaceDirectory).mockResolvedValue(selectedPath);
+    vi.mocked(inspectWorkspace).mockResolvedValue(validInspection);
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole("button", { name: "Open Existing Project" }));
+    expect(await screen.findByText(workspace.projectId)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Overview" })).toHaveAttribute("aria-current", "page");
+    const recentBeforeHome = loadRecentProjects();
+
+    await user.click(screen.getByRole("button", { name: "Home" }));
+
+    expect(screen.getByRole("heading", { name: "Turn ideas into playable worlds." })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Start New Project" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: `Open ${workspace.name}` })).toBeInTheDocument();
+    expect(loadRecentProjects()).toEqual(recentBeforeHome);
+    expect(selectWorkspaceDirectory).toHaveBeenCalledTimes(1);
+    expect(inspectWorkspace).toHaveBeenCalledTimes(1);
+    expect(initializeWorkspace).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: `Open ${workspace.name}` }));
+
+    expect(await screen.findByText(workspace.projectId)).toBeInTheDocument();
+    expect(inspectWorkspace).toHaveBeenCalledTimes(2);
+    expect(screen.getByRole("button", { name: "Home" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Overview" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("heading", { name: "Overview", level: 1 })).toBeInTheDocument();
+  });
+
   it("opens the bounded AI evaluation harness from the workspace shell", async () => {
     const user = userEvent.setup();
-    render(<WorkspaceShell workspace={workspace} onOpen={async () => undefined} />);
+    render(<WorkspaceShell workspace={workspace} onHome={() => undefined} onOpen={async () => undefined} />);
 
     await user.click(screen.getByRole("button", { name: "AI Evaluation" }));
 
@@ -306,17 +476,18 @@ describe("ForgeMind local workspace", () => {
   it("keeps the sidebar project summary compact and exposes the full project name", () => {
     const longName = "A Very Long ForgeMind Project Name That Must Stay Within The Sidebar";
     const { container } = render(
-      <WorkspaceShell workspace={{ ...workspace, name: longName }} onOpen={async () => undefined} />,
+      <WorkspaceShell workspace={{ ...workspace, name: longName }} onHome={() => undefined} onOpen={async () => undefined} />,
     );
 
     const sidebar = container.querySelector<HTMLElement>(".sidebar");
     const brand = sidebar?.querySelector<HTMLElement>(":scope > .sidebar-brand");
+    const homeAction = sidebar?.querySelector<HTMLElement>(":scope > .workspace-home-action");
     const projectCard = sidebar?.querySelector<HTMLElement>(":scope > .sidebar-project");
     const navigation = sidebar?.querySelector<HTMLElement>(":scope > .sidebar-navigation");
     const projectAction = sidebar?.querySelector<HTMLElement>(":scope > .change-project-button");
 
     expect(sidebar).not.toBeNull();
-    expect([brand, projectCard, navigation, projectAction]).toEqual(Array.from(sidebar!.children));
+    expect([brand, homeAction, projectCard, navigation, projectAction]).toEqual(Array.from(sidebar!.children));
     expect(projectCard).toHaveAttribute("title", longName);
     expect(within(projectCard!).getByText("Project")).toBeVisible();
     expect(within(projectCard!).getByText(longName)).toBeVisible();
@@ -342,7 +513,7 @@ describe("ForgeMind local workspace", () => {
       }],
     });
     const user = userEvent.setup();
-    render(<WorkspaceShell workspace={workspace} onOpen={async () => undefined} />);
+    render(<WorkspaceShell workspace={workspace} onHome={() => undefined} onOpen={async () => undefined} />);
     await user.click(screen.getByRole("button", { name: "Game Wiki" }));
     await user.click(await screen.findByRole("button", { name: /Systems/ }));
     await user.click(await screen.findByRole("button", { name: "View Feature Contracts" }));
@@ -377,7 +548,7 @@ describe("ForgeMind local workspace", () => {
       }],
     });
     const user = userEvent.setup();
-    render(<WorkspaceShell workspace={workspace} onOpen={async () => undefined} />);
+    render(<WorkspaceShell workspace={workspace} onHome={() => undefined} onOpen={async () => undefined} />);
 
     await user.click(screen.getByRole("button", { name: "Game Wiki" }));
     await user.click((await screen.findByText("Systems", { selector: ".wiki-area-nav span" })).closest("button")!);
@@ -390,7 +561,7 @@ describe("ForgeMind local workspace", () => {
 
   it("opens AI Behavior Designer inside the existing workspace shell", async () => {
     const user = userEvent.setup();
-    render(<WorkspaceShell workspace={workspace} onOpen={async () => undefined} />);
+    render(<WorkspaceShell workspace={workspace} onHome={() => undefined} onOpen={async () => undefined} />);
 
     await user.click(screen.getByRole("button", { name: "AI Behavior Designer" }));
 
@@ -401,7 +572,7 @@ describe("ForgeMind local workspace", () => {
 
   it("can leave AI Evaluation and open other workspace areas", async () => {
     const user = userEvent.setup();
-    render(<WorkspaceShell workspace={workspace} onOpen={async () => undefined} />);
+    render(<WorkspaceShell workspace={workspace} onHome={() => undefined} onOpen={async () => undefined} />);
 
     await user.click(screen.getByRole("button", { name: "AI Evaluation" }));
     expect(await screen.findByText("nebius_token_factory")).toBeInTheDocument();
@@ -417,7 +588,7 @@ describe("ForgeMind local workspace", () => {
 
   it("opens the Project Interview workflow from the workspace shell", async () => {
     const user = userEvent.setup();
-    render(<WorkspaceShell workspace={workspace} onOpen={async () => undefined} />);
+    render(<WorkspaceShell workspace={workspace} onHome={() => undefined} onOpen={async () => undefined} />);
 
     await user.click(screen.getByRole("button", { name: "Project Interview" }));
 
@@ -427,7 +598,7 @@ describe("ForgeMind local workspace", () => {
 
   it("opens the 0F Compendium and Decisions inside the existing workspace shell", async () => {
     const user = userEvent.setup();
-    render(<WorkspaceShell workspace={workspace} onOpen={async () => undefined} />);
+    render(<WorkspaceShell workspace={workspace} onHome={() => undefined} onOpen={async () => undefined} />);
 
     await user.click(screen.getByRole("button", { name: "Game Design" }));
     expect(await screen.findByRole("heading", { name: "Game Compendium" })).toBeInTheDocument();
@@ -440,7 +611,7 @@ describe("ForgeMind local workspace", () => {
 
   it("opens Game Wiki as the project knowledge browsing surface", async () => {
     const user = userEvent.setup();
-    render(<WorkspaceShell workspace={workspace} onOpen={async () => undefined} />);
+    render(<WorkspaceShell workspace={workspace} onHome={() => undefined} onOpen={async () => undefined} />);
     await user.click(screen.getByRole("button", { name: "Game Wiki" }));
     expect(await screen.findByRole("heading", { name: "Game Wiki", level: 2 })).toBeInTheDocument();
     expect(screen.getByRole("navigation", { name: "Wiki areas" })).toBeInTheDocument();
@@ -452,7 +623,7 @@ describe("ForgeMind local workspace", () => {
       entries: [{ id: "knowledge-1", area: "systems", title: "Perception model", statement: "Enemies use perceived facts.", status: "DIRECTION", provenance: "MANUAL", source: "manual_entry", createdAt: "2026-09-20T10:00:00Z", updatedAt: "2026-09-20T10:00:00Z" }],
     });
     const user = userEvent.setup();
-    render(<WorkspaceShell workspace={workspace} onOpen={async () => undefined} />);
+    render(<WorkspaceShell workspace={workspace} onHome={() => undefined} onOpen={async () => undefined} />);
     await user.click(screen.getByRole("button", { name: "Game Wiki" }));
     await user.click(await screen.findByRole("button", { name: /Systems/ }));
     await user.click(screen.getByText("Perception model"));
@@ -464,7 +635,7 @@ describe("ForgeMind local workspace", () => {
 
   it("opens the read-only Repository Reality workspace page", async () => {
     const user = userEvent.setup();
-    render(<WorkspaceShell workspace={workspace} onOpen={async () => undefined} />);
+    render(<WorkspaceShell workspace={workspace} onHome={() => undefined} onOpen={async () => undefined} />);
     await user.click(screen.getByRole("button", { name: "Repository / Git Reality" }));
     expect(await screen.findByRole("heading", { name: "Git / Repository", level: 2 })).toBeInTheDocument();
     expect(screen.getByText("The active ForgeMind workspace is not inside a Git repository.")).toBeInTheDocument();
@@ -476,7 +647,7 @@ describe("ForgeMind local workspace", () => {
 
   it("opens the Unity GroundTruth workspace page through the narrow inspection boundary", async () => {
     const user = userEvent.setup();
-    render(<WorkspaceShell workspace={workspace} onOpen={async () => undefined} />);
+    render(<WorkspaceShell workspace={workspace} onHome={() => undefined} onOpen={async () => undefined} />);
     await user.click(screen.getByRole("button", { name: "Unity" }));
     expect(await screen.findByRole("heading", { name: "Unity GroundTruth", level: 2 })).toBeInTheDocument();
     expect(screen.getByText("Not detected")).toBeInTheDocument();
@@ -494,7 +665,7 @@ describe("ForgeMind local workspace", () => {
     const user = userEvent.setup();
     render(<App />);
 
-    await user.click(screen.getByRole("button", { name: "Open Project" }));
+    await user.click(screen.getByRole("button", { name: "Open Existing Project" }));
 
     expect(await screen.findByText("ForgeMind workspace metadata is invalid.")).toBeInTheDocument();
     expect(screen.getByText("The existing .forgemind/project.json file was not changed.")).toBeInTheDocument();
@@ -512,7 +683,7 @@ describe("ForgeMind local workspace", () => {
     const user = userEvent.setup();
     render(<App />);
 
-    await user.click(screen.getByRole("button", { name: "Open Project" }));
+    await user.click(screen.getByRole("button", { name: "Open Existing Project" }));
 
     expect(await screen.findByRole("heading", { name: "Unsupported workspace version 2" })).toBeInTheDocument();
     expect(screen.getByText("ForgeMind workspace format version 2 is not supported.")).toBeInTheDocument();
@@ -523,7 +694,7 @@ describe("ForgeMind local workspace", () => {
     "keeps the %s placeholder honest after a valid workspace loads",
     async (area) => {
       const user = userEvent.setup();
-      render(<WorkspaceShell workspace={workspace} onOpen={async () => undefined} />);
+      render(<WorkspaceShell workspace={workspace} onHome={() => undefined} onOpen={async () => undefined} />);
 
       await user.click(screen.getByRole("button", { name: `${area}, Planned` }));
 
