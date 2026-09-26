@@ -56,12 +56,22 @@ pub enum KnowledgeSource {
     NewProjectCreator,
 }
 
+#[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum FoundationContentOrigin {
+    #[default]
+    UserAuthored,
+    AiAccepted,
+}
+
 #[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct FoundationPillar {
     pub title: String,
     #[serde(default)]
     pub explanation: String,
+    #[serde(default)]
+    pub origin: FoundationContentOrigin,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -81,6 +91,8 @@ pub struct ProjectFoundationInput {
     pub player_experience: String,
     #[serde(default)]
     pub core_loop: String,
+    #[serde(default)]
+    pub core_loop_origin: FoundationContentOrigin,
     #[serde(default)]
     pub setting: String,
     #[serde(default)]
@@ -273,6 +285,7 @@ pub fn initialize_foundation(
         KnowledgeArea::PlayerExperience,
         "Player experience",
         &foundation.player_experience,
+        KnowledgeProvenance::UserStated,
         &now,
     );
     push_optional_foundation_entry(
@@ -280,6 +293,7 @@ pub fn initialize_foundation(
         KnowledgeArea::CoreLoop,
         "Core loop",
         &foundation.core_loop,
+        provenance_for_origin(foundation.core_loop_origin),
         &now,
     );
 
@@ -295,7 +309,7 @@ pub fn initialize_foundation(
             &format!("Design pillar: {}", pillar.title.trim()),
             &statement,
             KnowledgeStatus::Direction,
-            KnowledgeProvenance::UserStated,
+            provenance_for_origin(pillar.origin),
             &now,
         );
     }
@@ -305,6 +319,7 @@ pub fn initialize_foundation(
         KnowledgeArea::WorldNarrative,
         "World setting",
         &foundation.setting,
+        KnowledgeProvenance::UserStated,
         &now,
     );
     push_optional_foundation_entry(
@@ -312,6 +327,7 @@ pub fn initialize_foundation(
         KnowledgeArea::WorldNarrative,
         "Desired tone",
         &foundation.tone,
+        KnowledgeProvenance::UserStated,
         &now,
     );
     push_optional_foundation_entry(
@@ -319,6 +335,7 @@ pub fn initialize_foundation(
         KnowledgeArea::WorldNarrative,
         "Inspirations",
         &foundation.inspirations,
+        KnowledgeProvenance::UserStated,
         &now,
     );
     push_optional_foundation_entry(
@@ -326,6 +343,7 @@ pub fn initialize_foundation(
         KnowledgeArea::WorldNarrative,
         "Anti-inspirations",
         &foundation.anti_inspirations,
+        KnowledgeProvenance::UserStated,
         &now,
     );
     push_combined_foundation_entry(
@@ -426,6 +444,7 @@ fn push_optional_foundation_entry(
     area: KnowledgeArea,
     title: &str,
     statement: &str,
+    provenance: KnowledgeProvenance,
     now: &str,
 ) {
     if !statement.trim().is_empty() {
@@ -435,9 +454,16 @@ fn push_optional_foundation_entry(
             title,
             statement,
             KnowledgeStatus::Direction,
-            KnowledgeProvenance::UserStated,
+            provenance,
             now,
         );
+    }
+}
+
+fn provenance_for_origin(origin: FoundationContentOrigin) -> KnowledgeProvenance {
+    match origin {
+        FoundationContentOrigin::UserAuthored => KnowledgeProvenance::UserStated,
+        FoundationContentOrigin::AiAccepted => KnowledgeProvenance::AiInferred,
     }
 }
 

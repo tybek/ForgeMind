@@ -291,7 +291,7 @@ fn is_valid_project(project: &ProjectMetadata) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::compendium::{FoundationPillar, KnowledgeArea, KnowledgeProvenance, KnowledgeSource, KnowledgeStatus};
+    use crate::compendium::{FoundationContentOrigin, FoundationPillar, KnowledgeArea, KnowledgeProvenance, KnowledgeSource, KnowledgeStatus};
     use std::collections::BTreeSet;
     use tempfile::TempDir;
 
@@ -325,6 +325,7 @@ mod tests {
             pitch: "Carry fragile messages through a changing volcanic frontier.".to_owned(),
             player_experience: "Become a trusted courier under pressure.".to_owned(),
             core_loop: "Plan a route, cross the frontier, and deliver a message.".to_owned(),
+            core_loop_origin: crate::compendium::FoundationContentOrigin::UserAuthored,
             setting: "A volcanic frontier.".to_owned(),
             tone: "Tense but hopeful.".to_owned(),
             inspirations: "Road stories.".to_owned(),
@@ -332,6 +333,7 @@ mod tests {
             pillars: vec![FoundationPillar {
                 title: "Meaningful routes".to_owned(),
                 explanation: "Every path changes risk and story.".to_owned(),
+                origin: crate::compendium::FoundationContentOrigin::UserAuthored,
             }],
             engine: "Unity".to_owned(),
             team_size: "Solo".to_owned(),
@@ -403,6 +405,25 @@ mod tests {
                 && entry.status == KnowledgeStatus::Tbd
                 && entry.provenance == KnowledgeProvenance::Unresolved
         }));
+        assert!(crate::decisions::load(directory.path()).unwrap().is_none());
+    }
+
+    #[test]
+    fn creator_initialization_preserves_explicitly_accepted_ai_provenance() {
+        let directory = TempDir::new().unwrap();
+        let mut assisted = foundation();
+        assisted.core_loop_origin = FoundationContentOrigin::AiAccepted;
+        assisted.pillars[0].origin = FoundationContentOrigin::AiAccepted;
+
+        initialize_with_foundation(directory.path(), &assisted).unwrap();
+        let compendium = compendium::load(directory.path()).unwrap().unwrap();
+        let core_loop = compendium.entries.iter().find(|entry| entry.area == KnowledgeArea::CoreLoop).unwrap();
+        let pillar = compendium.entries.iter().find(|entry| entry.title == "Design pillar: Meaningful routes").unwrap();
+
+        assert_eq!(core_loop.provenance, KnowledgeProvenance::AiInferred);
+        assert_eq!(pillar.provenance, KnowledgeProvenance::AiInferred);
+        assert_eq!(core_loop.source, KnowledgeSource::NewProjectCreator);
+        assert_eq!(pillar.source, KnowledgeSource::NewProjectCreator);
         assert!(crate::decisions::load(directory.path()).unwrap().is_none());
     }
 

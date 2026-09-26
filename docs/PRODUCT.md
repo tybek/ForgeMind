@@ -2,7 +2,7 @@
 
 ## Status
 
-This document defines the product direction. **CURRENT:** 0K Feature Contracts, UI-1, and UI-2 are complete. NPC-1 is implemented and headless-validated with manual validation pending. The local workspace includes Project Interview, Compendium knowledge, Decisions, one bounded specialist profile, Game Wiki aggregation, Repository Reality, completed Unity GroundTruth and Alignment workflows, the reviewed Feature Contract workbench, and the deterministic manual-first New Project Creator. NPC-2 AI Assistance and Recommended Next Steps remain unimplemented. Everything described as future direction below is **NOT IMPLEMENTED** unless explicitly identified otherwise.
+This document defines the product direction. **CURRENT:** 0K Feature Contracts, UI-1, UI-2, and NPC-1 are complete. NPC-2 AI Assistance is implemented and headless-validated with manual live-AI validation pending. The local workspace includes Project Interview, Compendium knowledge, Decisions, one bounded specialist profile, Game Wiki aggregation, Repository Reality, completed Unity GroundTruth and Alignment workflows, the reviewed Feature Contract workbench, and the manual-first New Project Creator with explicit Core Loop and Design Pillar AI proposals. Recommended Next Steps remains unimplemented. Everything described as future direction below is **NOT IMPLEMENTED** unless explicitly identified otherwise.
 
 ## Problem
 
@@ -84,7 +84,7 @@ Accounts, permissions, role-based access control, cloud synchronization, and rea
 
 ForgeMind supports the new-project path through the NPC-1 manual-first Creator and the existing-project path through the unchanged open/inspection flow. The detailed onboarding and future recommendation contract is in [New Project Creator and Recommended Next Steps](NEW_PROJECT_CREATOR.md).
 
-**New project:** Idea -> guided Creator -> structured Project Foundation -> human review -> explicit local initialization -> Project Brain. NPC-1 is deterministic and user-authored. Future NPC-2 AI may help structure Game Vision, Player Experience, Core Loop, Pillars, World / Tone, Constraints, and Open Questions, but people approve durable truth. AI suggestions do not create approved Decisions.
+**New project:** Idea -> guided Creator -> structured Project Foundation -> human review -> explicit local initialization -> Project Brain. NPC-1 supplies the complete deterministic manual path. NPC-2 optionally proposes bounded Core Loops and Design Pillars only after an explicit user action. Proposals remain transient until accepted, accepted content stays editable through Review, and people still approve durable truth. AI suggestions do not create approved Decisions.
 
 **Existing project:** Repository / Unity / documents -> Reality -> import and document review -> focused missing-Intent questions -> Project Brain -> Recommended Next Steps. The [Rebaseline Existing Project](PROJECT_REBASELINE.md) direction defines the non-destructive, Reality-first path for an existing workspace.
 

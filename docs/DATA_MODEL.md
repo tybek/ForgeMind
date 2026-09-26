@@ -2,7 +2,7 @@
 
 ## Scope
 
-This model establishes shared language and relationships. It is not a database schema or API contract. Milestone 0C serializes minimal Project identity in `.forgemind/project.json`; 0E adds approved onboarding evidence in `.forgemind/interview.json`; 0F adds separate versioned Compendium and Decision documents; 0G.3 adds non-authoritative specialist work history in `.forgemind/specialist-runs.json`; 0J.1 adds derived, reviewable Alignment history in `.forgemind/alignment.json`; 0K adds reviewed delivery artifacts in `.forgemind/feature-contracts.json`; and NPC-1 maps a reviewed manual Project Foundation into the existing Project and Compendium documents without a new truth store.
+This model establishes shared language and relationships. It is not a database schema or API contract. Milestone 0C serializes minimal Project identity in `.forgemind/project.json`; 0E adds approved onboarding evidence in `.forgemind/interview.json`; 0F adds separate versioned Compendium and Decision documents; 0G.3 adds non-authoritative specialist work history in `.forgemind/specialist-runs.json`; 0J.1 adds derived, reviewable Alignment history in `.forgemind/alignment.json`; 0K adds reviewed delivery artifacts in `.forgemind/feature-contracts.json`; NPC-1 maps a reviewed manual Project Foundation into the existing Project and Compendium documents; and NPC-2 adds transient typed proposals plus compact accepted-origin metadata without creating a new truth store.
 
 ## Core entities
 
@@ -143,7 +143,7 @@ Approval answers whether a person has accepted an artifact; it does not replace 
 - Files contain no absolute workspace path, credentials, provider response metadata, or machine identity.
 - Compendium and Decisions remain distinct: knowledge does not become a Decision automatically, and promoting knowledge creates only a proposed Decision.
 - Interview evidence remains in `.forgemind/interview.json` after import.
-- NPC-1 foundation entries remain in the same Compendium format version. User-entered fields are `DIRECTION` / `USER_STATED` / `new_project_creator`; deterministic missing-field questions are `TBD` / `UNRESOLVED` / `new_project_creator`. Existing projects require no migration.
+- Creator foundation entries remain in the same Compendium format version. User-authored fields are `DIRECTION` / `USER_STATED` / `new_project_creator`; explicitly accepted AI-assisted Core Loop and pillar fields are `DIRECTION` / `AI_INFERRED` / `new_project_creator`; deterministic missing-field questions are `TBD` / `UNRESOLVED` / `new_project_creator`. `AI_ACCEPTED` exists only as compact pre-initialization draft origin and is never a new authority level. Existing projects require no migration.
 
 ## 0G.3 specialist-history invariants
 

@@ -11,7 +11,10 @@ export interface ProjectMetadata {
 export interface FoundationPillar {
   title: string;
   explanation: string;
+  origin?: FoundationContentOrigin;
 }
+
+export type FoundationContentOrigin = "USER_AUTHORED" | "AI_ACCEPTED";
 
 export interface ProjectFoundationInput {
   workingTitle: string;
@@ -22,6 +25,7 @@ export interface ProjectFoundationInput {
   pitch: string;
   playerExperience: string;
   coreLoop: string;
+  coreLoopOrigin?: FoundationContentOrigin;
   setting: string;
   tone: string;
   inspirations: string;

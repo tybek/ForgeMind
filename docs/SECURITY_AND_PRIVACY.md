@@ -4,7 +4,9 @@
 
 **SEC-0 ARCHITECTURE SPECIFICATION ONLY - NO SECURITY IMPLEMENTATION.** This document defines ForgeMind's product stance, threat model, current readiness, credential policy, future AI Data Boundary, Security Preflight, Secret Guard, privacy UX, validation strategy, and phased security roadmap.
 
-0K Feature Contract remains the current milestone. Its implementation is complete through 0K.2, but required manual validation remains pending. SEC-1 through SEC-6 are planned and not started. This specification does not change current Feature Contract behavior, start 0L, implement UI-1, start a Studio, add credential storage, scan outbound requests, or make a provider call.
+NPC-2 Creator AI assistance is implemented and headless-validated with manual live-AI validation pending. SEC-1 through SEC-6 remain planned and not started. This specification does not start 0L, Recommended Next Steps, a Studio, credential storage, the shared Context Preview, or the full Secret Guard.
+
+The implemented Creator boundary sends only a typed projection of relevant fields already visible in the new-project draft. It excludes workspace paths, Recent Projects, Compendium, Decisions, Git Reality, Unity GroundTruth, Feature Contracts, credentials, and arbitrary filesystem data. Creator text is serialized beneath a fixed native task instruction and explicitly treated as untrusted data. A narrow check blocks a few obvious credential-like markers, but this is not the future shared Secret Guard and must not be presented as universal protection.
 
 Security claims in this document distinguish current repository evidence from planned protection. ForgeMind must not describe itself as "zero risk," "fully secure," or "enterprise-grade" without objective evidence supporting that claim.
 

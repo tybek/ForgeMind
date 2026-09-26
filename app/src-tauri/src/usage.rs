@@ -25,6 +25,8 @@ pub enum TaskCategory {
     TechnicalAnalysis,
     Alignment,
     FeatureContract,
+    NewProjectCoreLoop,
+    NewProjectDesignPillars,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -49,6 +51,8 @@ pub struct UsageRecord {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub estimated_cost_usd: Option<f64>,
     pub success: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub structured_output_success: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub error_category: Option<String>,
 }
@@ -164,6 +168,7 @@ pub fn record_for_result(
                 response.output_tokens,
             ),
             success: true,
+            structured_output_success: None,
             error_category: None,
         },
         Err(error) => UsageRecord {
@@ -179,6 +184,7 @@ pub fn record_for_result(
             latency_ms: None,
             estimated_cost_usd: None,
             success: false,
+            structured_output_success: None,
             error_category: Some(error.code.clone()),
         },
     }
@@ -377,6 +383,17 @@ mod tests {
             serde_json::to_string(&TaskCategory::ProjectInterview).unwrap(),
             "\"project_interview\""
         );
+    }
+
+    #[test]
+    fn creator_task_categories_and_structured_output_evidence_are_stable() {
+        assert_eq!(serde_json::to_string(&TaskCategory::NewProjectCoreLoop).unwrap(), "\"new_project_core_loop\"");
+        assert_eq!(serde_json::to_string(&TaskCategory::NewProjectDesignPillars).unwrap(), "\"new_project_design_pillars\"");
+        let mut record = record_for_result("session", None, &model(None), Some(TaskCategory::NewProjectCoreLoop), &Ok(response()));
+        record.structured_output_success = Some(false);
+        let serialized = serde_json::to_string(&record).unwrap();
+        assert!(serialized.contains("\"structuredOutputSuccess\":false"));
+        assert!(!serialized.contains("private response"));
     }
 
     #[test]

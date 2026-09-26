@@ -1,6 +1,7 @@
 pub mod ai;
 pub mod alignment;
 pub mod compendium;
+pub mod creator_ai;
 pub mod decisions;
 pub mod feature_contracts;
 pub mod interview;
@@ -27,6 +28,7 @@ use compendium::{
     ImportInterviewRequest, InterviewImportResult, KnowledgeEntryActionRequest,
     ProjectFoundationInput, PromoteSpecialistFindingRequest, UpdateKnowledgeEntryRequest,
 };
+use creator_ai::{CreatorAiError, CreatorAiRequest, CoreLoopProposalResult, PillarProposalResult};
 use decisions::{
     CreateDecisionRequest, DecisionActionRequest, DecisionError, DecisionsDocument,
     UpdateDecisionRequest,
@@ -82,6 +84,20 @@ async fn run_ai_evaluation(
     task_category: Option<TaskCategory>,
 ) -> Result<AIResponse, AIError> {
     evaluate_registered(request, project_id, task_category).await
+}
+
+#[tauri::command]
+async fn suggest_new_project_core_loops(
+    request: CreatorAiRequest,
+) -> Result<CoreLoopProposalResult, CreatorAiError> {
+    creator_ai::suggest_core_loops(request).await
+}
+
+#[tauri::command]
+async fn suggest_new_project_design_pillars(
+    request: CreatorAiRequest,
+) -> Result<PillarProposalResult, CreatorAiError> {
+    creator_ai::suggest_pillars(request).await
 }
 
 pub async fn evaluate_registered(
@@ -398,7 +414,7 @@ fn set_feature_contract_status(request: SetFeatureContractStatusRequest) -> Resu
     feature_contracts::set_status(request)
 }
 
-fn session_id() -> &'static str {
+pub(crate) fn session_id() -> &'static str {
     SESSION_ID.get_or_init(|| uuid::Uuid::new_v4().to_string())
 }
 
@@ -450,6 +466,8 @@ pub fn run() {
             inspect_repository_reality,
             inspect_unity_groundtruth,
             run_ai_evaluation,
+            suggest_new_project_core_loops,
+            suggest_new_project_design_pillars,
             list_models,
             list_specialist_profiles,
             run_specialist_analysis,

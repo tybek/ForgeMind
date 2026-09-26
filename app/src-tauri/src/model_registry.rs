@@ -2,6 +2,7 @@ use serde::Serialize;
 use std::collections::HashSet;
 
 pub const NEBIUS_PROVIDER_ID: &str = "nebius_token_factory";
+pub const CREATOR_DEFAULT_MODEL_ID: &str = "nvidia/nemotron-3-super-120b-a12b";
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -69,7 +70,7 @@ fn configured_entries() -> Vec<ModelEntry> {
         },
         ModelEntry {
             provider: NEBIUS_PROVIDER_ID.to_owned(),
-            model_id: "nvidia/nemotron-3-super-120b-a12b".to_owned(),
+            model_id: CREATOR_DEFAULT_MODEL_ID.to_owned(),
             display_name: "NVIDIA Nemotron 3 Super 120B".to_owned(),
             family: "Nemotron 3 Super".to_owned(),
             vendor: Some("NVIDIA".to_owned()),
@@ -112,6 +113,10 @@ pub fn enabled_model(model_id: &str) -> Result<ModelEntry, ModelRegistryError> {
             code: "UNKNOWN_MODEL",
             message: "The selected model is not enabled in the ForgeMind model registry.".to_owned(),
         })
+}
+
+pub fn creator_default_model() -> Result<ModelEntry, ModelRegistryError> {
+    enabled_model(CREATOR_DEFAULT_MODEL_ID)
 }
 
 #[cfg(test)]
@@ -158,7 +163,8 @@ mod tests {
 
     #[test]
     fn nemotron_is_enabled_without_invented_pricing_or_capabilities() {
-        let model = enabled_model("nvidia/nemotron-3-super-120b-a12b").unwrap();
+        let model = creator_default_model().unwrap();
+        assert_eq!(model.model_id, CREATOR_DEFAULT_MODEL_ID);
         assert_eq!(model.display_name, "NVIDIA Nemotron 3 Super 120B");
         assert_eq!(model.provider, NEBIUS_PROVIDER_ID);
         assert_eq!(model.pricing, None);

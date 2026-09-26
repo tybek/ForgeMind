@@ -5,6 +5,7 @@ import App, { WorkspaceShell, type Workspace } from "./App";
 import { loadCompendium } from "./platform/projectKnowledge";
 import { runInterviewTurn } from "./platform/projectInterview";
 import { runSpecialistAnalysis } from "./platform/specialists";
+import { suggestNewProjectCoreLoops, suggestNewProjectDesignPillars } from "./platform/creatorAi";
 import {
   getDevelopmentWorkspacePath,
   initializeWorkspace,
@@ -21,6 +22,11 @@ vi.mock("./platform/workspaceDirectory", () => ({
   selectWorkspaceDirectory: vi.fn(),
   inspectWorkspace: vi.fn(),
   initializeWorkspace: vi.fn(),
+}));
+
+vi.mock("./platform/creatorAi", () => ({
+  suggestNewProjectCoreLoops: vi.fn(),
+  suggestNewProjectDesignPillars: vi.fn(),
 }));
 
 vi.mock("./platform/modelRegistry", () => ({
@@ -252,6 +258,8 @@ describe("ForgeMind local workspace", () => {
       pitch: "Carry fragile messages through a changing volcanic frontier.",
       openQuestions: expect.arrayContaining(["What will players do again and again?"]),
     }));
+    expect(suggestNewProjectCoreLoops).not.toHaveBeenCalled();
+    expect(suggestNewProjectDesignPillars).not.toHaveBeenCalled();
     expect(runInterviewTurn).not.toHaveBeenCalled();
     expect(runSpecialistAnalysis).not.toHaveBeenCalled();
     expect(await screen.findByRole("heading", { name: "Overview" })).toBeInTheDocument();
