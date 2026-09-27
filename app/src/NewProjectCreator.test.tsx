@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState, type ComponentProps } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -8,14 +8,37 @@ import {
 } from "./NewProjectCreator";
 import type { ProjectFoundationInput } from "./platform/workspaceDirectory";
 import {
+  loadCreatorAiPreflight,
   suggestNewProjectCoreLoops,
   suggestNewProjectDesignPillars,
 } from "./platform/creatorAi";
 
 vi.mock("./platform/creatorAi", () => ({
+  loadCreatorAiPreflight: vi.fn(),
   suggestNewProjectCoreLoops: vi.fn(),
   suggestNewProjectDesignPillars: vi.fn(),
 }));
+
+const defaultModelId = "nvidia/nemotron-3-super-120b-a12b";
+const registryModels = [
+  { provider: "nebius_token_factory", modelId: "deepseek-ai/DeepSeek-V4.1-Flash", displayName: "DeepSeek V4.1 Flash", family: "DeepSeek V4.1", availability: "configured", capabilities: { supportsReasoningEffort: true }, enabled: true },
+  { provider: "nebius_token_factory", modelId: defaultModelId, displayName: "NVIDIA Nemotron 3 Super 120B", family: "Nemotron 3 Super", availability: "configured", capabilities: {}, enabled: true },
+];
+
+function preflight(task: "coreLoop" | "designPillars", modelId = defaultModelId) {
+  return {
+    task,
+    taskLabel: task === "coreLoop" ? "Core Loop suggestions" : "Design Pillar suggestions",
+    provider: "nebius_token_factory",
+    modelId,
+    defaultModelId,
+    models: registryModels,
+    contextFields: ["Identity", "Pitch", "Player Experience"],
+    estimatedInputTokens: { minimum: 350, maximum: 450 },
+    usageBand: "low" as const,
+    historyAvailable: true,
+  };
+}
 
 const coreLoopResult = {
   provider: "nebius_token_factory",
@@ -26,7 +49,7 @@ const coreLoopResult = {
   totalTokens: 150,
   note: "Choose the emphasis that fits.",
   proposals: [
-    { title: "Route and deliver", description: "Plan a route, cross hazards, deliver the message, and recover.", rationale: "Makes preparation meaningful." },
+    { title: "Route and deliver", description: "Plan a route, cross hazards, deliver the message, and recover.", rationale: "Makes preparation meaningful.", assumptions: ["Introduces route hazards as a proposed direction."] },
     { title: "Listen and adapt", description: "Gather local needs, choose a delivery, navigate change, and earn trust." },
   ],
 };
@@ -85,8 +108,15 @@ async function continueToReview(user: ReturnType<typeof userEvent.setup>) {
   }
 }
 
+async function confirmAiRequest(user: ReturnType<typeof userEvent.setup>, action: "Suggest Core Loops" | "Suggest Pillars" | "Regenerate") {
+  await user.click(screen.getByRole("button", { name: action }));
+  const dialog = await screen.findByRole("dialog", { name: /suggestions/i });
+  await user.click(within(dialog).getByRole("button", { name: "Run AI" }));
+}
+
 describe("New Project Creator", () => {
   beforeEach(() => {
+    vi.mocked(loadCreatorAiPreflight).mockReset().mockImplementation((task, _context, modelId) => Promise.resolve(preflight(task, modelId)));
     vi.mocked(suggestNewProjectCoreLoops).mockReset().mockResolvedValue(coreLoopResult);
     vi.mocked(suggestNewProjectDesignPillars).mockReset().mockResolvedValue(pillarResult);
   });
@@ -194,6 +224,13 @@ describe("New Project Creator", () => {
 
     await user.click(screen.getByRole("button", { name: "Suggest Core Loops" }));
 
+    expect(suggestNewProjectCoreLoops).not.toHaveBeenCalled();
+    const preflightDialog = await screen.findByRole("dialog", { name: "Core Loop suggestions" });
+    expect(preflightDialog).toHaveTextContent("LOW");
+    expect(preflightDialog).toHaveTextContent("~350–450 tokens");
+    expect(preflightDialog).toHaveTextContent("Exact estimate unavailable");
+    await user.click(within(preflightDialog).getByRole("button", { name: "Run AI" }));
+
     expect(suggestNewProjectCoreLoops).toHaveBeenCalledTimes(1);
     expect(suggestNewProjectCoreLoops).toHaveBeenCalledWith({
       workingTitle: "Ashfall Courier",
@@ -210,10 +247,91 @@ describe("New Project Creator", () => {
       teamSize: "",
       expectedScope: "",
       majorConstraints: "",
-    });
+    }, defaultModelId);
     expect(await screen.findByText("Route and deliver")).toBeInTheDocument();
     expect(screen.getByLabelText("Creator AI usage")).toHaveTextContent("Nebius Token Factory");
     expect(screen.getByLabelText("Creator AI usage")).toHaveTextContent("150");
+    expect(screen.getByText("Introduces route hazards as a proposed direction.")).toBeInTheDocument();
+  });
+
+  it("cancels preflight without a request and uses only a selected registered model", async () => {
+    const user = userEvent.setup();
+    renderCreator();
+    await completeRequiredFoundation(user);
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+
+    await user.click(screen.getByRole("button", { name: "Suggest Core Loops" }));
+    let dialog = await screen.findByRole("dialog", { name: "Core Loop suggestions" });
+    expect(within(dialog).getByRole("option", { name: /NVIDIA Nemotron 3 Super 120B.*Creator default/ })).toBeInTheDocument();
+    expect(within(dialog).getByRole("option", { name: "DeepSeek V4.1 Flash" })).toBeInTheDocument();
+    expect(dialog).toHaveTextContent("Not enough local history");
+    expect(dialog).not.toHaveTextContent("Estimated provider cost: $");
+    await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
+    expect(suggestNewProjectCoreLoops).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "Suggest Core Loops" }));
+    dialog = await screen.findByRole("dialog", { name: "Core Loop suggestions" });
+    await user.selectOptions(within(dialog).getByLabelText(/Model/), "deepseek-ai/DeepSeek-V4.1-Flash");
+    await waitFor(() => expect(dialog).toHaveTextContent("Alternative model available through Token Factory."));
+    await waitFor(() => expect(within(dialog).getByRole("button", { name: "Run AI" })).toBeEnabled());
+    await user.click(within(dialog).getByRole("button", { name: "Run AI" }));
+    expect(suggestNewProjectCoreLoops).toHaveBeenCalledWith(expect.any(Object), "deepseek-ai/DeepSeek-V4.1-Flash");
+  });
+
+  it("labels one latency observation differently from a recent local range", async () => {
+    vi.mocked(loadCreatorAiPreflight)
+      .mockResolvedValueOnce({ ...preflight("coreLoop"), historicalLatency: { observationCount: 1, lastMs: 2_037, minimumMs: 2_037, maximumMs: 2_037 } })
+      .mockResolvedValueOnce({ ...preflight("coreLoop"), historicalLatency: { observationCount: 2, lastMs: 2_037, minimumMs: 2_037, maximumMs: 2_500 } });
+    const user = userEvent.setup();
+    renderCreator();
+    await completeRequiredFoundation(user);
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+
+    await user.click(screen.getByRole("button", { name: "Suggest Core Loops" }));
+    let dialog = await screen.findByRole("dialog", { name: "Core Loop suggestions" });
+    expect(dialog).toHaveTextContent("Last observed: ~2.0 s");
+    await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
+
+    await user.click(screen.getByRole("button", { name: "Suggest Core Loops" }));
+    dialog = await screen.findByRole("dialog", { name: "Core Loop suggestions" });
+    expect(dialog).toHaveTextContent("Recent: ~2.0–2.5 s");
+    expect(suggestNewProjectCoreLoops).not.toHaveBeenCalled();
+  });
+
+  it("keeps discarded proposals in bounded session history and restores without applying", async () => {
+    const user = userEvent.setup();
+    renderCreator();
+    await completeRequiredFoundation(user);
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    await confirmAiRequest(user, "Suggest Core Loops");
+    await screen.findByText("Route and deliver");
+    await user.click(screen.getByRole("button", { name: "Discard proposals" }));
+    expect(screen.queryByText("Route and deliver")).not.toBeInTheDocument();
+    expect(screen.getByLabelText(/Core loop/)).toHaveValue("");
+
+    await user.click(screen.getByRole("button", { name: "AI History" }));
+    const history = screen.getByRole("dialog", { name: "Creator AI History" });
+    expect(history).toHaveTextContent("PASS · discarded");
+    expect(within(history).getByText("Route and deliver")).toBeInTheDocument();
+    await user.click(within(history).getByRole("button", { name: "Restore as current proposal" }));
+    expect(await screen.findByText("Route and deliver")).toBeInTheDocument();
+    expect(screen.getByLabelText(/Core loop/)).toHaveValue("");
+  });
+
+  it("does not carry proposal assumptions into initialized Creator truth", async () => {
+    const user = userEvent.setup();
+    const { onChooseDirectory } = renderCreator();
+    await completeRequiredFoundation(user);
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    await confirmAiRequest(user, "Suggest Core Loops");
+    await user.click((await screen.findAllByRole("button", { name: "Use this" }))[0]);
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    expect(screen.queryByText("Introduces route hazards as a proposed direction.")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Create Project" }));
+    expect(onChooseDirectory).toHaveBeenCalledWith(expect.not.objectContaining({ assumptions: expect.anything() }));
   });
 
   it("requires explicit confirmation before replacing a manual Core Loop and keeps accepted content editable", async () => {
@@ -223,7 +341,7 @@ describe("New Project Creator", () => {
     await user.click(screen.getByRole("button", { name: "Continue" }));
     const coreLoop = screen.getByLabelText(/Core loop/);
     await user.type(coreLoop, "Scout a safe path and deliver by hand.");
-    await user.click(screen.getByRole("button", { name: "Suggest Core Loops" }));
+    await confirmAiRequest(user, "Suggest Core Loops");
     await user.click((await screen.findAllByRole("button", { name: "Use this" }))[0]);
 
     expect(screen.getByRole("alertdialog")).toHaveTextContent("Replace the current Core Loop?");
@@ -240,7 +358,7 @@ describe("New Project Creator", () => {
     renderCreator();
     await completeRequiredFoundation(user);
     await user.click(screen.getByRole("button", { name: "Continue" }));
-    await user.click(screen.getByRole("button", { name: "Suggest Core Loops" }));
+    await confirmAiRequest(user, "Suggest Core Loops");
     await user.click((await screen.findAllByRole("button", { name: "Use this" }))[0]);
     const accepted = screen.getByLabelText(/Core loop/);
     expect(accepted).toHaveValue(coreLoopResult.proposals[0].description);
@@ -252,13 +370,17 @@ describe("New Project Creator", () => {
         { title: "Promise and return", description: "Accept a promise, prepare, travel, deliver, and report back." },
       ],
     });
-    await user.click(screen.getByRole("button", { name: "Regenerate" }));
+    await confirmAiRequest(user, "Regenerate");
     expect(await screen.findByText("Survey and commit")).toBeInTheDocument();
     expect(accepted).toHaveValue(coreLoopResult.proposals[0].description);
     await user.click(screen.getByRole("button", { name: "Discard proposals" }));
     expect(screen.queryByText("Survey and commit")).not.toBeInTheDocument();
     expect(accepted).toHaveValue(coreLoopResult.proposals[0].description);
     expect(suggestNewProjectCoreLoops).toHaveBeenCalledTimes(2);
+    await user.click(screen.getByRole("button", { name: "AI History" }));
+    const history = screen.getByRole("dialog", { name: "Creator AI History" });
+    expect(history).toHaveTextContent("discarded");
+    expect(history).toHaveTextContent("regenerated");
   });
 
   it("prevents duplicate Core Loop requests while one is running", async () => {
@@ -270,6 +392,8 @@ describe("New Project Creator", () => {
     await user.click(screen.getByRole("button", { name: "Continue" }));
     const action = screen.getByRole("button", { name: "Suggest Core Loops" });
     await user.click(action);
+    const dialog = await screen.findByRole("dialog", { name: "Core Loop suggestions" });
+    await user.click(within(dialog).getByRole("button", { name: "Run AI" }));
     expect(action).toBeDisabled();
     expect(screen.getByRole("status")).toHaveTextContent("Requesting proposals");
     expect(suggestNewProjectCoreLoops).toHaveBeenCalledTimes(1);
@@ -284,7 +408,7 @@ describe("New Project Creator", () => {
     await completeRequiredFoundation(user);
     await user.click(screen.getByRole("button", { name: "Continue" }));
     await user.type(screen.getByLabelText(/Core loop/), "Plan, travel, deliver.");
-    await user.click(screen.getByRole("button", { name: "Suggest Core Loops" }));
+    await confirmAiRequest(user, "Suggest Core Loops");
 
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent("AI setup required");
@@ -303,7 +427,7 @@ describe("New Project Creator", () => {
     await user.type(screen.getByLabelText("Pillar 1 title"), "Meaningful routes");
     await user.type(screen.getByLabelText(/Pillar 1 explanation/), "Manual explanation stays.");
 
-    await user.click(screen.getByRole("button", { name: "Suggest Pillars" }));
+    await confirmAiRequest(user, "Suggest Pillars");
     expect(await screen.findByText("Preparation beats repetition")).toBeInTheDocument();
     const proposal = screen.getByText("Preparation beats repetition").closest("article")!;
     await user.click(within(proposal).getByRole("button", { name: "Accept pillar" }));
@@ -314,8 +438,8 @@ describe("New Project Creator", () => {
     expect(screen.getByLabelText(/Pillar 1 explanation/)).toHaveValue("Manual explanation stays.");
     expect(screen.getAllByDisplayValue("Meaningful routes")).toHaveLength(1);
     expect(screen.getByDisplayValue("Hope under pressure")).toBeInTheDocument();
-    expect(screen.getAllByText(/AI-assisted · accepted into draft · editable/).length).toBeGreaterThan(0);
-    await user.click(screen.getByRole("button", { name: "Regenerate" }));
+    expect(screen.getAllByText(/AI-assisted · accepted · editable/).length).toBeGreaterThan(0);
+    await confirmAiRequest(user, "Regenerate");
     expect(await screen.findByText("Preparation beats repetition")).toBeInTheDocument();
     expect(screen.getByLabelText("Pillar 1 title")).toHaveValue("Meaningful routes");
     expect(screen.getByLabelText("Pillar 2 title")).toHaveValue("Preparation beats repetition");
@@ -323,7 +447,46 @@ describe("New Project Creator", () => {
     expect(screen.queryByText("Accept pillar")).not.toBeInTheDocument();
     expect(screen.getByLabelText("Pillar 2 title")).toHaveValue("Preparation beats repetition");
     await user.click(screen.getByRole("button", { name: "Continue" }));
-    expect(screen.getByText(/Hard limits the design should work within/)).toBeInTheDocument();
+    expect(screen.getByText(/12-month scope, limited art budget/)).toBeInTheDocument();
+  });
+
+  it("keeps only the ten most recent Creator AI runs in session history", async () => {
+    const user = userEvent.setup();
+    renderCreator();
+    await completeRequiredFoundation(user);
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    await confirmAiRequest(user, "Suggest Core Loops");
+    await waitFor(() => expect(screen.getByRole("button", { name: "Regenerate" })).toBeEnabled());
+    for (let index = 0; index < 10; index += 1) {
+      await confirmAiRequest(user, "Regenerate");
+      await waitFor(() => expect(screen.getByRole("button", { name: "Regenerate" })).toBeEnabled());
+    }
+    await user.click(screen.getByRole("button", { name: "AI History" }));
+    const history = screen.getByRole("dialog", { name: "Creator AI History" });
+    expect(history.querySelectorAll(".creator-ai-history-entry")).toHaveLength(10);
+    expect(suggestNewProjectCoreLoops).toHaveBeenCalledTimes(11);
+  });
+
+  it("adds persistent World guidance and keeps concise constraints in compact controls", async () => {
+    const user = userEvent.setup();
+    renderCreator();
+    await completeRequiredFoundation(user);
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    expect(screen.getByText(/abandoned orbital station/)).toBeInTheDocument();
+    expect(screen.getByText(/Games, films, books, art/)).toBeInTheDocument();
+    await user.type(screen.getByLabelText(/Setting \/ world/), "Flooded industrial city");
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+
+    expect(screen.getByLabelText(/Engine/).tagName).toBe("INPUT");
+    expect(screen.getByLabelText(/Team size/).tagName).toBe("INPUT");
+    expect(screen.getByLabelText(/Expected scope/).tagName).toBe("INPUT");
+    expect(screen.getByLabelText(/Major constraints/).tagName).toBe("TEXTAREA");
+    await user.type(screen.getByLabelText(/Engine/), "Unity");
+    await user.click(screen.getByRole("button", { name: "Back" }));
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    expect(screen.getByLabelText(/Engine/)).toHaveValue("Unity");
   });
 
   it("keeps unaccepted AI output transient and carries accepted provenance to Review and initialization", async () => {
@@ -331,7 +494,7 @@ describe("New Project Creator", () => {
     const { onChooseDirectory } = renderCreator();
     await completeRequiredFoundation(user);
     await user.click(screen.getByRole("button", { name: "Continue" }));
-    await user.click(screen.getByRole("button", { name: "Suggest Core Loops" }));
+    await confirmAiRequest(user, "Suggest Core Loops");
     await user.click((await screen.findAllByRole("button", { name: "Use this" }))[0]);
     await user.click(screen.getByRole("button", { name: "Continue" }));
     await user.click(screen.getByRole("button", { name: "Continue" }));

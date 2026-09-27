@@ -12,6 +12,8 @@ export const TASK_CATEGORIES = [
   "technical_analysis",
   "alignment",
   "feature_contract",
+  "new_project_core_loop",
+  "new_project_design_pillars",
 ] as const;
 
 export type TaskCategory = (typeof TASK_CATEGORIES)[number];

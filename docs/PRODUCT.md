@@ -2,7 +2,7 @@
 
 ## Status
 
-This document defines the product direction. **CURRENT:** 0K Feature Contracts, UI-1, UI-2, and NPC-1 are complete. NPC-2 AI Assistance is implemented and headless-validated with manual live-AI validation pending. The local workspace includes Project Interview, Compendium knowledge, Decisions, one bounded specialist profile, Game Wiki aggregation, Repository Reality, completed Unity GroundTruth and Alignment workflows, the reviewed Feature Contract workbench, and the manual-first New Project Creator with explicit Core Loop and Design Pillar AI proposals. Recommended Next Steps remains unimplemented. Everything described as future direction below is **NOT IMPLEMENTED** unless explicitly identified otherwise.
+This document defines the product direction. **CURRENT:** 0K Feature Contracts, UI-1, UI-2, and NPC-1 are complete. NPC-2 AI Assistance and NPC-2.1 Creator AI polish are implemented and headless-validated; first live Creator evidence exists, while the updated manual visual/interaction verification remains pending. The local workspace includes Project Interview, Compendium knowledge, Decisions, one bounded specialist profile, Game Wiki aggregation, Repository Reality, completed Unity GroundTruth and Alignment workflows, the reviewed Feature Contract workbench, and the manual-first New Project Creator with explicit confirmed Core Loop and Design Pillar AI proposals. Recommended Next Steps remains unimplemented. Everything described as future direction below is **NOT IMPLEMENTED** unless explicitly identified otherwise.
 
 ## Problem
 

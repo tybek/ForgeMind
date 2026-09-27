@@ -214,6 +214,12 @@ Model recommendations should eventually use local task-specific evaluation data,
 - Keep destructive actions explicit, local, and visually distinct; do not place them beside a primary action without separation.
 - Use motion only for quick functional feedback. Never make the user wait for decorative animation.
 
+### Implemented Creator layout guidance
+
+NPC-2.1 keeps the New Project Creator prose headings at a readable line length while allowing fields and AI proposal regions to grow across more of the desktop stage. At the default `1180x760` window, proposal grids should favor two readable columns; a third Design Pillar column is reserved for genuinely wide viewports, and narrow layouts stack to one. Vertical page scrolling is acceptable, horizontal scrolling is not, and the Tauri default dimensions remain unchanged.
+
+Manual Design Pillars use full-width row/cards: title and explanation share the row where space permits, Remove has a stable action position, and AI-assisted provenance remains a small secondary badge near the title rather than a dedicated grid column. The compact preflight is modal because it gates a provider request; session-only Creator AI History is a closed-by-default right drawer because it is secondary recovery state, not project truth or a permanent default-width column.
+
 ## Feature Contract follow-up from 0K dogfooding
 
 UI-1 supplies shared styling for the current Feature Contract workbench but does not redesign its information architecture. The following product questions remain for a later explicitly scoped phase:

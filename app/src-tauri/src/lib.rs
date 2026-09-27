@@ -28,7 +28,10 @@ use compendium::{
     ImportInterviewRequest, InterviewImportResult, KnowledgeEntryActionRequest,
     ProjectFoundationInput, PromoteSpecialistFindingRequest, UpdateKnowledgeEntryRequest,
 };
-use creator_ai::{CreatorAiError, CreatorAiRequest, CoreLoopProposalResult, PillarProposalResult};
+use creator_ai::{
+    CreatorAiError, CreatorAiPreflight, CreatorAiPreflightRequest, CreatorAiRequest,
+    CoreLoopProposalResult, PillarProposalResult,
+};
 use decisions::{
     CreateDecisionRequest, DecisionActionRequest, DecisionError, DecisionsDocument,
     UpdateDecisionRequest,
@@ -245,6 +248,13 @@ fn get_usage_summary(
         session_id(),
         project_id.as_deref(),
     ))
+}
+
+#[tauri::command]
+fn get_creator_ai_preflight(
+    request: CreatorAiPreflightRequest,
+) -> Result<CreatorAiPreflight, CreatorAiError> {
+    creator_ai::preflight(request)
 }
 
 #[tauri::command]
@@ -468,6 +478,7 @@ pub fn run() {
             run_ai_evaluation,
             suggest_new_project_core_loops,
             suggest_new_project_design_pillars,
+            get_creator_ai_preflight,
             list_models,
             list_specialist_profiles,
             run_specialist_analysis,
