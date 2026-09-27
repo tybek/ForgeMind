@@ -32,7 +32,8 @@ describe("Unity GroundTruth", () => {
   });
 
   it("shows detected project evidence, parsed version, manifest status, and verified snapshot counts", async () => {
-    render(<UnityGroundTruthPage workspace={workspace} />);
+    const onResult = vi.fn();
+    render(<UnityGroundTruthPage workspace={workspace} onResult={onResult} />);
     const projectSummary = await screen.findByLabelText("Unity project summary");
     expect(within(projectSummary).getByText("6000.3.23f1", { selector: "strong" })).toBeInTheDocument();
     expect(within(projectSummary).getByText("Available", { selector: "strong" })).toBeInTheDocument();
@@ -45,6 +46,7 @@ describe("Unity GroundTruth", () => {
     expect(screen.getByText("AI INFERENCE")).toBeInTheDocument();
     expect(screen.getByLabelText("GroundTruth observation counts")).toHaveTextContent("Scenes 2");
     expect(inspectUnityGroundTruth).toHaveBeenCalledWith(workspace.path);
+    expect(onResult).toHaveBeenCalledWith(detected);
   });
 
   it.each([

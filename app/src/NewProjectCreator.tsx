@@ -104,10 +104,15 @@ function AiMetadata({ metadata }: { metadata: CreatorAiMetadata }) {
 
 function AiErrorNotice({ error }: { error: CreatorAiError }) {
   const missingCredential = error.code === "MISSING_API_KEY";
+  const invalidOutput = error.code === "INVALID_CREATOR_AI_OUTPUT";
   return (
     <section className="creator-ai-error" role="alert">
       <strong>{missingCredential ? "AI setup required" : "AI suggestions unavailable"}</strong>
-      <p>{missingCredential ? "Nebius Token Factory API key was not detected." : error.message}</p>
+      <p>{missingCredential
+        ? "Nebius Token Factory API key was not detected."
+        : invalidOutput
+          ? "ForgeMind couldn't validate this AI response. Your draft was not changed. You can try again or continue manually."
+          : error.message}</p>
       {missingCredential ? <small>Set NEBIUS_API_KEY before launching ForgeMind, then try again. Your Creator draft is unchanged.</small> : <small>{error.code} · Continue manually or try again explicitly.</small>}
     </section>
   );

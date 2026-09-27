@@ -110,7 +110,13 @@ function ManifestSummary({ summary }: { summary: GroundTruthManifestSummary }) {
   );
 }
 
-export function UnityGroundTruthPage({ workspace }: { workspace: UnityWorkspace }) {
+export function UnityGroundTruthPage({
+  workspace,
+  onResult,
+}: {
+  workspace: UnityWorkspace;
+  onResult?: (result: UnityGroundTruthResult) => void;
+}) {
   const [result, setResult] = useState<UnityGroundTruthResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -119,7 +125,9 @@ export function UnityGroundTruthPage({ workspace }: { workspace: UnityWorkspace 
     setLoading(true);
     setError(null);
     try {
-      setResult(await inspectUnityGroundTruth(workspace.path));
+      const nextResult = await inspectUnityGroundTruth(workspace.path);
+      setResult(nextResult);
+      onResult?.(nextResult);
     } catch (inspectionError) {
       setResult(null);
       setError(messageFromError(inspectionError));

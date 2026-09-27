@@ -2,7 +2,7 @@
 
 ## Scope
 
-This model establishes shared language and relationships. It is not a database schema or API contract. Milestone 0C serializes minimal Project identity in `.forgemind/project.json`; 0E adds approved onboarding evidence in `.forgemind/interview.json`; 0F adds separate versioned Compendium and Decision documents; 0G.3 adds non-authoritative specialist work history in `.forgemind/specialist-runs.json`; 0J.1 adds derived, reviewable Alignment history in `.forgemind/alignment.json`; 0K adds reviewed delivery artifacts in `.forgemind/feature-contracts.json`; NPC-1 maps a reviewed manual Project Foundation into the existing Project and Compendium documents; and NPC-2 adds transient typed proposals plus compact accepted-origin metadata without creating a new truth store.
+This model establishes shared language and relationships. It is not a database schema or API contract. Milestone 0C serializes minimal Project identity in `.forgemind/project.json`; 0E adds approved onboarding evidence in `.forgemind/interview.json`; 0F adds separate versioned Compendium and Decision documents; 0G.3 adds non-authoritative specialist work history in `.forgemind/specialist-runs.json`; 0J.1 adds derived, reviewable Alignment history in `.forgemind/alignment.json`; 0K adds reviewed delivery artifacts in `.forgemind/feature-contracts.json`; NPC-1 maps a reviewed manual Project Foundation into the existing Project and Compendium documents; NPC-2 adds transient typed proposals plus compact accepted-origin metadata without creating a new truth store; and NEXT-1 adds a transient derived recommendation model without persistence.
 
 ## Core entities
 
@@ -37,6 +37,10 @@ A bounded delivery objective with a status, scope, dependencies, and optional ta
 ### FeatureContract
 
 A durable, derived delivery artifact assembled manually from one approved Alignment Review, current Compendium entry, or approved Decision. The format-version `1` model records stable `id`, `createdAt` / `updatedAt`, immutable captured source trace, title, goal, current Reality summary, affected systems, required behavior, out of scope, risks, acceptance criteria, deterministic tests, implementation notes, evidence-backed likely affected references, lifecycle status, human review state, and optional review time. It is implementation scope, not a competing truth source or authorization to execute code changes.
+
+### RecommendedNextStep
+
+A transient derived view model that explains one useful existing workflow to inspect next. It contains a stable rule ID, title, plain-language reason, product area, existing navigation target and action label, small structured source signals, deterministic priority, and optional bounded effort. The engine returns no more than five; Home displays no more than three. Recommendations are not tasks, Project truth, approvals, or durable history and have no `.forgemind` file. Recomputing, viewing, or following one does not mutate its source domains.
 
 ### GroundTruthSnapshot
 

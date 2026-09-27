@@ -33,7 +33,8 @@ describe("Repository Reality", () => {
 
   it("renders branch, HEAD, working tree, diff statistics, changed files, and bounded history", async () => {
     const user = userEvent.setup();
-    render(<RepositoryPage workspace={workspace} />);
+    const onResult = vi.fn();
+    render(<RepositoryPage workspace={workspace} onResult={onResult} />);
     expect(await screen.findByText("main")).toBeInTheDocument();
     expect(screen.getAllByText("Add repository evidence")).toHaveLength(2);
     expect(screen.getByText("Tracked diff: 1 files changed, +3, -1")).toBeInTheDocument();
@@ -44,6 +45,7 @@ describe("Repository Reality", () => {
     expect(within(file).getByText("Repository-relative path")).toBeInTheDocument();
     expect(within(file).getByText("+3, -1")).toBeInTheDocument();
     expect(inspectRepositoryReality).toHaveBeenCalledWith(workspace.path);
+    expect(onResult).toHaveBeenCalledWith(detected);
   });
 
   it.each([

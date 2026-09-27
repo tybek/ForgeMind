@@ -144,6 +144,30 @@ describe("New Project Creator", () => {
     expect(screen.getByLabelText("Working title")).toHaveValue("Ashfall Courier");
   });
 
+  it("keeps every Identity value in a single-line control across navigation", async () => {
+    const user = userEvent.setup();
+    renderCreator();
+    const identity = {
+      "Working title": "Ashfall Courier",
+      "Genre / subgenre": "Tactical extraction",
+      Mode: "Single-player",
+      Perspective: "Isometric",
+      "Target platform": "PC",
+    };
+
+    for (const [label, value] of Object.entries(identity)) {
+      const control = screen.getByLabelText(label);
+      expect(control.tagName).toBe("INPUT");
+      await user.type(control, value);
+    }
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    await user.click(screen.getByRole("button", { name: "Back" }));
+
+    for (const [label, value] of Object.entries(identity)) {
+      expect(screen.getByLabelText(label)).toHaveValue(value);
+    }
+  });
+
   it("allows optional sections to remain empty and reviews only deterministic gaps", async () => {
     const user = userEvent.setup();
     const { onChooseDirectory, onInitialize } = renderCreator();
@@ -252,6 +276,7 @@ describe("New Project Creator", () => {
     expect(screen.getByLabelText("Creator AI usage")).toHaveTextContent("Nebius Token Factory");
     expect(screen.getByLabelText("Creator AI usage")).toHaveTextContent("150");
     expect(screen.getByText("Introduces route hazards as a proposed direction.")).toBeInTheDocument();
+    expect(screen.queryByText(/No assumptions/i)).not.toBeInTheDocument();
   });
 
   it("cancels preflight without a request and uses only a selected registered model", async () => {
@@ -414,6 +439,34 @@ describe("New Project Creator", () => {
     expect(alert).toHaveTextContent("AI setup required");
     expect(alert).toHaveTextContent("NEBIUS_API_KEY");
     expect(screen.getByLabelText(/Core loop/)).toHaveValue("Plan, travel, deliver.");
+  });
+
+  it("rejects invalid AI output without changing the draft and records only safe failure history", async () => {
+    vi.mocked(suggestNewProjectCoreLoops).mockRejectedValue({
+      code: "INVALID_CREATOR_AI_OUTPUT",
+      message: "The AI response did not match the required proposal structure.",
+    });
+    const user = userEvent.setup();
+    renderCreator();
+    await completeRequiredFoundation(user);
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    await user.type(screen.getByLabelText(/Core loop/), "Plan, travel, deliver.");
+    await confirmAiRequest(user, "Suggest Core Loops");
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("ForgeMind couldn't validate this AI response. Your draft was not changed.");
+    expect(alert).toHaveTextContent("INVALID_CREATOR_AI_OUTPUT");
+    expect(alert).not.toHaveTextContent("did not match the required proposal structure");
+    expect(screen.getByLabelText(/Core loop/)).toHaveValue("Plan, travel, deliver.");
+    expect(suggestNewProjectCoreLoops).toHaveBeenCalledTimes(1);
+    await user.type(screen.getByLabelText(/Core loop/), " Continue manually.");
+    expect(screen.getByLabelText(/Core loop/)).toHaveValue("Plan, travel, deliver. Continue manually.");
+
+    await user.click(screen.getByRole("button", { name: "AI History" }));
+    const history = screen.getByRole("dialog", { name: "Creator AI History" });
+    expect(history).toHaveTextContent("FAILED");
+    expect(history).toHaveTextContent("No proposal payload was stored");
+    expect(within(history).queryByRole("button", { name: "Restore as current proposal" })).not.toBeInTheDocument();
   });
 
   it("accepts individual and all proposed pillars without replacing manual pillars or adding an obvious duplicate", async () => {

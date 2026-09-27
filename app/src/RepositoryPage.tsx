@@ -98,7 +98,13 @@ function RepositorySnapshotView({ snapshot }: { snapshot: RepositorySnapshot }) 
   );
 }
 
-export function RepositoryPage({ workspace }: { workspace: RepositoryWorkspace }) {
+export function RepositoryPage({
+  workspace,
+  onResult,
+}: {
+  workspace: RepositoryWorkspace;
+  onResult?: (result: RepositoryRealityResult) => void;
+}) {
   const [result, setResult] = useState<RepositoryRealityResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -107,7 +113,9 @@ export function RepositoryPage({ workspace }: { workspace: RepositoryWorkspace }
     setLoading(true);
     setError(null);
     try {
-      setResult(await inspectRepositoryReality(workspace.path));
+      const nextResult = await inspectRepositoryReality(workspace.path);
+      setResult(nextResult);
+      onResult?.(nextResult);
     } catch (inspectionError) {
       setResult(null);
       setError(messageFromError(inspectionError));

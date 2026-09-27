@@ -4,7 +4,7 @@
 
 This document records the agreed product and interface direction for ForgeMind. It distinguishes implemented presentation foundations from future dashboard and consistency work.
 
-**UI-1 IS COMPLETE.** Its shared foundation and manual visual pass are complete, and the production SVG brand follow-up is implemented. 0K Feature Contracts is complete. UI-2 and later phases have not started. Do not rewrite working behavior solely to make it fit this direction or treat UI-1 as authorization for future information architecture.
+**UI-1 AND UI-2 ARE COMPLETE.** Their shared foundation, Workspace Home, and manual visual passes are complete. NEXT-1 now fills the reserved Home recommendation region with deterministic project-aware guidance and is headless-validated; its short manual card/navigation check remains pending. UI-3 and later phases have not started. Do not rewrite working behavior solely to make it fit this direction or treat the completed phases as authorization for future information architecture.
 
 Use this document with the [ForgeMind Brandbook](BRANDBOOK.md), [Product Direction](PRODUCT.md), and [Roadmap](ROADMAP.md). The Brandbook owns visual identity and voice; this document owns information architecture, dashboard behavior, layout, workflow, artwork policy inside the product, and phased UI implementation.
 
@@ -95,7 +95,7 @@ Primary actions are **Open project**, **View all**, and **Open another project**
 
 ### Recommended Next Steps
 
-Show approximately three to five contextual actions derived from current project state. Initial logic should be deterministic; AI is not required for the first implementation. The rule layers, recommendation fields, beginner onboarding relationship, and authority boundaries are specified in [New Project Creator and Recommended Next Steps](NEW_PROJECT_CREATOR.md).
+NEXT-1 shows up to three compact Home actions from a deterministic list bounded to five. Each card names the area and priority, explains the current source-backed reason in plain language, and routes to an existing owning workflow. Source-signal internals stay out of the normal card. The rule layers, recommendation fields, beginner onboarding relationship, and authority boundaries are specified in [New Project Creator and Recommended Next Steps](NEW_PROJECT_CREATOR.md). AI is not used.
 
 Examples include:
 
@@ -264,7 +264,7 @@ When no project image exists, use an abstract dark branded fallback. Home may us
 
 ## Phased implementation status
 
-These phases are recorded in the [Roadmap](ROADMAP.md). Only UI-1 is implemented; UI-2 through UI-5 remain planned and not started.
+These phases are recorded in the [Roadmap](ROADMAP.md). UI-1 and UI-2 are complete; UI-3 through UI-5 remain planned and not started.
 
 ### UI-1 — Brand / Design System Foundation — COMPLETE
 
@@ -279,14 +279,14 @@ Implementation includes semantic CSS tokens; shared typography, surface, button,
 
 Exit direction: shared primitives and tokens can be applied without feature-specific color or control drift.
 
-### UI-2 — Workspace Home
+### UI-2 — Workspace Home — COMPLETE
 
 - greeting and welcome hero;
 - recent project cards with approved image sources and branded fallbacks;
-- deterministic recommended next steps;
+- a reserved recommendation region, now populated by the separately authorized NEXT-1 deterministic layer;
 - improved project selection and open-another-project flow.
 
-Coordinate the recommendation region with NEXT-1/NEXT-2 in [New Project Creator and Recommended Next Steps](NEW_PROJECT_CREATOR.md). UI-2 does not by itself authorize Creator persistence, an AI recommendation call, or a new task store.
+NEXT-1 coordinates the recommendation region with the existing Home without changing UI-2's launcher or Recent Projects authority. UI-2 and NEXT-1 do not authorize Creator persistence, an AI recommendation call, or a new task store.
 
 Exit direction: Home answers current project, project state, and next action without emphasizing filesystem paths.
 

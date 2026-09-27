@@ -708,11 +708,13 @@ button:focus-visible {
 
 .home-next-steps {
   min-height: 6.5rem;
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  padding: var(--space-4) var(--space-5);
+}
+
+.home-next-steps-heading {
+  display: flex;
   align-items: center;
   gap: var(--space-4);
-  padding: var(--space-4) var(--space-5);
 }
 
 .home-next-steps-icon {
@@ -726,10 +728,39 @@ button:focus-visible {
   background: #15191d;
 }
 
-.home-preview-label {
-  padding: 0.3rem 0.5rem;
+.home-recommendation-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+.home-recommendation-card {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-4);
+  padding: var(--space-4);
   border: 1px solid var(--color-border);
-  border-radius: 999px;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-elevated);
+}
+
+.home-recommendation-copy {
+  min-width: 0;
+  flex: 1;
+}
+
+.home-recommendation-copy h3 {
+  margin: var(--space-2) 0 0;
+  font-size: var(--type-body-size);
+}
+
+.home-recommendation-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
   color: var(--color-text-muted);
   font-size: var(--type-label-size);
   font-weight: 700;
@@ -737,14 +768,27 @@ button:focus-visible {
   text-transform: uppercase;
 }
 
+.home-recommendation-card .outline-button {
+  width: 100%;
+  justify-content: space-between;
+}
+
+.home-next-steps .home-recommendation-note {
+  margin-top: var(--space-3);
+  color: var(--color-text-muted);
+  font-size: var(--type-meta-size);
+}
+
 @media (max-width: 64rem) {
   .recent-project-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .home-recommendation-list { grid-template-columns: minmax(0, 1fr); }
 }
 
 @media (max-width: 48rem) {
   .home-hero { align-items: stretch; flex-direction: column; }
   .home-primary-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .recent-project-grid { grid-template-columns: minmax(0, 1fr); }
+  .home-next-steps { padding: var(--space-4); }
 }
 
 .welcome-card {
@@ -4682,6 +4726,7 @@ body {
 .creator-field {
   min-width: 0;
   display: grid;
+  align-content: start;
   gap: var(--space-2);
   color: var(--color-text-primary);
   font-weight: 680;
@@ -4712,6 +4757,7 @@ body {
 }
 
 .creator-field input {
+  height: 3rem;
   min-height: 3rem;
   padding: 0.7rem 0.85rem;
 }
@@ -4767,7 +4813,7 @@ body {
   display: grid;
   grid-template-columns: minmax(13rem, 0.8fr) minmax(18rem, 1.4fr) auto;
   gap: var(--space-4);
-  align-items: end;
+  align-items: start;
   padding: var(--space-4);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
@@ -4789,7 +4835,8 @@ body {
 }
 
 .creator-remove-pillar {
-  align-self: center;
+  align-self: start;
+  margin-top: calc(1.45em + var(--space-2));
   color: var(--color-danger);
   white-space: nowrap;
 }
@@ -5492,6 +5539,7 @@ body {
 
   .creator-remove-pillar {
     justify-self: start;
+    margin-top: 0;
   }
 
   .creator-directory,

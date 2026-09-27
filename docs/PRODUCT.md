@@ -2,7 +2,7 @@
 
 ## Status
 
-This document defines the product direction. **CURRENT:** 0K Feature Contracts, UI-1, UI-2, and NPC-1 are complete. NPC-2 AI Assistance and NPC-2.1 Creator AI polish are implemented and headless-validated; first live Creator evidence exists, while the updated manual visual/interaction verification remains pending. The local workspace includes Project Interview, Compendium knowledge, Decisions, one bounded specialist profile, Game Wiki aggregation, Repository Reality, completed Unity GroundTruth and Alignment workflows, the reviewed Feature Contract workbench, and the manual-first New Project Creator with explicit confirmed Core Loop and Design Pillar AI proposals. Recommended Next Steps remains unimplemented. Everything described as future direction below is **NOT IMPLEMENTED** unless explicitly identified otherwise.
+This document defines the product direction. **CURRENT:** 0K Feature Contracts, UI-1, UI-2, NPC-1, and NPC-2 are complete. NEXT-1 deterministic Recommended Next Steps is implemented and headless-validated with a short manual Home check pending. The local workspace includes Project Interview, Compendium knowledge, Decisions, one bounded specialist profile, Game Wiki aggregation, Repository Reality, completed Unity GroundTruth and Alignment workflows, the reviewed Feature Contract workbench, the manual-first New Project Creator with explicit confirmed Core Loop and Design Pillar AI proposals, and local explainable Home guidance. Optional NEXT-2 AI refinement remains unimplemented. Everything described as future direction below is **NOT IMPLEMENTED** unless explicitly identified otherwise.
 
 ## Problem
 
@@ -82,7 +82,7 @@ Accounts, permissions, role-based access control, cloud synchronization, and rea
 
 ## New and existing project onboarding
 
-ForgeMind supports the new-project path through the NPC-1 manual-first Creator and the existing-project path through the unchanged open/inspection flow. The detailed onboarding and future recommendation contract is in [New Project Creator and Recommended Next Steps](NEW_PROJECT_CREATOR.md).
+ForgeMind supports the new-project path through the NPC-1 manual-first Creator and the existing-project path through the unchanged open/inspection flow. Both may use the implemented NEXT-1 deterministic recommendations once a project is current. The detailed onboarding and recommendation contract is in [New Project Creator and Recommended Next Steps](NEW_PROJECT_CREATOR.md).
 
 **New project:** Idea -> guided Creator -> structured Project Foundation -> human review -> explicit local initialization -> Project Brain. NPC-1 supplies the complete deterministic manual path. NPC-2 optionally proposes bounded Core Loops and Design Pillars only after an explicit user action. Proposals remain transient until accepted, accepted content stays editable through Review, and people still approve durable truth. AI suggestions do not create approved Decisions.
 

@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import App, { WorkspaceShell, type Workspace } from "./App";
 import { loadCompendium } from "./platform/projectKnowledge";
+import { loadDecisions } from "./platform/decisions";
 import { runInterviewTurn } from "./platform/projectInterview";
 import { runSpecialistAnalysis } from "./platform/specialists";
 import { suggestNewProjectCoreLoops, suggestNewProjectDesignPillars } from "./platform/creatorAi";
@@ -13,6 +14,7 @@ import {
   selectWorkspaceDirectory,
 } from "./platform/workspaceDirectory";
 import { inspectUnityGroundTruth } from "./platform/unityGroundTruth";
+import { inspectRepositoryReality } from "./platform/repositoryReality";
 import { loadAlignmentResults } from "./platform/alignment";
 import { loadFeatureContracts } from "./platform/featureContracts";
 import { loadRecentProjects, recordRecentProject } from "./platform/recentProjects";
@@ -195,6 +197,7 @@ describe("ForgeMind local workspace", () => {
     localStorage.clear();
     vi.mocked(getDevelopmentWorkspacePath).mockResolvedValue(null);
     vi.mocked(loadCompendium).mockResolvedValue(null);
+    vi.mocked(loadDecisions).mockResolvedValue(null);
     vi.mocked(loadAlignmentResults).mockResolvedValue(null);
     vi.mocked(loadFeatureContracts).mockResolvedValue(null);
   });
@@ -211,6 +214,74 @@ describe("ForgeMind local workspace", () => {
     expect(screen.getByRole("heading", { name: "Recommended Next Steps" })).toBeInTheDocument();
     expect(screen.getByText("Open a project to get project-aware next steps.")).toBeInTheDocument();
     expect(screen.queryByText("Fix combat system")).not.toBeInTheDocument();
+  });
+
+  it("shows project-aware recommendations with reasons and routes actions to existing areas", async () => {
+    vi.mocked(selectWorkspaceDirectory).mockResolvedValue(selectedPath);
+    vi.mocked(inspectWorkspace).mockResolvedValue(validInspection);
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole("button", { name: "Open Existing Project" }));
+    await user.click(await screen.findByRole("button", { name: "Home" }));
+
+    expect(await screen.findByRole("heading", { name: "Define Game Vision" })).toBeInTheDocument();
+    expect(screen.getByText("Your Game Foundation does not yet contain a current Game Vision.")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Define Core Loop" })).toBeInTheDocument();
+    expect(suggestNewProjectCoreLoops).not.toHaveBeenCalled();
+    expect(suggestNewProjectDesignPillars).not.toHaveBeenCalled();
+    expect(inspectRepositoryReality).not.toHaveBeenCalled();
+    expect(inspectUnityGroundTruth).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "Define Core Loop in Game Design" }));
+
+    expect(screen.getByRole("heading", { name: "Game Design", level: 1 })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Game Design" })).toHaveAttribute("aria-current", "page");
+  });
+
+  it("recomputes Home recommendations after opening a different recent project", async () => {
+    const secondPath = "D:\\Games\\SecondGame";
+    const secondProject = { ...validInspection.project, projectId: "660e8400-e29b-41d4-a716-446655440000", name: "Second Game" };
+    recordRecentProject(selectedPath, validInspection.project, "2026-09-27T10:00:00.000Z");
+    recordRecentProject(secondPath, secondProject, "2026-09-27T09:00:00.000Z");
+    vi.mocked(inspectWorkspace).mockImplementation(async (path) => path === selectedPath
+      ? validInspection
+      : { status: "VALID", rootPath: secondPath, project: secondProject });
+    vi.mocked(loadCompendium).mockImplementation(async (path) => ({
+      formatVersion: 1,
+      projectId: path === selectedPath ? validInspection.project.projectId : secondProject.projectId,
+      updatedAt: "2026-09-27T10:00:00.000Z",
+      entries: path === selectedPath ? [
+        { id: "vision", area: "game_vision", title: "Game vision", statement: "A clear vision.", status: "DIRECTION", provenance: "USER_STATED", source: "new_project_creator", createdAt: "2026-09-27T10:00:00.000Z", updatedAt: "2026-09-27T10:00:00.000Z" },
+        { id: "experience", area: "player_experience", title: "Player experience", statement: "A clear experience.", status: "DIRECTION", provenance: "USER_STATED", source: "new_project_creator", createdAt: "2026-09-27T10:00:00.000Z", updatedAt: "2026-09-27T10:00:00.000Z" },
+        { id: "pillar", area: "game_vision", title: "Design pillar: Clarity", statement: "Stay readable.", status: "DIRECTION", provenance: "USER_STATED", source: "new_project_creator", createdAt: "2026-09-27T10:00:00.000Z", updatedAt: "2026-09-27T10:00:00.000Z" },
+      ] : [
+        { id: "vision", area: "game_vision", title: "Game vision", statement: "A clear vision.", status: "DIRECTION", provenance: "USER_STATED", source: "new_project_creator", createdAt: "2026-09-27T10:00:00.000Z", updatedAt: "2026-09-27T10:00:00.000Z" },
+        { id: "experience", area: "player_experience", title: "Player experience", statement: "A clear experience.", status: "DIRECTION", provenance: "USER_STATED", source: "new_project_creator", createdAt: "2026-09-27T10:00:00.000Z", updatedAt: "2026-09-27T10:00:00.000Z" },
+        { id: "loop", area: "core_loop", title: "Core loop", statement: "Explore and return.", status: "DIRECTION", provenance: "USER_STATED", source: "new_project_creator", createdAt: "2026-09-27T10:00:00.000Z", updatedAt: "2026-09-27T10:00:00.000Z" },
+        { id: "pillar", area: "game_vision", title: "Design pillar: Clarity", statement: "Stay readable.", status: "DIRECTION", provenance: "USER_STATED", source: "new_project_creator", createdAt: "2026-09-27T10:00:00.000Z", updatedAt: "2026-09-27T10:00:00.000Z" },
+      ],
+    }));
+    vi.mocked(loadDecisions).mockImplementation(async (path) => path === secondPath ? {
+      formatVersion: 1,
+      projectId: secondProject.projectId,
+      updatedAt: "2026-09-27T10:00:00.000Z",
+      decisions: [{
+        id: "decision-1", title: "Camera", statement: "Use a close camera.", rationale: "Intensity.", status: "PROPOSED", area: "game_vision", author: "Designer", createdAt: "2026-09-27T10:00:00.000Z", relatedKnowledgeEntryIds: [],
+      }],
+    } : null);
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole("button", { name: `Open ${workspace.name}` }));
+    await user.click(await screen.findByRole("button", { name: "Home" }));
+    expect(await screen.findByRole("heading", { name: "Define Core Loop" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Open Second Game" }));
+    await user.click(await screen.findByRole("button", { name: "Home" }));
+
+    expect(await screen.findByRole("heading", { name: "Review Pending Decisions" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Define Core Loop" })).not.toBeInTheDocument();
   });
 
   it("opens the guided Creator before any directory selection", async () => {

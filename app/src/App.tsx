@@ -20,14 +20,23 @@ import {
   PageHeader,
   type IconName,
 } from "./designSystem";
-import type { FeatureContractSourceType } from "./platform/featureContracts";
-import type { KnowledgeArea, KnowledgeEntry } from "./platform/projectKnowledge";
+import { loadAlignmentResults } from "./platform/alignment";
+import { loadDecisions } from "./platform/decisions";
+import { loadFeatureContracts, type FeatureContractSourceType } from "./platform/featureContracts";
+import { loadCompendium, type KnowledgeArea, type KnowledgeEntry } from "./platform/projectKnowledge";
+import {
+  recommendNextSteps,
+  type RecommendationProjectState,
+  type RecommendationTarget,
+} from "./platform/recommendedNextSteps";
 import {
   loadRecentProjects,
   recordRecentProject,
   removeRecentProject,
   type RecentProject,
 } from "./platform/recentProjects";
+import type { RepositoryRealityResult } from "./platform/repositoryReality";
+import type { UnityGroundTruthResult } from "./platform/unityGroundTruth";
 import {
   getDevelopmentWorkspacePath,
   initializeWorkspace,
@@ -143,7 +152,7 @@ type AppView =
   | { kind: "creator" }
   | { kind: "loading"; path: string }
   | { kind: "uninitialized"; path: string }
-  | { kind: "valid"; workspace: Workspace }
+  | { kind: "valid"; workspace: Workspace; initialArea?: WorkspaceView }
   | { kind: "invalid"; path: string; message: string }
   | { kind: "unsupported"; path: string; version: string; message: string }
   | { kind: "access-error"; path: string; message: string };
@@ -176,15 +185,67 @@ function formatLastOpened(value: string): string {
 
 export function WelcomeScreen({
   recentProjects,
+  currentProject,
+  repositoryReality,
+  unityGroundTruth,
   onStart,
   onOpen,
   onOpenRecent,
+  onOpenRecommendation,
 }: {
   recentProjects: RecentProject[];
+  currentProject: Workspace | null;
+  repositoryReality: RepositoryRealityResult | null;
+  unityGroundTruth: UnityGroundTruthResult | null;
   onStart: () => Promise<void>;
   onOpen: () => Promise<void>;
   onOpenRecent: (project: RecentProject) => Promise<void>;
+  onOpenRecommendation: (target: RecommendationTarget) => void;
 }) {
+  const [recommendationState, setRecommendationState] = useState<RecommendationProjectState | null>(null);
+  const [recommendationsLoading, setRecommendationsLoading] = useState(false);
+  const [recommendationsPartial, setRecommendationsPartial] = useState(false);
+
+  useEffect(() => {
+    if (currentProject === null) {
+      setRecommendationState(null);
+      setRecommendationsLoading(false);
+      setRecommendationsPartial(false);
+      return;
+    }
+
+    let active = true;
+    setRecommendationState(null);
+    setRecommendationsLoading(true);
+    setRecommendationsPartial(false);
+
+    void Promise.allSettled([
+      loadCompendium(currentProject.path),
+      loadDecisions(currentProject.path),
+      loadAlignmentResults(currentProject.path),
+      loadFeatureContracts(currentProject.path),
+    ]).then(([compendium, decisions, alignment, featureContracts]) => {
+      if (!active) return;
+      const results = [compendium, decisions, alignment, featureContracts];
+      setRecommendationState({
+        compendium: compendium.status === "fulfilled" ? compendium.value : undefined,
+        decisions: decisions.status === "fulfilled" ? decisions.value : undefined,
+        repositoryReality,
+        unityGroundTruth,
+        alignment: alignment.status === "fulfilled" ? alignment.value : undefined,
+        featureContracts: featureContracts.status === "fulfilled" ? featureContracts.value : undefined,
+      });
+      setRecommendationsPartial(results.some((result) => result.status === "rejected"));
+      setRecommendationsLoading(false);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [currentProject, repositoryReality, unityGroundTruth]);
+
+  const recommendations = recommendNextSteps(recommendationState, 3);
+
   return (
     <main className="workspace-home">
       <header className="home-topbar">
@@ -264,13 +325,49 @@ export function WelcomeScreen({
         </section>
 
         <section className="home-next-steps" aria-labelledby="next-steps-title">
-          <div className="home-next-steps-icon" aria-hidden="true"><LineIcon name="route" /></div>
-          <div>
-            <p className="eyebrow">Project-aware guidance</p>
-            <h2 id="next-steps-title">Recommended Next Steps</h2>
-            <p>Open a project to get project-aware next steps.</p>
+          <div className="home-next-steps-heading">
+            <div className="home-next-steps-icon" aria-hidden="true"><LineIcon name="route" /></div>
+            <div>
+              <p className="eyebrow">Project-aware guidance</p>
+              <h2 id="next-steps-title">Recommended Next Steps</h2>
+              {currentProject ? <p>Derived from {currentProject.name}&apos;s current project signals.</p> : null}
+            </div>
           </div>
-          <span className="home-preview-label">Preview</span>
+          {currentProject === null ? (
+            <p>Open a project to get project-aware next steps.</p>
+          ) : recommendationsLoading ? (
+            <p role="status"><span className="inline-spinner" aria-hidden="true" /> Reading current project signals...</p>
+          ) : recommendations.length > 0 ? (
+            <div className="home-recommendation-list">
+              {recommendations.map((recommendation) => (
+                <article className="home-recommendation-card" key={recommendation.id}>
+                  <div className="home-recommendation-copy">
+                    <div className="home-recommendation-meta">
+                      <span>{recommendation.area}</span>
+                      <span>{recommendation.priority}</span>
+                    </div>
+                    <h3>{recommendation.title}</h3>
+                    <p>{recommendation.reason}</p>
+                  </div>
+                  <button
+                    className="outline-button"
+                    type="button"
+                    onClick={() => onOpenRecommendation(recommendation.target)}
+                  >
+                    {recommendation.actionLabel}
+                    <LineIcon name="arrow-right" />
+                  </button>
+                </article>
+              ))}
+            </div>
+          ) : recommendationsPartial ? (
+            <p>Some project signals could not be read. Open the project to inspect its current state.</p>
+          ) : (
+            <p>No urgent next steps detected.</p>
+          )}
+          {recommendationsPartial && recommendations.length > 0 ? (
+            <p className="home-recommendation-note">Some project signals were unavailable, so only verified recommendations are shown.</p>
+          ) : null}
         </section>
       </div>
     </main>
@@ -421,14 +518,20 @@ function Placeholder({ area }: { area: Exclude<WorkspaceArea, "Overview" | "Repo
 
 export function WorkspaceShell({
   workspace,
+  initialArea = "Overview",
   onHome,
   onOpen,
+  onRepositoryRealityChange,
+  onUnityGroundTruthChange,
 }: {
   workspace: Workspace;
+  initialArea?: WorkspaceView;
   onHome: () => void;
   onOpen: () => Promise<void>;
+  onRepositoryRealityChange?: (result: RepositoryRealityResult) => void;
+  onUnityGroundTruthChange?: (result: UnityGroundTruthResult) => void;
 }) {
-  const [activeArea, setActiveArea] = useState<WorkspaceView>("Overview");
+  const [activeArea, setActiveArea] = useState<WorkspaceView>(initialArea);
   const [promotedKnowledge, setPromotedKnowledge] = useState<KnowledgeEntry | null>(null);
   const [knowledgeEditTarget, setKnowledgeEditTarget] = useState<string | null>(null);
   const [alignmentInitialSubview, setAlignmentInitialSubview] = useState<"CREATE" | "HISTORY">("CREATE");
@@ -549,9 +652,9 @@ export function WorkspaceShell({
           ) : activeArea === "Overview" ? (
             <Overview workspace={workspace} />
           ) : activeArea === "Repository / Git Reality" ? (
-            <RepositoryPage workspace={workspace} />
+            <RepositoryPage workspace={workspace} onResult={onRepositoryRealityChange} />
           ) : activeArea === "Unity" ? (
-            <UnityGroundTruthPage workspace={workspace} />
+            <UnityGroundTruthPage workspace={workspace} onResult={onUnityGroundTruthChange} />
           ) : activeArea === "Game Wiki" ? (
             <WikiPage workspace={workspace} initialArea={wikiReturnArea} onEditKnowledge={editKnowledgeAtSource} onViewAlignmentHistory={viewAlignmentHistory} onViewFeatureContracts={viewFeatureContracts} />
           ) : activeArea === "Game Design" ? (
@@ -578,6 +681,9 @@ export function WorkspaceShell({
 
 export default function App() {
   const [view, setView] = useState<AppView>({ kind: "welcome" });
+  const [currentWorkspace, setCurrentWorkspace] = useState<Workspace | null>(null);
+  const [repositoryReality, setRepositoryReality] = useState<{ path: string; result: RepositoryRealityResult } | null>(null);
+  const [unityGroundTruth, setUnityGroundTruth] = useState<{ path: string; result: UnityGroundTruthResult } | null>(null);
   const [recentProjects, setRecentProjects] = useState<RecentProject[]>(loadRecentProjects);
   const [creatorDraft, setCreatorDraft] = useState<ProjectFoundationInput>(emptyProjectFoundation);
   const [creatorDirectory, setCreatorDirectory] = useState<string | null>(null);
@@ -590,10 +696,15 @@ export default function App() {
       case "UNINITIALIZED":
         setView({ kind: "uninitialized", path: inspection.rootPath });
         break;
-      case "VALID":
+      case "VALID": {
+        const workspace = workspaceFromInspection(inspection);
         setRecentProjects(recordRecentProject(inspection.rootPath, inspection.project));
-        setView({ kind: "valid", workspace: workspaceFromInspection(inspection) });
+        setCurrentWorkspace(workspace);
+        setRepositoryReality((current) => current?.path === workspace.path ? current : null);
+        setUnityGroundTruth((current) => current?.path === workspace.path ? current : null);
+        setView({ kind: "valid", workspace });
         break;
+      }
       case "INVALID":
         setView({ kind: "invalid", path: inspection.rootPath, message: inspection.message });
         break;
@@ -670,6 +781,11 @@ export default function App() {
   function returnHome() {
     setError(null);
     setView({ kind: "welcome" });
+  }
+
+  function openRecommendation(target: RecommendationTarget) {
+    if (currentWorkspace === null) return;
+    setView({ kind: "valid", workspace: currentWorkspace, initialArea: target });
   }
 
   function startNewProject() {
@@ -759,9 +875,13 @@ export default function App() {
       content = (
         <WelcomeScreen
           recentProjects={recentProjects}
+          currentProject={currentWorkspace}
+          repositoryReality={currentWorkspace !== null && repositoryReality?.path === currentWorkspace.path ? repositoryReality.result : null}
+          unityGroundTruth={currentWorkspace !== null && unityGroundTruth?.path === currentWorkspace.path ? unityGroundTruth.result : null}
           onStart={async () => startNewProject()}
           onOpen={() => chooseProject("open")}
           onOpenRecent={openRecentProject}
+          onOpenRecommendation={openRecommendation}
         />
       );
       break;
@@ -797,8 +917,11 @@ export default function App() {
       content = (
         <WorkspaceShell
           workspace={view.workspace}
+          initialArea={view.initialArea}
           onHome={returnHome}
           onOpen={() => chooseProject("open")}
+          onRepositoryRealityChange={(result) => setRepositoryReality({ path: view.workspace.path, result })}
+          onUnityGroundTruthChange={(result) => setUnityGroundTruth({ path: view.workspace.path, result })}
         />
       );
       break;

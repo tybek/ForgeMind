@@ -9,6 +9,7 @@ pub mod git_reality;
 pub mod model_registry;
 pub mod specialist_history;
 pub mod specialists;
+mod structured_output;
 pub mod usage;
 pub mod unity_groundtruth;
 mod workspace;
