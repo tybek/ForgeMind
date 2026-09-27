@@ -6,9 +6,17 @@ import {
   type RepositoryRealityResult,
   type RepositorySnapshot,
 } from "./platform/repositoryReality";
+import {
+  disconnectRealityConnection,
+  getRealityConnections,
+  selectRealityFolder,
+  setRealityConnection,
+  type RealityConnectionSummary,
+} from "./platform/realityConnections";
 
 interface RepositoryWorkspace {
   path: string;
+  projectId: string;
 }
 
 function messageFromError(error: unknown): string {
@@ -106,6 +114,7 @@ export function RepositoryPage({
   onResult?: (result: RepositoryRealityResult) => void;
 }) {
   const [result, setResult] = useState<RepositoryRealityResult | null>(null);
+  const [connection, setConnection] = useState<RealityConnectionSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -113,7 +122,11 @@ export function RepositoryPage({
     setLoading(true);
     setError(null);
     try {
-      const nextResult = await inspectRepositoryReality(workspace.path);
+      const [connections, nextResult] = await Promise.all([
+        getRealityConnections(workspace.path),
+        inspectRepositoryReality(workspace.path),
+      ]);
+      setConnection(connections.repository);
       setResult(nextResult);
       onResult?.(nextResult);
     } catch (inspectionError) {
@@ -128,6 +141,28 @@ export function RepositoryPage({
     void refresh();
   }, [workspace.path]);
 
+  async function chooseConnection() {
+    setError(null);
+    try {
+      const selected = await selectRealityFolder("REPOSITORY");
+      if (selected === null) return;
+      await setRealityConnection(workspace.path, workspace.projectId, "REPOSITORY", selected);
+      await refresh();
+    } catch (connectionError) {
+      setError(messageFromError(connectionError));
+    }
+  }
+
+  async function disconnect() {
+    setError(null);
+    try {
+      await disconnectRealityConnection(workspace.path, workspace.projectId, "REPOSITORY");
+      await refresh();
+    } catch (connectionError) {
+      setError(messageFromError(connectionError));
+    }
+  }
+
   return (
     <div className="repository-page">
       <section className="repository-intro">
@@ -136,19 +171,37 @@ export function RepositoryPage({
           <h2>Git / Repository</h2>
           <p>Read-only implementation evidence from the active workspace repository. File changes do not prove that a feature is implemented.</p>
         </div>
-        <Button icon="refresh" loading={loading} loadingLabel="Inspecting..." onClick={() => void refresh()}>
-          Refresh snapshot
-        </Button>
+        <div className="reality-actions">
+          <Button icon="folder" onClick={() => void chooseConnection()}>
+            {connection?.configured ? "Change Repository Folder" : "Select Repository Folder"}
+          </Button>
+          <Button icon="refresh" loading={loading} loadingLabel="Inspecting..." onClick={() => void refresh()}>
+            Refresh snapshot
+          </Button>
+          {connection?.configured ? <button className="text-button" type="button" onClick={() => void disconnect()}>Disconnect</button> : null}
+        </div>
       </section>
       {error ? <div className="repository-state repository-state-error" role="alert">{error}</div> : null}
       {!error && loading && result === null ? <p aria-live="polite">Inspecting Repository Reality...</p> : null}
       {!error && !loading && result && result.status !== "DETECTED" ? (
         <section className="repository-state" role="status">
-          <h3>{result.status === "NOT_REPOSITORY" ? "Repository not detected" : result.status === "GIT_UNAVAILABLE" ? "Git unavailable" : "Inspection failed"}</h3>
+          <span className={result.status === "INSPECTION_FAILED" || result.status === "GIT_UNAVAILABLE" ? "reality-status reality-status-error" : "reality-status reality-status-muted"}>
+            {result.status === "NOT_REPOSITORY" ? "NOT CONNECTED" : "ERROR"}
+          </span>
+          <h3>{result.status === "NOT_REPOSITORY" ? "Repository not connected" : result.status === "GIT_UNAVAILABLE" ? "Git unavailable" : "Inspection failed"}</h3>
           <p>{result.message}</p>
+          {result.status === "NOT_REPOSITORY" ? <button className="primary-button compact-action" type="button" onClick={() => void chooseConnection()}>Select Repository Folder</button> : null}
         </section>
       ) : null}
-      {!error && result?.status === "DETECTED" && result.repository ? <RepositorySnapshotView snapshot={result.repository} /> : null}
+      {!error && result?.status === "DETECTED" && result.repository ? (
+        <>
+          <section className="reality-connection-strip" aria-label="Repository connection status">
+            <span>Connection</span><strong className="reality-status-positive">Connected</strong>
+            <small>{connection?.configured ? `Selected folder: ${connection.folderName ?? "External repository"}` : "Using the ForgeMind workspace repository"}</small>
+          </section>
+          <RepositorySnapshotView snapshot={result.repository} />
+        </>
+      ) : null}
     </div>
   );
 }

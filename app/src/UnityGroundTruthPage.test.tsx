@@ -3,10 +3,17 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { UnityGroundTruthPage } from "./UnityGroundTruthPage";
 import { inspectUnityGroundTruth, type UnityGroundTruthResult } from "./platform/unityGroundTruth";
+import { disconnectRealityConnection, getRealityConnections, selectRealityFolder, setRealityConnection } from "./platform/realityConnections";
 
 vi.mock("./platform/unityGroundTruth", () => ({ inspectUnityGroundTruth: vi.fn() }));
+vi.mock("./platform/realityConnections", () => ({
+  disconnectRealityConnection: vi.fn(),
+  getRealityConnections: vi.fn(),
+  selectRealityFolder: vi.fn(),
+  setRealityConnection: vi.fn(),
+}));
 
-const workspace = { path: "D:\\Games\\Sample" };
+const workspace = { path: "D:\\Games\\Sample", projectId: "project-1" };
 const detected: UnityGroundTruthResult = {
   status: "DETECTED",
   evidence: { assets: true, packages: true, projectSettings: true },
@@ -29,6 +36,7 @@ describe("Unity GroundTruth", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(inspectUnityGroundTruth).mockResolvedValue(detected);
+    vi.mocked(getRealityConnections).mockResolvedValue({ repository: { configured: false }, unity: { configured: false } });
   });
 
   it("shows detected project evidence, parsed version, manifest status, and verified snapshot counts", async () => {
@@ -41,22 +49,23 @@ describe("Unity GroundTruth", () => {
     expect(within(evidence).getByText("Assets/").parentElement).toHaveTextContent("Present");
     expect(within(evidence).getByText("Packages/").parentElement).toHaveTextContent("Present");
     expect(within(evidence).getByText("ProjectSettings/").parentElement).toHaveTextContent("Present");
-    expect(screen.getAllByText("VERIFIED FROM UNITY").length).toBeGreaterThan(1);
+    expect(screen.getAllByText("VERIFIED FROM UNITY")).toHaveLength(2);
     expect(screen.getByText("DOCUMENTED")).toBeInTheDocument();
     expect(screen.getByText("AI INFERENCE")).toBeInTheDocument();
+    expect(screen.getByText("About evidence types")).toBeInTheDocument();
     expect(screen.getByLabelText("GroundTruth observation counts")).toHaveTextContent("Scenes 2");
     expect(inspectUnityGroundTruth).toHaveBeenCalledWith(workspace.path);
     expect(onResult).toHaveBeenCalledWith(detected);
   });
 
   it.each([
-    ["NOT_GENERATED", "Not generated"],
-    ["INVALID_OR_UNSUPPORTED", "Invalid / unsupported"],
-  ] as const)("renders the %s manifest state without fabricating evidence", async (status, label) => {
+    "NOT_GENERATED",
+    "INVALID_OR_UNSUPPORTED",
+  ] as const)("renders the %s manifest state without fabricating evidence", async (status) => {
     vi.mocked(inspectUnityGroundTruth).mockResolvedValue({ ...detected, manifest: { status, message: status === "INVALID_OR_UNSUPPORTED" ? "Safe invalid state." : undefined } });
     render(<UnityGroundTruthPage workspace={workspace} />);
     const projectSummary = await screen.findByLabelText("Unity project summary");
-    expect(within(projectSummary).getByText(label, { selector: "strong" })).toBeInTheDocument();
+    expect(within(projectSummary).getByText("Not available", { selector: "strong" })).toHaveClass(status === "INVALID_OR_UNSUPPORTED" ? "reality-status-error" : "reality-status-muted");
     expect(screen.queryByLabelText("GroundTruth observation counts")).not.toBeInTheDocument();
   });
 
@@ -70,10 +79,37 @@ describe("Unity GroundTruth", () => {
     });
     const user = userEvent.setup();
     render(<UnityGroundTruthPage workspace={workspace} />);
-    expect(await screen.findByText("Not detected")).toBeInTheDocument();
+    expect(await screen.findByText("Not connected")).toBeInTheDocument();
     expect(screen.getByText("ForgeMind remains usable.")).toBeInTheDocument();
+    expect(screen.getByText("Project-owned GroundTruth").parentElement).toHaveTextContent("Not available");
+    expect(screen.queryByRole("heading", { name: ".forgemind/unity-groundtruth.json" })).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Refresh evidence" }));
     expect(inspectUnityGroundTruth).toHaveBeenCalledTimes(2);
+  });
+
+  it("selects and persists an explicit Unity folder before re-inspection", async () => {
+    vi.mocked(inspectUnityGroundTruth).mockResolvedValue({
+      status: "NOT_DETECTED",
+      evidence: { assets: false, packages: false, projectSettings: false },
+      projectVersion: { status: "MISSING" },
+      manifest: { status: "NOT_GENERATED" },
+    });
+    vi.mocked(selectRealityFolder).mockResolvedValue("D:\\Unity\\Game");
+    const user = userEvent.setup();
+    render(<UnityGroundTruthPage workspace={workspace} />);
+    await screen.findByRole("heading", { name: "No Unity project connected" });
+    await user.click(screen.getAllByRole("button", { name: "Select Unity Project" })[0]);
+    expect(setRealityConnection).toHaveBeenCalledWith(workspace.path, workspace.projectId, "UNITY", "D:\\Unity\\Game");
+    expect(inspectUnityGroundTruth).toHaveBeenCalledTimes(2);
+  });
+
+  it("disconnects only the configured Unity connection", async () => {
+    vi.mocked(getRealityConnections).mockResolvedValue({ repository: { configured: false }, unity: { configured: true, folderName: "Game" } });
+    const user = userEvent.setup();
+    render(<UnityGroundTruthPage workspace={workspace} />);
+    await screen.findByLabelText("Unity project summary");
+    await user.click(screen.getByRole("button", { name: "Disconnect" }));
+    expect(disconnectRealityConnection).toHaveBeenCalledWith(workspace.path, workspace.projectId, "UNITY");
   });
 
   it("shows capped counts as partial and renders safe classified coverage issues", async () => {

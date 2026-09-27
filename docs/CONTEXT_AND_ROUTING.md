@@ -20,6 +20,8 @@ The future Context Builder and Task Router support that loop and other explicitl
 
 Related product and implementation boundaries are defined in [Product](PRODUCT.md), [Architecture](ARCHITECTURE.md), [Security and Privacy Architecture](SECURITY_AND_PRIVACY.md), [Conceptual Data Model](DATA_MODEL.md), [Workflows](WORKFLOWS.md), [Roadmap](ROADMAP.md), [ForgeMind Studios Roadmap](STUDIOS_ROADMAP.md), [Rebaseline Existing Project](PROJECT_REBASELINE.md), [ForgeMind UI Direction](UI_DIRECTION.md), and the [Coding Context Map](CODING_CONTEXT_MAP.md).
 
+The planned **AIW-0 Shared AI Workspace Foundation** should be the common initiating/context/proposal/review shell for **WR-1 Writers' Room MVP** and **CHR-1/CHR-2 Wiki Chronicler**, not two independent routing stacks. Writers' Room focuses on creative narrative development; Chronicler focuses on Project Brain navigation, retrieval, and edit proposals. Both retain source trace and the boundary **proposal -> human review -> project truth**. These are future phases only; this CR-0 specification and NEXT-1.1 implement none of them.
+
 ## Problem and desired flow
 
 ForgeMind should eventually accept a short user intent such as "Enemies know too much after hearing the player" and identify the appropriate work without sending every project record to one universal prompt.

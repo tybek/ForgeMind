@@ -2,7 +2,7 @@
 
 ## Scope
 
-This model establishes shared language and relationships. It is not a database schema or API contract. Milestone 0C serializes minimal Project identity in `.forgemind/project.json`; 0E adds approved onboarding evidence in `.forgemind/interview.json`; 0F adds separate versioned Compendium and Decision documents; 0G.3 adds non-authoritative specialist work history in `.forgemind/specialist-runs.json`; 0J.1 adds derived, reviewable Alignment history in `.forgemind/alignment.json`; 0K adds reviewed delivery artifacts in `.forgemind/feature-contracts.json`; NPC-1 maps a reviewed manual Project Foundation into the existing Project and Compendium documents; NPC-2 adds transient typed proposals plus compact accepted-origin metadata without creating a new truth store; and NEXT-1 adds a transient derived recommendation model without persistence.
+This model establishes shared language and relationships. It is not a database schema or API contract. Milestone 0C serializes minimal Project identity in `.forgemind/project.json`; 0E adds approved onboarding evidence in `.forgemind/interview.json`; 0F adds separate versioned Compendium and Decision documents; 0G.3 adds non-authoritative specialist work history in `.forgemind/specialist-runs.json`; 0J.1 adds derived, reviewable Alignment history in `.forgemind/alignment.json`; 0K adds reviewed delivery artifacts in `.forgemind/feature-contracts.json`; NPC-1 maps a reviewed manual Project Foundation into the existing Project and Compendium documents; NPC-2 adds transient typed proposals plus compact accepted-origin metadata without creating a new truth store; NEXT-1 adds a transient derived recommendation model without persistence; and NEXT-1.1 adds machine-local project-scoped Reality connection settings without changing portable Project or evidence schemas.
 
 ## Core entities
 
@@ -41,6 +41,10 @@ A durable, derived delivery artifact assembled manually from one approved Alignm
 ### RecommendedNextStep
 
 A transient derived view model that explains one useful existing workflow to inspect next. It contains a stable rule ID, title, plain-language reason, product area, existing navigation target and action label, small structured source signals, deterministic priority, and optional bounded effort. The engine returns no more than five; Home displays no more than three. Recommendations are not tasks, Project truth, approvals, or durable history and have no `.forgemind` file. Recomputing, viewing, or following one does not mutate its source domains.
+
+### RealityConnection
+
+A machine-local adapter setting keyed by portable Project ID and source kind (`REPOSITORY` or `UNITY`). It records an explicitly picker-selected folder only in application-local `reality-connections-v1.json`; normal UI receives only whether a connection is configured and a safe final folder name. It is not portable Project truth, Compendium/Wiki knowledge, Reality evidence, or a GroundTruth snapshot. No connection path is copied into `.forgemind` or durable evidence/history. Removing a connection falls back to inspecting the ForgeMind workspace root.
 
 ### GroundTruthSnapshot
 
@@ -148,6 +152,8 @@ Approval answers whether a person has accepted an artifact; it does not replace 
 - Compendium and Decisions remain distinct: knowledge does not become a Decision automatically, and promoting knowledge creates only a proposed Decision.
 - Interview evidence remains in `.forgemind/interview.json` after import.
 - Creator foundation entries remain in the same Compendium format version. User-authored fields are `DIRECTION` / `USER_STATED` / `new_project_creator`; explicitly accepted AI-assisted Core Loop and pillar fields are `DIRECTION` / `AI_INFERRED` / `new_project_creator`; deterministic missing-field questions are `TBD` / `UNRESOLVED` / `new_project_creator`. `AI_ACCEPTED` exists only as compact pre-initialization draft origin and is never a new authority level. Existing projects require no migration.
+- Design Pillars remain `game_vision` Compendium entries titled `Design pillar: <name>`. The Game Design pillar section is a projection over these records, so existing Creator pillars remain readable and manual add/edit/deprecate uses the unchanged Compendium schema.
+- Detached Repository/Unity paths are machine-local adapter configuration, not format-version `1` Project fields. Switching projects resolves settings by Project ID; set/change/disconnect never writes the selected source folder.
 
 ## 0G.3 specialist-history invariants
 

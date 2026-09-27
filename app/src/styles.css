@@ -1200,6 +1200,48 @@ button:focus-visible {
   gap: 8px;
 }
 
+.pillar-section {
+  display: grid;
+  gap: 12px;
+}
+
+.pillar-section-heading,
+.pillar-row {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.pillar-section-heading h3,
+.pillar-section-heading p,
+.pillar-row p {
+  margin: 0;
+}
+
+.pillar-section-heading h3 {
+  margin-top: 4px;
+}
+
+.pillar-list {
+  display: grid;
+  gap: 6px;
+}
+
+.pillar-row {
+  padding: 11px 12px;
+  border: 1px solid #29303a;
+  border-radius: 5px;
+  background: #11151a;
+}
+
+.pillar-row p {
+  margin-top: 4px;
+  color: #aeb5c1;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .knowledge-entry,
 .decision-entry {
   background: #14171c;
@@ -2571,6 +2613,42 @@ button:focus-visible {
   opacity: 0.65;
 }
 
+.reality-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.reality-connection-strip {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid #2c323b;
+  border-radius: 7px;
+  background: #15191f;
+}
+
+.reality-connection-strip span,
+.reality-connection-strip small {
+  color: #858d9a;
+}
+
+.reality-status {
+  display: inline-block;
+  width: fit-content;
+  margin-bottom: 7px;
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+}
+
+.reality-status-positive { color: #9dd8b3; }
+.reality-status-muted { color: #e1c292; }
+.reality-status-error { color: #f0bec4; }
+
 .repository-summary {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -2800,10 +2878,26 @@ button:focus-visible {
   gap: 10px;
 }
 
-.evidence-legend,
-.unity-summary {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+.evidence-help {
+  padding: 10px 12px;
+  border: 1px solid #2c323b;
+  border-radius: 7px;
+  background: #15191f;
 }
+
+.evidence-help summary {
+  cursor: pointer;
+  color: #b9c8ed;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.evidence-help[open] .evidence-legend {
+  margin-top: 10px;
+}
+
+.evidence-legend { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.unity-summary { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 
 .evidence-legend article,
 .unity-summary article,
@@ -2875,6 +2969,17 @@ button:focus-visible {
 .unity-metadata dd {
   margin: 4px 0 0;
   overflow-wrap: anywhere;
+  font-size: 12px;
+}
+
+.unity-groundtruth-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #29303a;
+  color: #9da5b2;
   font-size: 12px;
 }
 
@@ -2956,6 +3061,10 @@ button:focus-visible {
   .repository-intro {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .reality-actions {
+    justify-content: flex-start;
   }
 
   .repository-intro .outline-button {

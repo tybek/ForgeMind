@@ -7,6 +7,7 @@ pub mod feature_contracts;
 pub mod interview;
 pub mod git_reality;
 pub mod model_registry;
+pub mod reality_connections;
 pub mod specialist_history;
 pub mod specialists;
 mod structured_output;
@@ -47,6 +48,10 @@ use interview::{
     SaveInterviewRequest,
 };
 use model_registry::{ModelEntry, ModelRegistryError};
+use reality_connections::{
+    DisconnectRealityConnectionRequest, RealityConnectionError, RealityConnections,
+    SetRealityConnectionRequest,
+};
 use specialist_history::{
     SpecialistRunBudgetMetadata, SpecialistRunUsage, SpecialistRunsDocument,
 };
@@ -449,10 +454,59 @@ fn initialize_workspace(
     }
 }
 
+fn validate_connection_project(
+    root_path: &str,
+    expected_project_id: Option<&str>,
+) -> Result<workspace::ProjectMetadata, RealityConnectionError> {
+    match workspace::inspect(Path::new(root_path)) {
+        Ok(WorkspaceInspection::Valid { project, .. })
+            if expected_project_id.map_or(true, |expected| expected == project.project_id) => Ok(project),
+        _ => Err(RealityConnectionError {
+            code: "INVALID_REALITY_CONNECTION_PROJECT",
+            message: "Reality connections require the current valid ForgeMind project.".to_owned(),
+        }),
+    }
+}
+
+#[tauri::command]
+fn get_reality_connections(path: String) -> Result<RealityConnections, RealityConnectionError> {
+    let project = validate_connection_project(&path, None)?;
+    reality_connections::load(&project.project_id)
+}
+
+#[tauri::command]
+fn set_reality_connection(
+    request: SetRealityConnectionRequest,
+) -> Result<RealityConnections, RealityConnectionError> {
+    validate_connection_project(&request.root_path, Some(&request.project_id))?;
+    reality_connections::set(
+        &request.project_id,
+        request.source,
+        Path::new(&request.selected_path),
+    )
+}
+
+#[tauri::command]
+fn disconnect_reality_connection(
+    request: DisconnectRealityConnectionRequest,
+) -> Result<RealityConnections, RealityConnectionError> {
+    validate_connection_project(&request.root_path, Some(&request.project_id))?;
+    reality_connections::disconnect(&request.project_id, request.source)
+}
+
 #[tauri::command]
 fn inspect_repository_reality(path: String) -> git_reality::RepositoryRealityResult {
     match workspace::inspect(Path::new(&path)) {
-        Ok(WorkspaceInspection::Valid { .. }) => git_reality::inspect(Path::new(&path)),
+        Ok(WorkspaceInspection::Valid { project, .. }) => {
+            match reality_connections::resolved_path(
+                Path::new(&path),
+                &project.project_id,
+                reality_connections::RealitySource::Repository,
+            ) {
+                Ok(source_path) => git_reality::inspect(&source_path),
+                Err(_) => git_reality::inspection_failed(),
+            }
+        }
         _ => git_reality::inspection_failed(),
     }
 }
@@ -461,7 +515,14 @@ fn inspect_repository_reality(path: String) -> git_reality::RepositoryRealityRes
 fn inspect_unity_groundtruth(path: String) -> unity_groundtruth::UnityGroundTruthResult {
     match workspace::inspect(Path::new(&path)) {
         Ok(WorkspaceInspection::Valid { project, .. }) => {
-            unity_groundtruth::inspect(Path::new(&path), &project.project_id)
+            match reality_connections::resolved_path(
+                Path::new(&path),
+                &project.project_id,
+                reality_connections::RealitySource::Unity,
+            ) {
+                Ok(source_path) => unity_groundtruth::inspect(&source_path, &project.project_id),
+                Err(_) => unity_groundtruth::inspection_failed(),
+            }
         }
         _ => unity_groundtruth::inspection_failed(),
     }
@@ -474,6 +535,9 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             inspect_workspace,
             initialize_workspace,
+            get_reality_connections,
+            set_reality_connection,
+            disconnect_reality_connection,
             inspect_repository_reality,
             inspect_unity_groundtruth,
             run_ai_evaluation,

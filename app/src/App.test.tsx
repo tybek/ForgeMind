@@ -134,6 +134,13 @@ vi.mock("./platform/unityGroundTruth", () => ({
   }),
 }));
 
+vi.mock("./platform/realityConnections", () => ({
+  disconnectRealityConnection: vi.fn(),
+  getRealityConnections: vi.fn().mockResolvedValue({ repository: { configured: false }, unity: { configured: false } }),
+  selectRealityFolder: vi.fn(),
+  setRealityConnection: vi.fn(),
+}));
+
 vi.mock("./platform/alignment", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./platform/alignment")>()),
   loadAlignmentSources: vi.fn().mockResolvedValue({ projectId: "550e8400-e29b-41d4-a716-446655440000", intentSources: [], realityEvidence: [] }),
@@ -225,15 +232,14 @@ describe("ForgeMind local workspace", () => {
     await user.click(screen.getByRole("button", { name: "Open Existing Project" }));
     await user.click(await screen.findByRole("button", { name: "Home" }));
 
-    expect(await screen.findByRole("heading", { name: "Define Game Vision" })).toBeInTheDocument();
-    expect(screen.getByText("Your Game Foundation does not yet contain a current Game Vision.")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Define Core Loop" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Complete Game Foundation" })).toBeInTheDocument();
+    expect(screen.getByText("Your Game Foundation still needs Game Vision, Core Loop, Player Experience, and Design Pillars.")).toBeInTheDocument();
     expect(suggestNewProjectCoreLoops).not.toHaveBeenCalled();
     expect(suggestNewProjectDesignPillars).not.toHaveBeenCalled();
     expect(inspectRepositoryReality).not.toHaveBeenCalled();
     expect(inspectUnityGroundTruth).not.toHaveBeenCalled();
 
-    await user.click(screen.getByRole("button", { name: "Define Core Loop in Game Design" }));
+    await user.click(screen.getByRole("button", { name: "Continue in Game Design" }));
 
     expect(screen.getByRole("heading", { name: "Game Design", level: 1 })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Game Design" })).toHaveAttribute("aria-current", "page");
@@ -275,13 +281,13 @@ describe("ForgeMind local workspace", () => {
 
     await user.click(screen.getByRole("button", { name: `Open ${workspace.name}` }));
     await user.click(await screen.findByRole("button", { name: "Home" }));
-    expect(await screen.findByRole("heading", { name: "Define Core Loop" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Complete Game Foundation" })).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Open Second Game" }));
     await user.click(await screen.findByRole("button", { name: "Home" }));
 
     expect(await screen.findByRole("heading", { name: "Review Pending Decisions" })).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "Define Core Loop" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Complete Game Foundation" })).not.toBeInTheDocument();
   });
 
   it("opens the guided Creator before any directory selection", async () => {
@@ -729,7 +735,7 @@ describe("ForgeMind local workspace", () => {
     render(<WorkspaceShell workspace={workspace} onHome={() => undefined} onOpen={async () => undefined} />);
     await user.click(screen.getByRole("button", { name: "Unity" }));
     expect(await screen.findByRole("heading", { name: "Unity GroundTruth", level: 2 })).toBeInTheDocument();
-    expect(screen.getByText("Not detected")).toBeInTheDocument();
+    expect(screen.getByText("Not connected")).toBeInTheDocument();
     expect(inspectUnityGroundTruth).toHaveBeenCalledWith(workspace.path);
     expect(screen.getByText("0I · Complete")).toBeInTheDocument();
   });

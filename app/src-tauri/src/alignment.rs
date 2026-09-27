@@ -1,6 +1,7 @@
 use crate::compendium::{self, KnowledgeArea, KnowledgeStatus};
 use crate::decisions::{self, DecisionStatus};
 use crate::git_reality::{self, RepositoryRealityStatus};
+use crate::reality_connections::{self, RealitySource as ConnectionSource};
 use crate::unity_groundtruth;
 use crate::workspace::{self, WorkspaceInspection};
 use chrono::{DateTime, SecondsFormat, Utc};
@@ -243,9 +244,11 @@ pub fn sources(root: &Path) -> Result<AlignmentSourceCatalog, AlignmentError> {
     }
     intent_sources.sort_by(|left, right| left.title.cmp(&right.title).then(left.source_id.cmp(&right.source_id)));
 
-    let mut reality_evidence = git_evidence(root);
+    let repository_root = reality_connections::resolved_path(root, &project_id, ConnectionSource::Repository).ok();
+    let unity_root = reality_connections::resolved_path(root, &project_id, ConnectionSource::Unity).ok();
+    let mut reality_evidence = repository_root.as_deref().map(git_evidence).unwrap_or_default();
     reality_evidence.extend(
-        unity_groundtruth::alignment_evidence(root, &project_id)
+        unity_root.as_deref().map(|path| unity_groundtruth::alignment_evidence(path, &project_id)).unwrap_or_default()
             .into_iter()
             .map(|item| RealityEvidenceCandidate {
                 id: item.id,

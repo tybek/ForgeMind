@@ -144,25 +144,25 @@ describe("deterministic Recommended Next Steps", () => {
     expect(recommendNextSteps(null)).toEqual([]);
   });
 
-  it("recommends defining a missing Vision", () => {
+  it("groups multiple Foundation gaps into one explainable recommendation", () => {
     const recommendations = recommendNextSteps(state({
-      compendium: { formatVersion: 1, projectId: "project-1", updatedAt: timestamp, entries: foundation.filter((entry) => entry.title !== "Game vision") },
+      compendium: { formatVersion: 1, projectId: "project-1", updatedAt: timestamp, entries: [] },
     }));
-    expect(recommendations[0]).toMatchObject({ id: "define-game-vision", target: "Game Design", priority: "HIGH" });
+    expect(recommendations[0]).toMatchObject({ id: "complete-game-foundation", title: "Complete Game Foundation", target: "Game Design", priority: "HIGH" });
+    expect(recommendations[0].reason).toBe("Your Game Foundation still needs Game Vision, Core Loop, Player Experience, and Design Pillars.");
+    expect(recommendations[0].sourceSignals.map(({ fact }) => fact)).toEqual([
+      "Game Vision is missing",
+      "Core Loop is missing",
+      "Player Experience is missing",
+      "Design Pillars is missing",
+    ]);
   });
 
-  it("recommends defining a missing Core Loop", () => {
-    const recommendations = recommendNextSteps(state({
-      compendium: { formatVersion: 1, projectId: "project-1", updatedAt: timestamp, entries: foundation.filter((entry) => entry.area !== "core_loop") },
-    }));
-    expect(recommendations[0]).toMatchObject({ id: "define-core-loop", title: "Define Core Loop" });
-  });
-
-  it("recommends continuing an incomplete Foundation", () => {
+  it("names the actual single missing Foundation field", () => {
     const recommendations = recommendNextSteps(state({
       compendium: { formatVersion: 1, projectId: "project-1", updatedAt: timestamp, entries: foundation.filter((entry) => entry.area !== "player_experience") },
     }));
-    expect(recommendations[0]).toMatchObject({ id: "continue-game-foundation" });
+    expect(recommendations[0]).toMatchObject({ id: "complete-game-foundation" });
     expect(recommendations[0].reason).toContain("Player Experience");
   });
 
@@ -187,6 +187,33 @@ describe("deterministic Recommended Next Steps", () => {
       id: "inspect-repository-reality",
       target: "Repository / Git Reality",
     });
+  });
+
+  it("turns an inspected missing repository into a connection action", () => {
+    expect(recommendNextSteps(state({ repositoryReality: { status: "NOT_REPOSITORY" } }))[0]).toMatchObject({
+      id: "connect-repository",
+      title: "Connect Repository",
+    });
+  });
+
+  it("removes the repository connection recommendation after successful inspection", () => {
+    expect(recommendNextSteps(state()).some(({ id }) => id === "connect-repository")).toBe(false);
+  });
+
+  it("turns an inspected missing Unity project into a connection action", () => {
+    const recommendations = recommendNextSteps(state({
+      unityGroundTruth: {
+        status: "NOT_DETECTED",
+        evidence: { assets: false, packages: false, projectSettings: false },
+        projectVersion: { status: "MISSING" },
+        manifest: { status: "NOT_GENERATED" },
+      },
+    }));
+    expect(recommendations[0]).toMatchObject({ id: "connect-unity-project", title: "Connect Unity Project" });
+  });
+
+  it("removes the Unity connection recommendation after successful inspection", () => {
+    expect(recommendNextSteps(state()).some(({ id }) => id === "connect-unity-project")).toBe(false);
   });
 
   it("recommends importing GroundTruth when a Unity project has no manifest", () => {
@@ -235,11 +262,11 @@ describe("deterministic Recommended Next Steps", () => {
     });
     const recommendations = recommendNextSteps(input);
     expect(recommendations.map(({ id }) => id)).toEqual([
-      "define-game-vision",
-      "define-core-loop",
-      "continue-game-foundation",
+      "complete-game-foundation",
       "review-pending-decisions",
       "resolve-open-question",
+      "inspect-repository-reality",
+      "inspect-unity-reality",
     ]);
     expect(recommendations).toHaveLength(RECOMMENDATION_LIMIT);
   });

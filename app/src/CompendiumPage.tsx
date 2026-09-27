@@ -35,6 +35,16 @@ const emptyInput: KnowledgeEntryInput = {
   status: "DIRECTION",
 };
 
+const DESIGN_PILLAR_PREFIX = "Design pillar:";
+
+function isDesignPillar(entry: Pick<KnowledgeEntry, "area" | "title">): boolean {
+  return entry.area === "game_vision" && entry.title.toLocaleLowerCase().startsWith(DESIGN_PILLAR_PREFIX.toLocaleLowerCase());
+}
+
+function pillarName(title: string): string {
+  return title.slice(title.indexOf(":") + 1).trimStart();
+}
+
 function KnowledgeEditor({
   mode,
   input,
@@ -42,6 +52,7 @@ function KnowledgeEditor({
   busy,
   onSubmit,
   onCancel,
+  pillar = false,
 }: {
   mode: "create" | "edit";
   input: KnowledgeEntryInput;
@@ -49,26 +60,27 @@ function KnowledgeEditor({
   busy: boolean;
   onSubmit: (event: FormEvent) => void;
   onCancel: () => void;
+  pillar?: boolean;
 }) {
   return (
     <form className={`knowledge-form ${mode === "edit" ? "inline-knowledge-editor" : "knowledge-card"}`} onSubmit={onSubmit}>
-      <h3>{mode === "edit" ? "Edit Knowledge" : "Add Knowledge"}</h3>
+      <h3>{pillar ? `${mode === "edit" ? "Edit" : "Add"} Design Pillar` : mode === "edit" ? "Edit Knowledge" : "Add Knowledge"}</h3>
       <div className="knowledge-form-grid">
-        <label>Section
+        {!pillar ? <label>Section
           <select value={input.area} onChange={(event) => setInput({ ...input, area: event.target.value as KnowledgeArea })}>
             {KNOWLEDGE_AREAS.map(([id, label]) => <option key={id} value={id}>{label}</option>)}
           </select>
-        </label>
+        </label> : null}
         <label>Status
           <select value={input.status} onChange={(event) => setInput({ ...input, status: event.target.value as KnowledgeStatus })}>
             {KNOWLEDGE_STATUSES.map((status) => <option key={status} value={status}>{status}</option>)}
           </select>
         </label>
       </div>
-      <label>Title
-        <input required maxLength={120} value={input.title} onChange={(event) => setInput({ ...input, title: event.target.value })} />
+      <label>{pillar ? "Pillar name" : "Title"}
+        <input required maxLength={120} value={pillar ? pillarName(input.title) : input.title} onChange={(event) => setInput({ ...input, title: pillar ? `${DESIGN_PILLAR_PREFIX} ${event.target.value}` : event.target.value })} />
       </label>
-      <label>Statement
+      <label>{pillar ? "Explanation" : "Statement"}
         <textarea required maxLength={2000} rows={4} value={input.statement} onChange={(event) => setInput({ ...input, statement: event.target.value })} />
       </label>
       {mode === "create" ? <p className="scope-note">Manual entries retain MANUAL provenance and manual_entry source.</p> : null}
@@ -96,6 +108,7 @@ export function CompendiumPage({
   const [error, setError] = useState<{ code: string; message: string } | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
+  const [editorKind, setEditorKind] = useState<"knowledge" | "pillar">("knowledge");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [input, setInput] = useState<KnowledgeEntryInput>(emptyInput);
   const [expandedIds, setExpandedIds] = useState<string[]>([]);
@@ -122,8 +135,15 @@ export function CompendiumPage({
     return () => { active = false; };
   }, [workspace.path]);
 
+  const pillarEntries = useMemo(
+    () => (document?.entries ?? []).filter(isDesignPillar),
+    [document],
+  );
+
   const entries = useMemo(
     () => (document?.entries ?? []).filter((entry) =>
+      !isDesignPillar(entry)
+      &&
       (areaFilter === "all" || entry.area === areaFilter)
       && (statusFilter === "all" || entry.status === statusFilter)),
     [areaFilter, document, statusFilter],
@@ -132,6 +152,15 @@ export function CompendiumPage({
   function openCreate() {
     setEditingId(null);
     setInput(emptyInput);
+    setEditorKind("knowledge");
+    setFormOpen(true);
+    setError(null);
+  }
+
+  function openCreatePillar() {
+    setEditingId(null);
+    setInput({ area: "game_vision", title: `${DESIGN_PILLAR_PREFIX} `, statement: "", status: "DIRECTION" });
+    setEditorKind("pillar");
     setFormOpen(true);
     setError(null);
   }
@@ -139,6 +168,7 @@ export function CompendiumPage({
   function openEdit(entry: KnowledgeEntry) {
     setEditingId(entry.id);
     setInput({ area: entry.area, title: entry.title, statement: entry.statement, status: entry.status });
+    setEditorKind(isDesignPillar(entry) ? "pillar" : "knowledge");
     setFormOpen(false);
     setExpandedIds((current) => current.includes(entry.id) ? current : [...current, entry.id]);
     setError(null);
@@ -161,6 +191,7 @@ export function CompendiumPage({
     setFormOpen(false);
     setEditingId(null);
     setInput(emptyInput);
+    setEditorKind("knowledge");
   }
 
   function toggleExpanded(entryId: string) {
@@ -182,6 +213,7 @@ export function CompendiumPage({
       setFormOpen(false);
       setEditingId(null);
       setInput(emptyInput);
+      setEditorKind("knowledge");
     } catch (saveError) {
       setError(errorDetails(saveError));
     } finally {
@@ -252,8 +284,34 @@ export function CompendiumPage({
           busy={busy}
           onSubmit={(event) => void submit(event)}
           onCancel={cancelEditor}
+          pillar={editorKind === "pillar"}
         />
       ) : null}
+
+      <section className="knowledge-card pillar-section" aria-labelledby="design-pillars-title">
+        <div className="pillar-section-heading">
+          <div><span className="section-label">Game Foundation</span><h3 id="design-pillars-title">Design Pillars</h3><p>Durable Compendium knowledge using the existing Game Vision pillar convention.</p></div>
+          <button className="outline-button compact-action" type="button" disabled={busy} onClick={openCreatePillar}>Add Design Pillar</button>
+        </div>
+        {pillarEntries.length === 0 ? <p className="scope-note">No Design Pillars have been documented yet.</p> : (
+          <div className="pillar-list">
+            {pillarEntries.map((entry) => editingId === entry.id ? (
+              <article className="knowledge-entry compact-knowledge-entry" aria-label={`Design pillar: ${pillarName(entry.title)}`} key={entry.id}>
+                <KnowledgeEditor mode="edit" input={input} setInput={setInput} busy={busy} onSubmit={(event) => void submit(event)} onCancel={cancelEditor} pillar />
+              </article>
+            ) : (
+              <article className={`pillar-row ${entry.status === "DEPRECATED" ? "knowledge-deprecated" : ""}`} aria-label={`Design pillar: ${pillarName(entry.title)}`} key={entry.id}>
+                <div><strong>{pillarName(entry.title)}</strong><p>{entry.statement}</p></div>
+                <div className="knowledge-actions">
+                  <span className={`knowledge-status status-${entry.status.toLowerCase()}`}>{entry.status}</span>
+                  <button className="outline-button compact-action" type="button" disabled={busy} onClick={() => openEdit(entry)}>Edit</button>
+                  {entry.status !== "DEPRECATED" ? <button className="outline-button compact-action" type="button" disabled={busy} onClick={() => void deprecate(entry)}>Deprecate</button> : null}
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
 
       <section className="knowledge-filters" aria-label="Compendium filters">
         <label>Section
@@ -272,7 +330,7 @@ export function CompendiumPage({
 
       {entries.length === 0 ? (
         <section className="knowledge-card empty-knowledge">
-          <h3>No Compendium knowledge yet</h3>
+          <h3>{pillarEntries.length > 0 ? "No other Compendium knowledge in this view" : "No Compendium knowledge yet"}</h3>
           <p>Add a manual entry{interviewAvailable ? " or explicitly import approved Project Interview knowledge" : ""}. Nothing is imported automatically.</p>
         </section>
       ) : (
@@ -294,6 +352,7 @@ export function CompendiumPage({
                     busy={busy}
                     onSubmit={(event) => void submit(event)}
                     onCancel={cancelEditor}
+                    pillar={editorKind === "pillar"}
                   />
                 ) : (
                   <>

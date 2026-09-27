@@ -7,6 +7,8 @@ import type { UnityGroundTruthResult } from "./unityGroundTruth";
 
 export const RECOMMENDATION_LIMIT = 5;
 
+export type RealityConnectionState = "UNKNOWN" | "CONNECTED" | "NOT_CONNECTED" | "PARTIAL" | "ERROR";
+
 export type RecommendationPriority = "HIGH" | "MEDIUM" | "LOW";
 export type RecommendationArea = "PROJECT" | "REALITY" | "ALIGNMENT" | "DELIVERY";
 export type RecommendationTarget =
@@ -54,6 +56,21 @@ export interface RecommendationProjectState {
 
 interface RankedRecommendation extends RecommendedNextStep {
   rank: number;
+}
+
+export function repositoryConnectionState(result: RepositoryRealityResult | null | undefined): RealityConnectionState {
+  if (result == null) return "UNKNOWN";
+  if (result.status === "DETECTED") return "CONNECTED";
+  if (result.status === "NOT_REPOSITORY") return "NOT_CONNECTED";
+  return "ERROR";
+}
+
+export function unityConnectionState(result: UnityGroundTruthResult | null | undefined): RealityConnectionState {
+  if (result == null) return "UNKNOWN";
+  if (result.status === "NOT_DETECTED") return "NOT_CONNECTED";
+  if (result.status === "INSPECTION_FAILED" || result.manifest.status === "INVALID_OR_UNSUPPORTED") return "ERROR";
+  if (result.manifest.status !== "AVAILABLE" || result.manifest.summary?.coverageIssues.length) return "PARTIAL";
+  return "CONNECTED";
 }
 
 const currentKnowledgeStatuses = new Set(["DIRECTION", "LOCKED"]);
@@ -109,48 +126,18 @@ function addFoundationRecommendations(
   compendium: CompendiumDocument | null,
 ): void {
   const entries = currentEntries(compendium);
-  const hasVision = hasGameVision(entries);
-  const hasCoreLoop = hasCurrentKnowledge(entries, "core_loop");
   const missingFoundationAreas = [
+    !hasGameVision(entries) ? "Game Vision" : null,
+    !hasCurrentKnowledge(entries, "core_loop") ? "Core Loop" : null,
     !hasCurrentKnowledge(entries, "player_experience") ? "Player Experience" : null,
     !hasDesignPillar(entries) ? "Design Pillars" : null,
   ].filter((area): area is string => area !== null);
 
-  if (!hasVision) {
-    candidates.push({
-      id: "define-game-vision",
-      title: "Define Game Vision",
-      reason: "Your Game Foundation does not yet contain a current Game Vision.",
-      area: "PROJECT",
-      target: "Game Design",
-      actionLabel: "Define Vision in Game Design",
-      sourceSignals: [{ source: "COMPENDIUM", fact: "Current Game Vision is missing" }],
-      priority: "HIGH",
-      effort: "SMALL",
-      rank: 10,
-    });
-  }
-
-  if (!hasCoreLoop) {
-    candidates.push({
-      id: "define-core-loop",
-      title: "Define Core Loop",
-      reason: "Your Game Foundation does not yet define the activity players will repeat during normal play.",
-      area: "PROJECT",
-      target: "Game Design",
-      actionLabel: "Define Core Loop in Game Design",
-      sourceSignals: [{ source: "COMPENDIUM", fact: "Current Core Loop is missing" }],
-      priority: "HIGH",
-      effort: "SMALL",
-      rank: 20,
-    });
-  }
-
   if (missingFoundationAreas.length > 0) {
     candidates.push({
-      id: "continue-game-foundation",
-      title: "Continue Game Foundation",
-      reason: `Your Game Foundation still needs ${missingFoundationAreas.join(" and ")}.`,
+      id: "complete-game-foundation",
+      title: "Complete Game Foundation",
+      reason: `Your Game Foundation still needs ${missingFoundationAreas.length === 1 ? missingFoundationAreas[0] : `${missingFoundationAreas.slice(0, -1).join(", ")}, and ${missingFoundationAreas.at(-1)}`}.`,
       area: "PROJECT",
       target: "Game Design",
       actionLabel: "Continue in Game Design",
@@ -160,7 +147,7 @@ function addFoundationRecommendations(
       })),
       priority: "HIGH",
       effort: "MEDIUM",
-      rank: 30,
+      rank: 10,
     });
   }
 }
@@ -216,7 +203,8 @@ export function recommendNextSteps(
     }
   }
 
-  if (state.repositoryReality === null) {
+  const repositoryConnection = repositoryConnectionState(state.repositoryReality);
+  if (state.repositoryReality !== undefined && repositoryConnection === "UNKNOWN") {
     candidates.push({
       id: "inspect-repository-reality",
       title: "Inspect Repository Reality",
@@ -229,10 +217,20 @@ export function recommendNextSteps(
       effort: "SMALL",
       rank: 60,
     });
-  } else if (
-    state.repositoryReality !== undefined &&
-    ["GIT_UNAVAILABLE", "INSPECTION_FAILED"].includes(state.repositoryReality.status)
-  ) {
+  } else if (repositoryConnection === "NOT_CONNECTED") {
+    candidates.push({
+      id: "connect-repository",
+      title: "Connect Repository",
+      reason: "No repository is connected, so ForgeMind cannot inspect implementation history.",
+      area: "REALITY",
+      target: "Repository / Git Reality",
+      actionLabel: "Connect Repository",
+      sourceSignals: [{ source: "GIT_REALITY", fact: "Repository connection is not configured or detected" }],
+      priority: "MEDIUM",
+      effort: "SMALL",
+      rank: 60,
+    });
+  } else if (repositoryConnection === "ERROR" && state.repositoryReality !== undefined && state.repositoryReality !== null) {
     candidates.push({
       id: "inspect-repository-reality",
       title: "Inspect Repository Reality",
@@ -249,7 +247,8 @@ export function recommendNextSteps(
     });
   }
 
-  if (state.unityGroundTruth === null) {
+  const unityConnection = unityConnectionState(state.unityGroundTruth);
+  if (state.unityGroundTruth !== undefined && unityConnection === "UNKNOWN") {
     candidates.push({
       id: "inspect-unity-reality",
       title: "Inspect Unity Reality",
@@ -258,6 +257,19 @@ export function recommendNextSteps(
       target: "Unity",
       actionLabel: "Open Unity Reality",
       sourceSignals: [{ source: "UNITY_GROUNDTRUTH", fact: "Current session has no Unity Reality inspection" }],
+      priority: "MEDIUM",
+      effort: "SMALL",
+      rank: 70,
+    });
+  } else if (unityConnection === "NOT_CONNECTED") {
+    candidates.push({
+      id: "connect-unity-project",
+      title: "Connect Unity Project",
+      reason: "No Unity project is connected, so ForgeMind cannot verify implementation evidence.",
+      area: "REALITY",
+      target: "Unity",
+      actionLabel: "Connect Unity Project",
+      sourceSignals: [{ source: "UNITY_GROUNDTRUTH", fact: "Unity project connection is not configured or detected" }],
       priority: "MEDIUM",
       effort: "SMALL",
       rank: 70,
@@ -274,6 +286,19 @@ export function recommendNextSteps(
       target: "Unity",
       actionLabel: "Open Unity Reality",
       sourceSignals: [{ source: "UNITY_GROUNDTRUTH", fact: `Manifest status is ${state.unityGroundTruth.manifest.status}` }],
+      priority: "MEDIUM",
+      effort: "MEDIUM",
+      rank: 70,
+    });
+  } else if (state.unityGroundTruth?.manifest.summary?.coverageIssues.length) {
+    candidates.push({
+      id: "complete-unity-reality",
+      title: "Refresh / Complete Unity Evidence",
+      reason: `${countLabel(state.unityGroundTruth.manifest.summary.coverageIssues.length, "GroundTruth coverage issue")} ${state.unityGroundTruth.manifest.summary.coverageIssues.length === 1 ? "limits" : "limit"} the current Unity evidence.`,
+      area: "REALITY",
+      target: "Unity",
+      actionLabel: "Review Unity Evidence",
+      sourceSignals: [{ source: "UNITY_GROUNDTRUTH", fact: "GroundTruth coverage issues", count: state.unityGroundTruth.manifest.summary.coverageIssues.length }],
       priority: "MEDIUM",
       effort: "MEDIUM",
       rank: 70,

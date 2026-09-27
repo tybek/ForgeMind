@@ -54,6 +54,15 @@ const longEntry: KnowledgeEntry = {
   statement: "This deliberately long project statement explains how several tactical systems interact across movement, combat, resource pressure, extraction risk, player readability, and encounter pacing so the compact presentation must not consume the full page height by default.",
 };
 
+const pillar: KnowledgeEntry = {
+  ...entry,
+  id: "8c9af7dd-5adc-4938-8dd9-2224eb5b0041",
+  area: "game_vision",
+  title: "Design pillar: Readable danger",
+  statement: "Threats remain legible before they become lethal.",
+  source: "new_project_creator",
+};
+
 function document(entries: KnowledgeEntry[] = [entry]): CompendiumDocument {
   return {
     formatVersion: 1,
@@ -90,6 +99,46 @@ describe("Game Compendium", () => {
     const row = screen.getByRole("article", { name: `Knowledge entry: ${entry.title}` });
     expect(row).toHaveClass("compact-knowledge-entry");
     expect(within(row).getByRole("button", { name: "Expand" })).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("keeps Creator Design Pillars visible in a first-class Compendium section", async () => {
+    vi.mocked(loadCompendium).mockResolvedValue(document([pillar]));
+    await renderPage();
+    const section = screen.getByRole("heading", { name: "Design Pillars" }).closest("section")!;
+    expect(within(section).getByText("Readable danger")).toBeInTheDocument();
+    expect(within(section).getByText(pillar.statement)).toBeInTheDocument();
+    expect(within(section).getByRole("button", { name: "Edit" })).toBeEnabled();
+    expect(within(section).getByRole("button", { name: "Deprecate" })).toBeEnabled();
+  });
+
+  it("adds a manual Design Pillar through the existing Compendium store", async () => {
+    vi.mocked(createKnowledgeEntry).mockResolvedValue(document([pillar]));
+    const { user } = await renderPage();
+    await user.click(screen.getByRole("button", { name: "Add Design Pillar" }));
+    await user.type(screen.getByLabelText("Pillar name"), "Readable danger");
+    await user.type(screen.getByLabelText("Explanation"), pillar.statement);
+    await user.click(screen.getByRole("button", { name: "Save Knowledge" }));
+    expect(createKnowledgeEntry).toHaveBeenCalledWith(workspace.path, workspace.projectId, expect.objectContaining({
+      area: "game_vision",
+      title: "Design pillar: Readable danger",
+      statement: pillar.statement,
+    }));
+  });
+
+  it("edits an existing Design Pillar without creating another truth store", async () => {
+    vi.mocked(loadCompendium).mockResolvedValue(document([pillar]));
+    vi.mocked(updateKnowledgeEntry).mockResolvedValue(document([{ ...pillar, statement: "Updated explanation." }]));
+    const { user } = await renderPage();
+    const row = screen.getByRole("article", { name: "Design pillar: Readable danger" });
+    await user.click(within(row).getByRole("button", { name: "Edit" }));
+    const explanation = within(row).getByLabelText("Explanation");
+    await user.clear(explanation);
+    await user.type(explanation, "Updated explanation.");
+    await user.click(within(row).getByRole("button", { name: "Save Knowledge" }));
+    expect(updateKnowledgeEntry).toHaveBeenCalledWith(workspace.path, workspace.projectId, pillar.id, expect.objectContaining({
+      title: pillar.title,
+      statement: "Updated explanation.",
+    }));
   });
 
   it("opens the existing inline editor when source navigation targets a Knowledge entry", async () => {

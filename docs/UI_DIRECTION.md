@@ -95,7 +95,7 @@ Primary actions are **Open project**, **View all**, and **Open another project**
 
 ### Recommended Next Steps
 
-NEXT-1 shows up to three compact Home actions from a deterministic list bounded to five. Each card names the area and priority, explains the current source-backed reason in plain language, and routes to an existing owning workflow. Source-signal internals stay out of the normal card. The rule layers, recommendation fields, beginner onboarding relationship, and authority boundaries are specified in [New Project Creator and Recommended Next Steps](NEW_PROJECT_CREATOR.md). AI is not used.
+NEXT-1 shows up to three compact Home actions from a deterministic list bounded to five. NEXT-1.1 groups simultaneous Foundation gaps into one **Complete Game Foundation** card and uses explicit **Connect Repository** / **Connect Unity Project** cards after inspection establishes a disconnected state. Each card names the area and priority, explains the current source-backed reason in plain language, and routes to an existing owning workflow. Source-signal internals stay out of the normal card. The rule layers, recommendation fields, beginner onboarding relationship, and authority boundaries are specified in [New Project Creator and Recommended Next Steps](NEW_PROJECT_CREATOR.md). AI is not used.
 
 Examples include:
 
@@ -298,6 +298,8 @@ Exit direction: Home answers current project, project state, and next action wit
 - Feature Contracts;
 - Recent Activity;
 - Continue Building.
+
+Project Overview will also surface project-specific Recommended Next Steps as one part of this richer dashboard. Workspace Home keeps the quick top-three guidance for the currently loaded project; UI-3 must reuse the same derived model rather than move, duplicate, or persist recommendations as a second source.
 
 Exit direction: every state and recommendation is explainable from existing domain data and routes to the owning workspace.
 
