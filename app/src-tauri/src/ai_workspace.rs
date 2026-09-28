@@ -1039,7 +1039,7 @@ fn validate_document(document: &AiWorkspaceDocument, expected_project_id: &str) 
                 || !session_ids.insert(session.id.as_str())
                 || !valid_safe_stored_content(&session.surface, 1, 80)
                 || !valid_safe_stored_content(&session.purpose, 1, 500)
-                || !profiles().iter().any(|profile| profile.id == session.specialist_profile_id)
+                || !valid_safe_stored_content(&session.specialist_profile_id, 1, 120)
                 || !valid_safe_stored_content(&session.title, 1, 160)
                 || DateTime::parse_from_rfc3339(&session.created_at).is_err()
                 || DateTime::parse_from_rfc3339(&session.updated_at).is_err()
@@ -1302,6 +1302,24 @@ mod tests {
     }
 
     #[test]
+    fn empty_session_round_trip_restores_omitted_optional_collections() {
+        let (directory, project_id) = workspace();
+        let created = create_session(create_request(directory.path(), &project_id)).unwrap();
+        let persisted: serde_json::Value = serde_json::from_str(
+            &fs::read_to_string(document_path(directory.path())).unwrap(),
+        )
+        .unwrap();
+        assert!(persisted["sessions"][0].get("sourceTrace").is_none());
+        assert!(persisted["sessions"][0].get("proposals").is_none());
+
+        let reloaded = load(directory.path()).unwrap().unwrap();
+        assert_eq!(reloaded.sessions[0].id, created.sessions[0].id);
+        assert!(reloaded.sessions[0].messages.is_empty());
+        assert!(reloaded.sessions[0].source_trace.is_empty());
+        assert!(reloaded.sessions[0].proposals.is_empty());
+    }
+
+    #[test]
     fn project_isolation_rejects_cross_project_session_access() {
         let (first, first_id) = workspace();
         let (second, second_id) = workspace();
@@ -1324,6 +1342,37 @@ mod tests {
         assert_eq!(recovery.document.project_id, project_id);
         assert!(recovery.document.sessions.is_empty());
         assert!(recovery.archived_file_name.as_ref().is_some_and(|name| name.starts_with("ai-workspace-sessions.invalid-")));
+    }
+
+    #[test]
+    fn unknown_persisted_profile_remains_readable_archivable_and_does_not_block_new_sessions() {
+        let (directory, project_id) = workspace();
+        let created = create_session(create_request(directory.path(), &project_id)).unwrap();
+        let unknown_session_id = created.sessions[0].id.clone();
+        let mut persisted = serde_json::to_value(created).unwrap();
+        persisted["sessions"][0]["specialistProfileId"] = serde_json::json!("retired_profile");
+        fs::write(
+            document_path(directory.path()),
+            serde_json::to_vec_pretty(&persisted).unwrap(),
+        )
+        .unwrap();
+
+        let loaded = load(directory.path()).unwrap().unwrap();
+        assert_eq!(loaded.sessions[0].specialist_profile_id, "retired_profile");
+
+        let mut request = create_request(directory.path(), &project_id);
+        request.title = "Current profile session".to_owned();
+        let with_new_session = create_session(request).unwrap();
+        assert_eq!(with_new_session.sessions.len(), 2);
+        assert_eq!(with_new_session.sessions[0].specialist_profile_id, "retired_profile");
+
+        let archived = archive_session(AiWorkspaceSessionActionRequest {
+            root_path: directory.path().display().to_string(),
+            project_id,
+            session_id: unknown_session_id,
+        })
+        .unwrap();
+        assert_eq!(archived.sessions[0].status, AiWorkspaceSessionStatus::Archived);
     }
 
     #[test]

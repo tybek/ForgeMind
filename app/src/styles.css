@@ -33,7 +33,7 @@
   gap: var(--space-4);
   padding: var(--space-4);
   border-right: 1px solid var(--color-border);
-  background: color-mix(in srgb, var(--color-surface-raised) 76%, transparent);
+  background: color-mix(in srgb, var(--color-surface-elevated) 76%, transparent);
 }
 
 .writers-room-session-panel > header,
@@ -162,7 +162,7 @@
   padding: var(--space-6);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  background: var(--color-surface-raised);
+  background: var(--color-surface-elevated);
 }
 
 .writers-room-empty > div {
@@ -177,13 +177,13 @@
   padding: var(--space-4);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  background: var(--color-surface-raised);
+  background: var(--color-surface-elevated);
 }
 
 .writers-room-message--user {
   align-self: flex-end;
   border-color: color-mix(in srgb, var(--color-accent) 45%, var(--color-border));
-  background: color-mix(in srgb, var(--color-accent) 8%, var(--color-surface-raised));
+  background: color-mix(in srgb, var(--color-accent) 8%, var(--color-surface-elevated));
 }
 
 .writers-room-message > p,
@@ -235,7 +235,7 @@
   padding: var(--space-4);
   border: 1px solid color-mix(in srgb, var(--color-accent) 35%, var(--color-border));
   border-radius: var(--radius-lg);
-  background: color-mix(in srgb, var(--color-accent) 5%, var(--color-surface-raised));
+  background: color-mix(in srgb, var(--color-accent) 5%, var(--color-surface-elevated));
 }
 
 .writers-room-proposal h4 {
@@ -250,7 +250,7 @@
   flex: 0 0 auto;
   padding: var(--space-4) var(--space-5);
   border-top: 1px solid var(--color-border);
-  background: var(--color-surface-raised);
+  background: var(--color-surface-elevated);
 }
 
 .writers-room-composer label {
@@ -310,12 +310,13 @@
 
 .writers-room-dialog-backdrop {
   position: fixed;
-  z-index: 20;
+  z-index: 100;
   inset: 0;
   display: grid;
   place-items: center;
   padding: var(--space-5);
-  background: rgb(0 0 0 / 72%);
+  background: rgb(4 6 9 / 86%);
+  backdrop-filter: blur(3px);
 }
 
 .writers-room-preflight,
@@ -326,8 +327,8 @@
   padding: var(--space-5);
   border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-lg);
-  background: var(--color-surface-raised);
-  box-shadow: var(--shadow-lg);
+  background: var(--color-surface-elevated);
+  box-shadow: var(--shadow-elevated);
 }
 
 .writers-room-preflight-grid {
@@ -385,6 +386,28 @@
   border: 1px solid var(--color-danger);
   border-radius: var(--radius-md);
   background: color-mix(in srgb, var(--color-danger) 8%, var(--color-surface));
+}
+
+.writers-room-warning {
+  margin: var(--space-3) var(--space-5) 0;
+  padding: var(--space-3);
+  border: 1px solid var(--color-warning);
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+  background: var(--color-warning-surface);
+}
+
+.writers-room-loading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: auto;
+  padding: var(--space-6);
+  color: var(--color-text-secondary);
+}
+
+.writers-room-loading p {
+  margin-bottom: 0;
 }
 
 .writers-room-running {

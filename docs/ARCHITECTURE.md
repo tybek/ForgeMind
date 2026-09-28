@@ -160,6 +160,8 @@ The native run command prepares one request for the explicitly selected register
 
 The React page is a two-pane workbench with a collapsible Context/Sources drawer, not a permanent three-column chat layout. It uses the existing native dialog permission only to choose Markdown; native containment validation remains authoritative. Creator AI, Feature Contract AI, and current Specialist execution remain unchanged.
 
+WR-1.1 makes the frontend/native return boundary explicitly tolerant of format-version `1` fields that native serialization may omit when empty. Messages, proposals, source trace, selected Markdown, questions, and optional usage metadata are normalized before rendering; unusable non-authoritative records are skipped with a concise warning instead of throwing through the page. A safely formed persisted profile ID may outlive the current profile registry so its history remains readable and archivable, but native Writers' Room preparation still requires one of the three currently runnable registered profiles. This compatibility path does not migrate the file format or weaken provider/run validation.
+
 ### Future Context Builder and Task Router
 
 **CR-0 SPECIFIED; AIW-0 BOUNDED FOUNDATION COMPLETE; GENERAL ROUTING NOT STARTED.** [Context Builder and Task Router Architecture](CONTEXT_AND_ROUTING.md) defines broader future classification, freshness, routing, compaction, preview, and task-specific model recommendation. AIW-0 implements the small explicit-source Context Plan and source-trace subset now used by Writers' Room and reserved for future Chronicler work. It treats the Project Brain as a logical aggregate over existing owning domains rather than a new persistence store.

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import type { Workspace } from "./App";
 import {
@@ -29,9 +29,9 @@ import {
 const WRITERS_ROOM_PROFILE_IDS = ["lore_architect", "character_dialogue", "continuity_editor"];
 
 const starters: Record<string, string[]> = {
-  lore_architect: ["Develop a faction", "Explore a location", "Define a historical conflict", "Test this worldbuilding idea"],
+  lore_architect: ["Develop a faction", "Explore a location", "Define a historical conflict", "Test a worldbuilding idea"],
   character_dialogue: ["Develop a character", "Explore a relationship", "Draft a conversation", "Refine a character voice"],
-  continuity_editor: ["Check this idea against established lore", "Find contradictions", "Show unresolved questions", "Summarize what is established about a subject"],
+  continuity_editor: ["Check an idea against established lore", "Find contradictions", "Show unresolved questions", "Summarize what is established"],
 };
 
 interface WritersRoomError {
@@ -90,12 +90,13 @@ function formatLatency(preflight: WritersRoomPreflight): string {
 }
 
 function SourceCards({ sources, onOpenSource }: { sources: AiWorkspaceSourceTrace[]; onOpenSource?: (source: AiWorkspaceSourceTrace) => void }) {
-  if (sources.length === 0) return null;
+  const safeSources = Array.isArray(sources) ? sources : [];
+  if (safeSources.length === 0) return null;
   return (
     <section className="writers-room-sources" aria-label="Sources used">
       <strong>Sources used</strong>
       <div>
-        {sources.map((source) => (
+        {safeSources.map((source) => (
           <button
             type="button"
             key={`${source.sourceType}:${source.sourceId}`}
@@ -220,12 +221,15 @@ export function WritersRoomPage({
   onOpenSource?: (source: AiWorkspaceSourceTrace) => void;
 }) {
   const [document, setDocument] = useState<AiWorkspaceDocument | null>(null);
+  const [loadingSessions, setLoadingSessions] = useState(true);
   const [profiles, setProfiles] = useState<AiWorkspaceProfile[]>([]);
   const [usage, setUsage] = useState<WritersRoomUsageRecord[]>([]);
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [composer, setComposer] = useState("");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState<WritersRoomError | null>(null);
   const [newTitle, setNewTitle] = useState("");
   const [newProfileId, setNewProfileId] = useState("lore_architect");
   const [preflightMode, setPreflightMode] = useState<WritersRoomRunMode | null>(null);
@@ -245,28 +249,55 @@ export function WritersRoomPage({
   const runnableProfiles = profiles.filter((profile) => WRITERS_ROOM_PROFILE_IDS.includes(profile.id));
   const usageByReference = useMemo(() => new Map(usage.map((record) => [recordKey(record), record])), [usage]);
 
+  const loadSessions = useCallback(async () => {
+    setLoadingSessions(true);
+    setPersistenceError(null);
+    try {
+      setDocument(await loadAiWorkspaceSessions(workspace.path));
+    } catch (reason) {
+      setPersistenceError(safeError(reason));
+    } finally {
+      setLoadingSessions(false);
+    }
+  }, [workspace.path]);
+
   useEffect(() => {
     setError(null);
     setPersistenceError(null);
-    Promise.all([listAiWorkspaceProfiles(), loadWritersRoomUsage(workspace.projectId)])
-      .then(([loadedProfiles, loadedUsage]) => {
-        setProfiles(loadedProfiles);
-        setUsage(loadedUsage);
-      })
-      .catch((reason) => setError(safeError(reason)));
-    loadAiWorkspaceSessions(workspace.path)
-      .then((loaded) => {
-        setDocument(loaded);
-        const active = loaded?.sessions.filter((session) => session.surface === "writers_room" && session.status === "ACTIVE").at(-1);
-        const latest = active ?? loaded?.sessions.filter((session) => session.surface === "writers_room").at(-1);
-        setSelectedSessionId(latest?.id ?? null);
-      })
-      .catch((reason) => setPersistenceError(safeError(reason)));
-  }, [workspace.path, workspace.projectId]);
+    setDocument(null);
+    setSelectedSessionId(null);
+    void listAiWorkspaceProfiles().then(setProfiles).catch((reason) => setError(safeError(reason)));
+    void loadWritersRoomUsage(workspace.projectId).then(setUsage).catch(() => setUsage([]));
+    void loadSessions();
+  }, [loadSessions, workspace.path, workspace.projectId]);
+
+  useEffect(() => {
+    setSelectedSessionId((current) => {
+      const writersRoomSessions = document?.sessions.filter((session) => session.surface === "writers_room") ?? [];
+      if (current && writersRoomSessions.some((session) => session.id === current)) return current;
+      return writersRoomSessions
+        .filter((session) => session.status === "ACTIVE")
+        .sort((left, right) => Date.parse(right.updatedAt) - Date.parse(left.updatedAt))[0]?.id ?? null;
+    });
+  }, [document]);
+
+  useEffect(() => {
+    if (!createOpen) return;
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape" && !creating) {
+        setCreateOpen(false);
+        setCreateError(null);
+      }
+    }
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [createOpen, creating]);
 
   async function createSession() {
-    if (!newTitle.trim()) return;
+    if (!newTitle.trim() || creating) return;
     setError(null);
+    setCreateError(null);
+    setCreating(true);
     try {
       const updated = await createAiWorkspaceSession(
         workspace.path,
@@ -276,11 +307,14 @@ export function WritersRoomPage({
         newProfileId,
         newTitle.trim(),
       );
+      const previousIds = new Set(sessions.map((session) => session.id));
+      const created = updated.sessions.find((session) => !previousIds.has(session.id)) ?? updated.sessions.at(-1);
       setDocument(updated);
-      setSelectedSessionId(updated.sessions.at(-1)?.id ?? null);
+      setSelectedSessionId(created?.id ?? null);
       setNewTitle("");
       setCreateOpen(false);
-    } catch (reason) { setError(safeError(reason)); }
+    } catch (reason) { setCreateError(safeError(reason)); }
+    finally { setCreating(false); }
   }
 
   async function archiveSession(session: AiWorkspaceSession) {
@@ -417,13 +451,14 @@ export function WritersRoomPage({
 
   const profileStarters = activeProfile ? starters[activeProfile.id] ?? [] : [];
   const hasAssistant = selectedSession?.messages.some((message) => message.role === "ASSISTANT") ?? false;
+  const profileAvailable = Boolean(activeProfile?.availableForRuns && WRITERS_ROOM_PROFILE_IDS.includes(activeProfile.id));
 
   return (
     <section className="writers-room" aria-label="Writers' Room workspace">
       <aside className="writers-room-session-panel">
         <header>
           <div><span className="section-label">Non-authoritative work history</span><h2>Sessions</h2></div>
-          <button className="primary-button" type="button" onClick={() => setCreateOpen(true)}>New Session</button>
+          <button className="primary-button" type="button" onClick={() => { setCreateError(null); setCreateOpen(true); }}>New Session</button>
         </header>
         <div className="writers-room-session-list">
           {sessions.filter((session) => session.surface === "writers_room").map((session) => {
@@ -432,7 +467,7 @@ export function WritersRoomPage({
               <article className={session.id === selectedSessionId ? "writers-room-session is-active" : "writers-room-session"} key={session.id}>
                 <button type="button" onClick={() => { setSelectedSessionId(session.id); setError(null); }}>
                   <strong>{session.title}</strong>
-                  <span>{profile?.displayName ?? session.specialistProfileId}</span>
+                  <span>{profile?.displayName ?? "Profile unavailable"}</span>
                   <small>{session.status === "ARCHIVED" ? "Archived" : new Date(session.updatedAt).toLocaleString()}</small>
                 </button>
                 {session.status === "ACTIVE" ? <button className="writers-room-archive" type="button" aria-label={`Archive ${session.title}`} onClick={() => void archiveSession(session)}>Archive</button> : null}
@@ -444,17 +479,26 @@ export function WritersRoomPage({
       </aside>
 
       <section className="writers-room-workbench">
+        {document?.recoveryWarnings?.length ? (
+          <p className="writers-room-warning" role="status">Some saved Writers' Room history could not be displayed. Valid sessions remain available.</p>
+        ) : null}
         {persistenceError ? (
           <div className="writers-room-error" role="alert">
-            <strong>{persistenceError.code ?? "INVALID_AI_WORKSPACE_HISTORY"}</strong>
-            <p>{persistenceError.message}</p>
-            <button type="button" onClick={() => void recoverHistory()}>Archive invalid history and reset</button>
+            <strong>Saved sessions could not be loaded.</strong>
+            <p>{persistenceError.message ?? "Writers' Room can still create fresh history after explicit recovery."}</p>
+            <button type="button" onClick={() => void loadSessions()}>Retry</button>
+            {persistenceError.code === "INVALID_AI_WORKSPACE_HISTORY" ? <button type="button" onClick={() => void recoverHistory()}>Archive invalid history and reset</button> : null}
           </div>
         ) : null}
-        {selectedSession ? (
+        {loadingSessions ? (
+          <section className="writers-room-loading" role="status">
+            <span className="inline-spinner" aria-hidden="true" />
+            <div><strong>Loading sessions</strong><p>Restoring project-scoped, non-authoritative work history.</p></div>
+          </section>
+        ) : selectedSession ? (
           <>
             <header className="writers-room-toolbar">
-              <div><span className="section-label">{activeProfile?.displayName ?? selectedSession.specialistProfileId}</span><h3>{selectedSession.title}</h3></div>
+              <div><span className="section-label">{activeProfile?.displayName ?? "Profile unavailable"}</span><h3>{selectedSession.title}</h3></div>
               <div>
                 <button type="button" onClick={() => setDrawerOpen((open) => !open)} aria-expanded={drawerOpen}>Context / Sources</button>
                 <button type="button" disabled={selectedSession.status !== "ACTIVE"} onClick={() => void chooseMarkdown()}>Add Markdown Context</button>
@@ -465,8 +509,8 @@ export function WritersRoomPage({
               {selectedSession.messages.length === 0 ? (
                 <section className="writers-room-empty">
                   <span className="section-label">Creative workspace</span>
-                  <h3>{activeProfile?.displayName}</h3>
-                  <p>{activeProfile?.taskPurpose}</p>
+                   <h3>{activeProfile?.displayName ?? "Profile unavailable"}</h3>
+                   <p>{activeProfile?.taskPurpose ?? "This saved profile is no longer available. The session remains readable and can be archived; choose New Session to continue with a current profile."}</p>
                   <div>{profileStarters.map((starter) => <button type="button" key={starter} onClick={() => setComposer(starter)}>{starter}</button>)}</div>
                   <small>Conversation is exploratory. Nothing becomes project truth until you explicitly review and apply a proposal.</small>
                 </section>
@@ -505,12 +549,12 @@ export function WritersRoomPage({
             <footer className="writers-room-composer">
               <label>
                 Continue the conversation
-                <textarea value={composer} disabled={selectedSession.status !== "ACTIVE" || running} maxLength={16000} onChange={(event) => setComposer(event.target.value)} placeholder={selectedSession.status === "ARCHIVED" ? "Archived sessions are read-only." : "Explore an idea, test continuity, or ask for a proposal…"} />
+                <textarea value={composer} disabled={selectedSession.status !== "ACTIVE" || running || !profileAvailable} maxLength={16000} onChange={(event) => setComposer(event.target.value)} placeholder={selectedSession.status === "ARCHIVED" ? "Archived sessions are read-only." : !profileAvailable ? "This session's profile is unavailable." : "Explore an idea, test continuity, or ask for a proposal…"} />
               </label>
               <div>
                 <span>AI output is proposal-only.</span>
-                {hasAssistant ? <button type="button" disabled={running || selectedSession.status !== "ACTIVE"} onClick={() => void openPreflight("REGENERATE")}>Regenerate</button> : null}
-                <button className="primary-button" type="button" disabled={!composer.trim() || running || selectedSession.status !== "ACTIVE"} onClick={() => void openPreflight("SEND")}>Send</button>
+                {hasAssistant ? <button type="button" disabled={running || selectedSession.status !== "ACTIVE" || !profileAvailable} onClick={() => void openPreflight("REGENERATE")}>Regenerate</button> : null}
+                <button className="primary-button" type="button" disabled={!composer.trim() || running || selectedSession.status !== "ACTIVE" || !profileAvailable} onClick={() => void openPreflight("SEND")}>Send</button>
               </div>
             </footer>
           </>
@@ -518,8 +562,12 @@ export function WritersRoomPage({
           <section className="writers-room-no-session">
             <span className="section-label">Writers' Room</span>
             <h2>Build narrative with your Project Brain in view.</h2>
-            <p>Create a session, choose a focused profile, and keep every generated idea separate from established project truth.</p>
-            <button className="primary-button" type="button" onClick={() => setCreateOpen(true)}>New Session</button>
+            <p>Start from the Sessions area, choose a focused profile, and keep every generated idea separate from established project truth.</p>
+            <ul>
+              <li>Lore Architect develops factions, places, history, and conflicts.</li>
+              <li>Character &amp; Dialogue explores voice, relationships, and conversations.</li>
+              <li>Continuity Editor checks ideas against established and unresolved lore.</li>
+            </ul>
           </section>
         )}
       </section>
@@ -539,11 +587,12 @@ export function WritersRoomPage({
       {createOpen ? (
         <div className="writers-room-dialog-backdrop">
           <section className="writers-room-create-dialog" role="dialog" aria-modal="true" aria-labelledby="new-writers-room-session-title">
-            <header><div><span className="section-label">New non-authoritative session</span><h2 id="new-writers-room-session-title">Start a Writers' Room session</h2></div><button type="button" onClick={() => setCreateOpen(false)}>Cancel</button></header>
+            <header><div><span className="section-label">New non-authoritative session</span><h2 id="new-writers-room-session-title">Start a Writers' Room session</h2></div><button type="button" disabled={creating} onClick={() => { setCreateOpen(false); setCreateError(null); }}>Cancel</button></header>
             <label>Session title<input value={newTitle} maxLength={160} autoFocus onChange={(event) => setNewTitle(event.target.value)} /></label>
             <label>Profile<select value={newProfileId} onChange={(event) => setNewProfileId(event.target.value)}>{runnableProfiles.map((profile) => <option value={profile.id} key={profile.id}>{profile.displayName}</option>)}</select></label>
             <p>{runnableProfiles.find((profile) => profile.id === newProfileId)?.taskPurpose}</p>
-            <button className="primary-button" type="button" disabled={!newTitle.trim()} onClick={() => void createSession()}>Create Session</button>
+            {createError ? <p className="writers-room-error" role="alert">{createError.message ?? "The session could not be created. Your title and profile are unchanged."}</p> : null}
+            <button className="primary-button" type="button" disabled={!newTitle.trim() || creating || !runnableProfiles.some((profile) => profile.id === newProfileId)} onClick={() => void createSession()}>{creating ? "Creating…" : "Create Session"}</button>
           </section>
         </div>
       ) : null}
