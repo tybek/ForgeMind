@@ -6,8 +6,10 @@ import {
   archiveAiWorkspaceSession,
   archiveAndResetAiWorkspaceHistory,
   createAiWorkspaceSession,
+  deleteAiWorkspaceSession,
   listAiWorkspaceProfiles,
   loadAiWorkspaceSessions,
+  reopenAiWorkspaceSession,
   reviewAiWorkspaceProposal,
   setAiWorkspaceMarkdownContext,
   type AiWorkspaceDocument,
@@ -79,6 +81,12 @@ function usageKey(reference: AiWorkspaceUsageReference): string {
 
 function recordKey(record: WritersRoomUsageRecord): string {
   return `${record.sessionId}:${record.timestamp}`;
+}
+
+function newestActiveSessionId(document: AiWorkspaceDocument | null, excludedId?: string): string | null {
+  return document?.sessions
+    .filter((session) => session.surface === "writers_room" && session.status === "ACTIVE" && session.id !== excludedId)
+    .sort((left, right) => Date.parse(right.updatedAt) - Date.parse(left.updatedAt))[0]?.id ?? null;
 }
 
 function formatLatency(preflight: WritersRoomPreflight): string {
@@ -230,6 +238,9 @@ export function WritersRoomPage({
   const [createOpen, setCreateOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<WritersRoomError | null>(null);
+  const [deleteCandidate, setDeleteCandidate] = useState<AiWorkspaceSession | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<WritersRoomError | null>(null);
   const [newTitle, setNewTitle] = useState("");
   const [newProfileId, setNewProfileId] = useState("lore_architect");
   const [preflightMode, setPreflightMode] = useState<WritersRoomRunMode | null>(null);
@@ -241,13 +252,22 @@ export function WritersRoomPage({
   const [busyProposalId, setBusyProposalId] = useState<string | null>(null);
   const [error, setError] = useState<WritersRoomError | null>(null);
   const [persistenceError, setPersistenceError] = useState<WritersRoomError | null>(null);
+  const [runRecoveryAvailable, setRunRecoveryAvailable] = useState(false);
   const requestLock = useRef(false);
+  const conversationRef = useRef<HTMLDivElement>(null);
+  const followNewestMessage = useRef(true);
 
   const sessions = document?.sessions ?? [];
   const selectedSession = sessions.find((session) => session.id === selectedSessionId) ?? null;
   const activeProfile = profiles.find((profile) => profile.id === selectedSession?.specialistProfileId) ?? null;
   const runnableProfiles = profiles.filter((profile) => WRITERS_ROOM_PROFILE_IDS.includes(profile.id));
   const usageByReference = useMemo(() => new Map(usage.map((record) => [recordKey(record), record])), [usage]);
+  const writersRoomSessions = useMemo(() => sessions
+    .filter((session) => session.surface === "writers_room")
+    .sort((left, right) => {
+      if (left.status !== right.status) return left.status === "ACTIVE" ? -1 : 1;
+      return Date.parse(right.updatedAt) - Date.parse(left.updatedAt);
+    }), [sessions]);
 
   const loadSessions = useCallback(async () => {
     setLoadingSessions(true);
@@ -275,9 +295,7 @@ export function WritersRoomPage({
     setSelectedSessionId((current) => {
       const writersRoomSessions = document?.sessions.filter((session) => session.surface === "writers_room") ?? [];
       if (current && writersRoomSessions.some((session) => session.id === current)) return current;
-      return writersRoomSessions
-        .filter((session) => session.status === "ACTIVE")
-        .sort((left, right) => Date.parse(right.updatedAt) - Date.parse(left.updatedAt))[0]?.id ?? null;
+      return newestActiveSessionId(document);
     });
   }, [document]);
 
@@ -292,6 +310,23 @@ export function WritersRoomPage({
     window.addEventListener("keydown", closeOnEscape);
     return () => window.removeEventListener("keydown", closeOnEscape);
   }, [createOpen, creating]);
+
+  useEffect(() => {
+    if (!deleteCandidate) return;
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape" && !deleting) {
+        setDeleteCandidate(null);
+        setDeleteError(null);
+      }
+    }
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [deleteCandidate, deleting]);
+
+  useEffect(() => {
+    const conversation = conversationRef.current;
+    if (conversation && followNewestMessage.current) conversation.scrollTop = conversation.scrollHeight;
+  }, [selectedSessionId, selectedSession?.messages.length]);
 
   async function createSession() {
     if (!newTitle.trim() || creating) return;
@@ -322,7 +357,31 @@ export function WritersRoomPage({
     try {
       const updated = await archiveAiWorkspaceSession(workspace.path, workspace.projectId, session.id);
       setDocument(updated);
+      if (selectedSessionId === session.id) setSelectedSessionId(newestActiveSessionId(updated, session.id));
     } catch (reason) { setError(safeError(reason)); }
+  }
+
+  async function reopenSession(session: AiWorkspaceSession) {
+    setError(null);
+    try {
+      const updated = await reopenAiWorkspaceSession(workspace.path, workspace.projectId, session.id);
+      setDocument(updated);
+      setSelectedSessionId(session.id);
+      followNewestMessage.current = true;
+    } catch (reason) { setError(safeError(reason)); }
+  }
+
+  async function deleteSession() {
+    if (!deleteCandidate || deleting) return;
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      const updated = await deleteAiWorkspaceSession(workspace.path, workspace.projectId, deleteCandidate.id);
+      setDocument(updated);
+      if (selectedSessionId === deleteCandidate.id) setSelectedSessionId(newestActiveSessionId(updated));
+      setDeleteCandidate(null);
+    } catch (reason) { setDeleteError(safeError(reason)); }
+    finally { setDeleting(false); }
   }
 
   async function chooseMarkdown() {
@@ -403,6 +462,7 @@ export function WritersRoomPage({
     setPreflightMessage(undefined);
     setRunning(true);
     setError(null);
+    setRunRecoveryAvailable(false);
     try {
       const result = await runWritersRoom({
         rootPath: workspace.path,
@@ -413,9 +473,16 @@ export function WritersRoomPage({
         message,
       });
       setDocument(result.document);
-      setUsage(await loadWritersRoomUsage(workspace.projectId));
       if (mode === "SEND") setComposer("");
-    } catch (reason) { setError(safeError(reason)); }
+      void loadWritersRoomUsage(workspace.projectId).then(setUsage).catch(() => undefined);
+    } catch (reason) {
+      const failure = safeError(reason);
+      setError(failure);
+      if (failure.code === "AI_WORKSPACE_RESPONSE_RENDER_FAILED") {
+        setRunRecoveryAvailable(true);
+        if (mode === "SEND") setComposer("");
+      }
+    }
     finally { requestLock.current = false; setRunning(false); }
   }
 
@@ -460,17 +527,22 @@ export function WritersRoomPage({
           <div><span className="section-label">Non-authoritative work history</span><h2>Sessions</h2></div>
           <button className="primary-button" type="button" onClick={() => { setCreateError(null); setCreateOpen(true); }}>New Session</button>
         </header>
-        <div className="writers-room-session-list">
-          {sessions.filter((session) => session.surface === "writers_room").map((session) => {
+        <div className="writers-room-session-list" aria-label="Writers' Room sessions">
+          {writersRoomSessions.map((session) => {
             const profile = profiles.find((candidate) => candidate.id === session.specialistProfileId);
             return (
               <article className={session.id === selectedSessionId ? "writers-room-session is-active" : "writers-room-session"} key={session.id}>
-                <button type="button" onClick={() => { setSelectedSessionId(session.id); setError(null); }}>
+                <button type="button" onClick={() => { followNewestMessage.current = true; setSelectedSessionId(session.id); setError(null); }}>
                   <strong>{session.title}</strong>
                   <span>{profile?.displayName ?? "Profile unavailable"}</span>
-                  <small>{session.status === "ARCHIVED" ? "Archived" : new Date(session.updatedAt).toLocaleString()}</small>
+                  <small>{session.status === "ARCHIVED" ? "Archived · " : ""}{new Date(session.updatedAt).toLocaleString()}</small>
                 </button>
-                {session.status === "ACTIVE" ? <button className="writers-room-archive" type="button" aria-label={`Archive ${session.title}`} onClick={() => void archiveSession(session)}>Archive</button> : null}
+                <div className="writers-room-session-actions">
+                  {session.status === "ACTIVE"
+                    ? <button type="button" aria-label={`Archive ${session.title}`} onClick={() => void archiveSession(session)}>Archive</button>
+                    : <button type="button" aria-label={`Reopen ${session.title}`} onClick={() => void reopenSession(session)}>Reopen</button>}
+                  <button type="button" aria-label={`Delete ${session.title}`} onClick={() => { setDeleteError(null); setDeleteCandidate(session); }}>Delete</button>
+                </div>
               </article>
             );
           })}
@@ -505,7 +577,15 @@ export function WritersRoomPage({
               </div>
             </header>
 
-            <div className="writers-room-conversation" aria-live="polite">
+            <div
+              className="writers-room-conversation"
+              aria-live="polite"
+              ref={conversationRef}
+              onScroll={(event) => {
+                const target = event.currentTarget;
+                followNewestMessage.current = target.scrollHeight - target.scrollTop - target.clientHeight < 80;
+              }}
+            >
               {selectedSession.messages.length === 0 ? (
                 <section className="writers-room-empty">
                   <span className="section-label">Creative workspace</span>
@@ -545,7 +625,12 @@ export function WritersRoomPage({
               {running ? <p className="writers-room-running" role="status">Writers' Room is preparing a bounded response…</p> : null}
             </div>
 
-            {error && !preflightMode ? <p className="writers-room-error" role="alert"><strong>{error.code ?? "WRITERS_ROOM_FAILED"}</strong> {error.message}</p> : null}
+            {error && !preflightMode ? (
+              <div className="writers-room-error" role="alert">
+                <strong>{error.code ?? "WRITERS_ROOM_FAILED"}</strong> {error.message}
+                {runRecoveryAvailable ? <button type="button" onClick={() => { setError(null); setRunRecoveryAvailable(false); void loadSessions(); }}>Reload saved session</button> : null}
+              </div>
+            ) : null}
             <footer className="writers-room-composer">
               <label>
                 Continue the conversation
@@ -593,6 +678,23 @@ export function WritersRoomPage({
             <p>{runnableProfiles.find((profile) => profile.id === newProfileId)?.taskPurpose}</p>
             {createError ? <p className="writers-room-error" role="alert">{createError.message ?? "The session could not be created. Your title and profile are unchanged."}</p> : null}
             <button className="primary-button" type="button" disabled={!newTitle.trim() || creating || !runnableProfiles.some((profile) => profile.id === newProfileId)} onClick={() => void createSession()}>{creating ? "Creating…" : "Create Session"}</button>
+          </section>
+        </div>
+      ) : null}
+
+      {deleteCandidate ? (
+        <div className="writers-room-dialog-backdrop">
+          <section className="writers-room-delete-dialog" role="dialog" aria-modal="true" aria-labelledby="delete-writers-room-session-title">
+            <header>
+              <div><span className="section-label">Permanent history action</span><h2 id="delete-writers-room-session-title">Delete session?</h2></div>
+            </header>
+            <p><strong>“{deleteCandidate.title}”</strong> and its conversation history will be permanently removed from this project.</p>
+            <p>This does not delete Project Brain knowledge or Decisions previously created through explicit Apply actions.</p>
+            {deleteError ? <p className="writers-room-error" role="alert">{deleteError.message ?? "The session could not be deleted."}</p> : null}
+            <footer>
+              <button type="button" autoFocus disabled={deleting} onClick={() => { setDeleteCandidate(null); setDeleteError(null); }}>Cancel</button>
+              <button className="danger-button" type="button" disabled={deleting} onClick={() => void deleteSession()}>{deleting ? "Deleting…" : "Delete Session"}</button>
+            </footer>
           </section>
         </div>
       ) : null}

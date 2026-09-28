@@ -1,5 +1,10 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { AiWorkspaceDocument, AiWorkspaceSourceTrace, AiWorkspaceUsageReference } from "./aiWorkspace";
+import {
+  normalizeAiWorkspaceDocument,
+  type AiWorkspaceDocument,
+  type AiWorkspaceSourceTrace,
+  type AiWorkspaceUsageReference,
+} from "./aiWorkspace";
 import type { ModelEntry } from "./modelRegistry";
 
 export type WritersRoomRunMode = "SEND" | "REGENERATE";
@@ -85,7 +90,16 @@ export function runWritersRoom(input: {
   mode: WritersRoomRunMode;
   message?: string;
 }): Promise<WritersRoomRunResult> {
-  return invoke<WritersRoomRunResult>("run_writers_room", { request: input });
+  return invoke<WritersRoomRunResult>("run_writers_room", { request: input }).then((result) => {
+    try {
+      return { ...result, document: normalizeAiWorkspaceDocument(result.document) };
+    } catch {
+      throw {
+        code: "AI_WORKSPACE_RESPONSE_RENDER_FAILED",
+        message: "The response was saved, but Writers' Room could not display it safely. Reload the saved session without sending another request.",
+      };
+    }
+  });
 }
 
 export function loadWritersRoomUsage(projectId: string): Promise<WritersRoomUsageRecord[]> {

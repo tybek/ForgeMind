@@ -14,7 +14,8 @@
   position: relative;
   display: grid;
   grid-template-columns: minmax(12rem, 14rem) minmax(0, 1fr);
-  min-height: min(42rem, calc(100vh - 11rem));
+  height: max(28rem, calc(100dvh - 11rem));
+  min-height: 0;
   overflow: hidden;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
@@ -34,6 +35,7 @@
   padding: var(--space-4);
   border-right: 1px solid var(--color-border);
   background: color-mix(in srgb, var(--color-surface-elevated) 76%, transparent);
+  overflow: hidden;
 }
 
 .writers-room-session-panel > header,
@@ -41,6 +43,7 @@
 .writers-room-context-drawer > header,
 .writers-room-preflight > header,
 .writers-room-create-dialog > header,
+.writers-room-delete-dialog > header,
 .writers-room-message > header,
 .writers-room-proposal > header,
 .writers-room-composer > div {
@@ -55,6 +58,7 @@
 .writers-room-context-drawer h3,
 .writers-room-preflight h2,
 .writers-room-create-dialog h2,
+.writers-room-delete-dialog h2,
 .writers-room-proposals h3 {
   margin: 0;
 }
@@ -71,6 +75,7 @@
   flex-direction: column;
   gap: var(--space-2);
   overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .writers-room-session {
@@ -114,8 +119,13 @@
   color: var(--color-text-muted);
 }
 
-.writers-room-archive {
+.writers-room-session-actions {
+  display: flex;
+  gap: var(--space-3);
   margin: 0 var(--space-3) var(--space-3);
+}
+
+.writers-room-session-actions button {
   padding: 0;
   border: 0;
   color: var(--color-text-muted);
@@ -123,10 +133,15 @@
   font-size: var(--font-size-xs);
 }
 
+.writers-room-session-actions button:last-child {
+  color: var(--color-danger);
+}
+
 .writers-room-workbench {
   display: flex;
   min-height: 0;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .writers-room-toolbar {
@@ -146,10 +161,11 @@
 .writers-room-conversation {
   display: flex;
   flex: 1 1 auto;
-  min-height: 16rem;
+  min-height: 0;
   flex-direction: column;
   gap: var(--space-4);
   overflow-y: auto;
+  overscroll-behavior: contain;
   padding: var(--space-5);
   background-image: linear-gradient(rgb(255 255 255 / 1.5%) 1px, transparent 1px);
   background-size: 100% 2.75rem;
@@ -320,7 +336,8 @@
 }
 
 .writers-room-preflight,
-.writers-room-create-dialog {
+.writers-room-create-dialog,
+.writers-room-delete-dialog {
   width: min(44rem, 100%);
   max-height: calc(100vh - 3rem);
   overflow-y: auto;
@@ -329,6 +346,13 @@
   border-radius: var(--radius-lg);
   background: var(--color-surface-elevated);
   box-shadow: var(--shadow-elevated);
+}
+
+.writers-room-delete-dialog > footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
 }
 
 .writers-room-preflight-grid {
@@ -388,6 +412,10 @@
   background: color-mix(in srgb, var(--color-danger) 8%, var(--color-surface));
 }
 
+.writers-room-error button {
+  margin-left: var(--space-3);
+}
+
 .writers-room-warning {
   margin: var(--space-3) var(--space-5) 0;
   padding: var(--space-3);
@@ -417,11 +445,11 @@
 @media (max-width: 900px) {
   .writers-room {
     grid-template-columns: 1fr;
-    overflow: visible;
+    grid-template-rows: minmax(0, 11rem) minmax(0, 1fr);
   }
 
   .writers-room-session-panel {
-    max-height: 13rem;
+    max-height: none;
     border-right: 0;
     border-bottom: 1px solid var(--color-border);
   }
@@ -436,6 +464,7 @@
     grid-auto-columns: minmax(12rem, 70%);
     grid-auto-flow: column;
     overflow-x: auto;
+    overflow-y: hidden;
   }
 
   .writers-room-message {

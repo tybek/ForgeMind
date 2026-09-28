@@ -372,6 +372,26 @@ export function archiveAiWorkspaceSession(
   });
 }
 
+export function reopenAiWorkspaceSession(
+  rootPath: string,
+  projectId: string,
+  sessionId: string,
+): Promise<AiWorkspaceDocument> {
+  return invokeDocument("reopen_ai_workspace_session", {
+    request: { rootPath, projectId, sessionId },
+  });
+}
+
+export function deleteAiWorkspaceSession(
+  rootPath: string,
+  projectId: string,
+  sessionId: string,
+): Promise<AiWorkspaceDocument> {
+  return invokeDocument("delete_ai_workspace_session", {
+    request: { rootPath, projectId, sessionId },
+  });
+}
+
 export function createAiWorkspaceProposal(
   rootPath: string,
   projectId: string,

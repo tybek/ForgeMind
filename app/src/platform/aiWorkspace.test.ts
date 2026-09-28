@@ -7,12 +7,14 @@ import {
   buildAiWorkspaceContext,
   createAiWorkspaceProposal,
   createAiWorkspaceSession,
+  deleteAiWorkspaceSession,
   listAiWorkspaceProfiles,
   loadAiWorkspaceSessions,
   reviewAiWorkspaceProposal,
   setAiWorkspaceMarkdownContext,
   applyAiWorkspaceProposal,
   normalizeAiWorkspaceDocument,
+  reopenAiWorkspaceSession,
 } from "./aiWorkspace";
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
@@ -35,6 +37,8 @@ describe("AI Workspace platform boundary", () => {
     await createAiWorkspaceSession("D:\\Game", "project-1", "shared", "Explore lore", "lore_architect", "Faction");
     await appendAiWorkspaceMessage("D:\\Game", "project-1", "session-1", "USER", "Develop this faction.");
     await archiveAiWorkspaceSession("D:\\Game", "project-1", "session-1");
+    await reopenAiWorkspaceSession("D:\\Game", "project-1", "session-1");
+    await deleteAiWorkspaceSession("D:\\Game", "project-1", "session-1");
     await buildAiWorkspaceContext("D:\\Game", "project-1", [
       { sourceType: "DOCUMENT", relativePath: "FACTIONS.md", priority: "EXPLICIT" },
     ]);
@@ -49,14 +53,20 @@ describe("AI Workspace platform boundary", () => {
     expect(invoke).toHaveBeenNthCalledWith(3, "create_ai_workspace_session", {
       request: { rootPath: "D:\\Game", projectId: "project-1", surface: "shared", purpose: "Explore lore", specialistProfileId: "lore_architect", title: "Faction" },
     });
-    expect(invoke).toHaveBeenNthCalledWith(6, "build_ai_workspace_context", {
+    expect(invoke).toHaveBeenNthCalledWith(6, "reopen_ai_workspace_session", {
+      request: { rootPath: "D:\\Game", projectId: "project-1", sessionId: "session-1" },
+    });
+    expect(invoke).toHaveBeenNthCalledWith(7, "delete_ai_workspace_session", {
+      request: { rootPath: "D:\\Game", projectId: "project-1", sessionId: "session-1" },
+    });
+    expect(invoke).toHaveBeenNthCalledWith(8, "build_ai_workspace_context", {
       request: { rootPath: "D:\\Game", projectId: "project-1", sources: [{ sourceType: "DOCUMENT", relativePath: "FACTIONS.md", priority: "EXPLICIT" }] },
     });
-    expect(invoke).toHaveBeenNthCalledWith(9, "archive_and_reset_ai_workspace_history", { path: "D:\\Game" });
-    expect(invoke).toHaveBeenNthCalledWith(10, "set_ai_workspace_markdown_context", {
+    expect(invoke).toHaveBeenNthCalledWith(11, "archive_and_reset_ai_workspace_history", { path: "D:\\Game" });
+    expect(invoke).toHaveBeenNthCalledWith(12, "set_ai_workspace_markdown_context", {
       request: { rootPath: "D:\\Game", projectId: "project-1", sessionId: "session-1", relativePaths: ["FACTIONS.md"] },
     });
-    expect(invoke).toHaveBeenNthCalledWith(11, "apply_ai_workspace_proposal", {
+    expect(invoke).toHaveBeenNthCalledWith(13, "apply_ai_workspace_proposal", {
       request: { rootPath: "D:\\Game", projectId: "project-1", sessionId: "session-1", proposalId: "proposal-1" },
     });
   });

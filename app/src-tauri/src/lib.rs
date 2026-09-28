@@ -191,6 +191,20 @@ fn archive_ai_workspace_session(
 }
 
 #[tauri::command]
+fn reopen_ai_workspace_session(
+    request: AiWorkspaceSessionActionRequest,
+) -> Result<AiWorkspaceDocument, AiWorkspaceError> {
+    ai_workspace::reopen_session(request)
+}
+
+#[tauri::command]
+fn delete_ai_workspace_session(
+    request: AiWorkspaceSessionActionRequest,
+) -> Result<AiWorkspaceDocument, AiWorkspaceError> {
+    ai_workspace::delete_session(request)
+}
+
+#[tauri::command]
 fn create_ai_workspace_proposal(
     request: CreateAiWorkspaceProposalRequest,
 ) -> Result<AiWorkspaceDocument, AiWorkspaceError> {
@@ -690,6 +704,8 @@ pub fn run() {
             create_ai_workspace_session,
             append_ai_workspace_message,
             archive_ai_workspace_session,
+            reopen_ai_workspace_session,
+            delete_ai_workspace_session,
             create_ai_workspace_proposal,
             review_ai_workspace_proposal,
             build_ai_workspace_context,

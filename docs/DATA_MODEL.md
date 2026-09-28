@@ -64,7 +64,7 @@ A reviewable record of one explicit specialist request. Format version `1` store
 
 ### AIWorkspaceSession / Message
 
-A project-scoped non-authoritative work session with stable identity, surface, purpose, specialist-profile ID, title, timestamps, active/archive lifecycle, bounded user/assistant messages, up to five project-relative Markdown references, aggregate source trace, usage-record references, and pending proposals. WR-1 assistant messages may also store up to three focused questions. Messages store visible content only; system prompts, raw provider payloads, and hidden reasoning are excluded. An application-session ID plus usage timestamp references the canonical application-global usage record rather than duplicating provider/model/token/latency data in project history.
+A project-scoped non-authoritative work session with stable identity, surface, purpose, specialist-profile ID, title, timestamps, active/archive lifecycle, bounded user/assistant messages, up to five project-relative Markdown references, aggregate source trace, usage-record references, and pending proposals. Archive retains history and can be reopened. Explicit confirmed deletion removes only the selected session history. WR-1 assistant messages may also store up to three focused questions. Messages store visible content only; system prompts, raw provider payloads, and hidden reasoning are excluded. An application-session ID plus usage timestamp references the canonical application-global usage record rather than duplicating provider/model/token/latency data in project history.
 
 ### ContextPlan / SourceTrace
 
@@ -107,6 +107,8 @@ For the 0E workflow, questions, answers, provider responses, and pending or disc
 For the specialist workflow, normalized proposals and safe failure metadata may remain durable work history in `.forgemind/specialist-runs.json`. Persistence alone is not approval: history is never imported into the Compendium or Decisions automatically. Game Wiki reads that history as non-authoritative analysis; it is an aggregated view and adds no `wiki.json` storage.
 
 For AIW-0, visible multi-turn discussion and proposal review state may persist in `.forgemind/ai-workspace-sessions.json`. Persistence, proposal acceptance, and proposal application markers are not project truth. A separate explicit owning-domain action remains required, and that domain retains its own lifecycle and approval semantics.
+
+Deleting AI Workspace history does not delete or roll back Compendium knowledge, Decisions, or Open Questions previously created through explicit Apply. Those artifacts belong to their owning domains and survive independently of the proposal/session that led to them.
 
 WR-1 adds runnable narrative messages and reviewed proposal application without changing that distinction. Applied Project Knowledge uses `AI_INFERRED` provenance and `writers_room` source; applied Open Questions use the existing `OpenQuestions` / `TBD` / `UNRESOLVED` representation; applied Decisions use the existing `PROPOSED` initial state.
 
@@ -188,7 +190,7 @@ Approval answers whether a person has accepted an artifact; it does not replace 
 
 - `.forgemind/ai-workspace-sessions.json` is a human-readable format-version `1` work-history document tied to one portable Project ID; it is not Project truth.
 - The document is bounded to 50 sessions, 200 messages and 50 proposals per session, and 20 sources per trace/context request. Empty optional collections omitted by format-version `1` serialization read as empty collections. Invalid or unsupported history is never repaired silently; explicit recovery archives only this document and creates an empty replacement.
-- Session lifecycle is `ACTIVE` or `ARCHIVED`. Archived sessions are read-only. Messages contain only visible `USER` or `ASSISTANT` content; hidden reasoning, raw prompts/provider payloads, credentials, authorization data, and absolute workspace paths are excluded.
+- Session lifecycle is `ACTIVE` or `ARCHIVED`. Archived sessions are read-only and may be reopened. Confirmed deletion is a separate permanent history action scoped by Project and session ID; it removes only the selected AI Workspace session and does not mutate or reverse already-applied Compendium, Decision, or Open Question records. Messages contain only visible `USER` or `ASSISTANT` content; hidden reasoning, raw prompts/provider payloads, credentials, authorization data, and absolute workspace paths are excluded.
 - A safely formed persisted profile ID is retained even when that profile is no longer registered, so non-authoritative history remains readable, archivable, and does not block creation of a current-profile session. An unavailable profile cannot prepare or run a Writers' Room request.
 - Context selection is explicit and project-isolated. Supporting context orders approved Decisions before established Compendium knowledge, unresolved Open Questions, documented Markdown, explicitly integrated Reality evidence, and prior AI discussion. Explicit selections remain first in user order.
 - Markdown context must be an explicitly supplied project-relative `.md` or `.markdown` path outside `.forgemind`; each extraction and the total package are bounded. Markdown is `DOCUMENTED`, never automatically Canon.

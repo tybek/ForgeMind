@@ -605,6 +605,28 @@ pub fn archive_session(request: AiWorkspaceSessionActionRequest) -> Result<AiWor
     save(root, document)
 }
 
+pub fn reopen_session(request: AiWorkspaceSessionActionRequest) -> Result<AiWorkspaceDocument, AiWorkspaceError> {
+    let root = Path::new(&request.root_path);
+    verify_project(root, &request.project_id)?;
+    let mut document = required_document(root, &request.project_id)?;
+    let session = document.sessions.iter_mut().find(|session| session.id == request.session_id)
+        .ok_or_else(|| AiWorkspaceError::invalid("The selected AI Workspace session does not exist."))?;
+    session.status = AiWorkspaceSessionStatus::Active;
+    session.updated_at = timestamp();
+    save(root, document)
+}
+
+pub fn delete_session(request: AiWorkspaceSessionActionRequest) -> Result<AiWorkspaceDocument, AiWorkspaceError> {
+    let root = Path::new(&request.root_path);
+    verify_project(root, &request.project_id)?;
+    let mut document = required_document(root, &request.project_id)?;
+    let Some(index) = document.sessions.iter().position(|session| session.id == request.session_id) else {
+        return Err(AiWorkspaceError::invalid("The selected AI Workspace session does not exist."));
+    };
+    document.sessions.remove(index);
+    save(root, document)
+}
+
 pub fn create_proposal(request: CreateAiWorkspaceProposalRequest) -> Result<AiWorkspaceDocument, AiWorkspaceError> {
     let root = Path::new(&request.root_path);
     verify_project(root, &request.project_id)?;
@@ -1299,6 +1321,86 @@ mod tests {
         assert_eq!(archived.sessions[0].status, AiWorkspaceSessionStatus::Archived);
         assert!(!directory.path().join(".forgemind/compendium.json").exists());
         assert!(!directory.path().join(".forgemind/decisions.json").exists());
+    }
+
+    #[test]
+    fn archived_session_can_be_reopened_without_changing_its_history() {
+        let (directory, project_id) = workspace();
+        let created = create_session(create_request(directory.path(), &project_id)).unwrap();
+        let session_id = created.sessions[0].id.clone();
+        let archived = archive_session(AiWorkspaceSessionActionRequest {
+            root_path: directory.path().display().to_string(), project_id: project_id.clone(), session_id: session_id.clone(),
+        }).unwrap();
+        assert_eq!(archived.sessions[0].status, AiWorkspaceSessionStatus::Archived);
+
+        let reopened = reopen_session(AiWorkspaceSessionActionRequest {
+            root_path: directory.path().display().to_string(), project_id, session_id,
+        }).unwrap();
+        assert_eq!(reopened.sessions[0].status, AiWorkspaceSessionStatus::Active);
+        assert!(reopened.sessions[0].messages.is_empty());
+    }
+
+    #[test]
+    fn delete_session_is_project_scoped_persistent_and_rejects_unknown_ids() {
+        let (first, first_id) = workspace();
+        let (second, second_id) = workspace();
+        let first_session = create_session(create_request(first.path(), &first_id)).unwrap().sessions[0].id.clone();
+        let mut second_request = create_request(first.path(), &first_id);
+        second_request.title = "Second session".to_owned();
+        let second_session = create_session(second_request).unwrap().sessions[1].id.clone();
+
+        let cross_project_error = delete_session(AiWorkspaceSessionActionRequest {
+            root_path: second.path().display().to_string(), project_id: first_id.clone(), session_id: first_session.clone(),
+        }).unwrap_err();
+        assert_eq!(cross_project_error.code, "PROJECT_ID_MISMATCH");
+        assert!(load(second.path()).unwrap().is_none());
+        assert_ne!(first_id, second_id);
+
+        let remaining = delete_session(AiWorkspaceSessionActionRequest {
+            root_path: first.path().display().to_string(), project_id: first_id.clone(), session_id: first_session,
+        }).unwrap();
+        assert_eq!(remaining.sessions.len(), 1);
+        assert_eq!(remaining.sessions[0].id, second_session);
+        assert_eq!(load(first.path()).unwrap().unwrap(), remaining);
+
+        let unknown_error = delete_session(AiWorkspaceSessionActionRequest {
+            root_path: first.path().display().to_string(), project_id: first_id.clone(), session_id: Uuid::new_v4().to_string(),
+        }).unwrap_err();
+        assert_eq!(unknown_error.code, "INVALID_AI_WORKSPACE_REQUEST");
+        assert_eq!(load(first.path()).unwrap().unwrap().sessions.len(), 1);
+
+        let empty = delete_session(AiWorkspaceSessionActionRequest {
+            root_path: first.path().display().to_string(), project_id: first_id, session_id: second_session,
+        }).unwrap();
+        assert!(empty.sessions.is_empty());
+        assert!(load(first.path()).unwrap().unwrap().sessions.is_empty());
+    }
+
+    #[test]
+    fn deleting_session_history_does_not_reverse_applied_project_truth() {
+        let (directory, project_id) = workspace();
+        let created = create_session(create_request(directory.path(), &project_id)).unwrap();
+        let session_id = created.sessions[0].id.clone();
+        let proposed = create_proposal(CreateAiWorkspaceProposalRequest {
+            root_path: directory.path().display().to_string(), project_id: project_id.clone(), session_id: session_id.clone(),
+            proposal_type: AiWorkspaceProposalType::SaveKnowledge, title: "Retained knowledge".to_owned(), summary: "Applied truth survives history deletion.".to_owned(),
+            reason: Some("Explicitly reviewed.".to_owned()), source_trace: Vec::new(), proposed_edit: None,
+        }).unwrap();
+        let proposal_id = proposed.sessions[0].proposals[0].id.clone();
+        review_proposal(ReviewAiWorkspaceProposalRequest {
+            root_path: directory.path().display().to_string(), project_id: project_id.clone(), session_id: session_id.clone(),
+            proposal_id: proposal_id.clone(), status: AiWorkspaceProposalStatus::Accepted,
+        }).unwrap();
+        apply_proposal(ApplyAiWorkspaceProposalRequest {
+            root_path: directory.path().display().to_string(), project_id: project_id.clone(), session_id: session_id.clone(), proposal_id,
+        }).unwrap();
+
+        let deleted = delete_session(AiWorkspaceSessionActionRequest {
+            root_path: directory.path().display().to_string(), project_id, session_id,
+        }).unwrap();
+        assert!(deleted.sessions.is_empty());
+        let knowledge = compendium::load(directory.path()).unwrap().unwrap();
+        assert!(knowledge.entries.iter().any(|entry| entry.title == "Retained knowledge"));
     }
 
     #[test]
