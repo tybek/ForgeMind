@@ -277,14 +277,14 @@ export function recommendNextSteps(
   } else if (state.unityGroundTruth?.status === "DETECTED" && state.unityGroundTruth.manifest.status !== "AVAILABLE") {
     const invalid = state.unityGroundTruth.manifest.status === "INVALID_OR_UNSUPPORTED";
     candidates.push({
-      id: invalid ? "refresh-unity-reality" : "import-unity-ground-truth",
-      title: invalid ? "Refresh Unity Reality" : "Import Unity GroundTruth",
+      id: invalid ? "review-invalid-unity-evidence" : "complete-unity-ground-truth",
+      title: invalid ? "Review Invalid Unity Evidence" : "Complete Unity GroundTruth",
       reason: invalid
         ? "The project-owned Unity GroundTruth manifest is invalid or unsupported and needs review."
-        : "ForgeMind detected a Unity project, but no project-owned GroundTruth manifest is available yet.",
+        : "A Unity project is connected, but this ForgeMind project has no GroundTruth export attached yet.",
       area: "REALITY",
       target: "Unity",
-      actionLabel: "Open Unity Reality",
+      actionLabel: "Review Unity Evidence",
       sourceSignals: [{ source: "UNITY_GROUNDTRUTH", fact: `Manifest status is ${state.unityGroundTruth.manifest.status}` }],
       priority: "MEDIUM",
       effort: "MEDIUM",
@@ -292,8 +292,8 @@ export function recommendNextSteps(
     });
   } else if (state.unityGroundTruth?.manifest.summary?.coverageIssues.length) {
     candidates.push({
-      id: "complete-unity-reality",
-      title: "Refresh / Complete Unity Evidence",
+      id: "review-partial-unity-evidence",
+      title: "Review Partial Unity Evidence",
       reason: `${countLabel(state.unityGroundTruth.manifest.summary.coverageIssues.length, "GroundTruth coverage issue")} ${state.unityGroundTruth.manifest.summary.coverageIssues.length === 1 ? "limits" : "limit"} the current Unity evidence.`,
       area: "REALITY",
       target: "Unity",

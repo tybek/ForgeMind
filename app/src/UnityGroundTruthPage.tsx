@@ -34,13 +34,16 @@ function present(value: boolean): string {
 function manifestStatus(result: UnityGroundTruthResult): string {
   switch (result.manifest.status) {
     case "AVAILABLE": return "Available";
-    case "INVALID_OR_UNSUPPORTED": return "Invalid / unsupported";
+    case "NOT_ATTACHED": return "Not attached";
+    case "INVALID_OR_UNSUPPORTED": return "Invalid";
     default: return "Not generated";
   }
 }
 
 function coverageStatus(result: UnityGroundTruthResult): string {
-  if (result.manifest.status !== "AVAILABLE") return "No evidence";
+  if (result.manifest.status !== "AVAILABLE") {
+    return result.status === "DETECTED" ? "Portable inspection only" : "No evidence";
+  }
   return result.manifest.summary?.coverageIssues.length ? "Partial" : "Verified";
 }
 
@@ -193,7 +196,7 @@ export function UnityGroundTruthPage({
             {connection?.configured ? "Change Unity Project" : "Select Unity Project"}
           </Button>
           <Button icon="refresh" loading={loading} loadingLabel="Inspecting..." onClick={() => void refresh()}>
-            Refresh evidence
+            Refresh Evidence
           </Button>
           {connection?.configured ? <button className="text-button" type="button" onClick={() => void disconnect()}>Disconnect</button> : null}
         </div>
@@ -215,7 +218,7 @@ export function UnityGroundTruthPage({
           <section className="unity-summary" aria-label="Unity project summary">
             <article><span>Connection</span><strong className={result.status === "DETECTED" ? "reality-status-positive" : result.status === "NOT_DETECTED" ? "reality-status-muted" : "reality-status-error"}>{result.status === "DETECTED" ? "Connected" : result.status === "NOT_DETECTED" ? "Not connected" : "Error"}</strong></article>
             <article><span>Unity version</span><strong>{result.projectVersion.version ?? "—"}</strong></article>
-            <article><span>GroundTruth manifest</span><strong className={result.manifest.status === "INVALID_OR_UNSUPPORTED" ? "reality-status-error" : result.manifest.status === "AVAILABLE" ? "reality-status-positive" : "reality-status-muted"}>{result.manifest.status === "AVAILABLE" ? "Available" : "Not available"}</strong></article>
+            <article><span>GroundTruth manifest</span><strong className={result.manifest.status === "INVALID_OR_UNSUPPORTED" ? "reality-status-error" : result.manifest.status === "AVAILABLE" ? "reality-status-positive" : "reality-status-muted"}>{manifestStatus(result)}</strong></article>
             <article><span>Coverage</span><strong className={coverageStatus(result) === "Verified" ? "reality-status-positive" : "reality-status-muted"}>{coverageStatus(result)}</strong></article>
           </section>
 
@@ -247,6 +250,7 @@ export function UnityGroundTruthPage({
             <div className="unity-card-heading"><div><span className="section-label">Project-owned evidence</span><h3 id="unity-manifest-title">.forgemind/unity-groundtruth.json</h3></div><strong>{manifestStatus(result)}</strong></div>
             <p className="unity-note">The manifest is implementation evidence, not design truth. Missing evidence is unverified, not proof of absence.</p>
             {result.manifest.message ? <p className="unity-note">{result.manifest.message}</p> : null}
+            <p className="unity-note">Refresh re-reads current evidence. It does not run the Unity exporter or change exporter coverage.</p>
           </section> : null}
 
           {result.manifest.summary ? <ManifestSummary summary={result.manifest.summary} /> : null}

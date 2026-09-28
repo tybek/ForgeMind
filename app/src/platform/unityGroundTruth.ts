@@ -2,7 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 
 export type UnityProjectStatus = "DETECTED" | "NOT_DETECTED" | "INSPECTION_FAILED";
 export type UnityVersionStatus = "AVAILABLE" | "MISSING" | "INVALID";
-export type GroundTruthManifestStatus = "NOT_GENERATED" | "AVAILABLE" | "INVALID_OR_UNSUPPORTED";
+export type GroundTruthManifestStatus = "NOT_ATTACHED" | "NOT_GENERATED" | "AVAILABLE" | "INVALID_OR_UNSUPPORTED";
 export type GroundTruthCategory =
   | "SCENES"
   | "GAME_OBJECTS"

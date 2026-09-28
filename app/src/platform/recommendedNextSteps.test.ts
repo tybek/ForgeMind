@@ -216,16 +216,43 @@ describe("deterministic Recommended Next Steps", () => {
     expect(recommendNextSteps(state()).some(({ id }) => id === "connect-unity-project")).toBe(false);
   });
 
-  it("recommends importing GroundTruth when a Unity project has no manifest", () => {
+  it.each(["NOT_ATTACHED", "NOT_GENERATED"] as const)("recommends completing GroundTruth for connected portable inspection with %s project evidence", (status) => {
     const recommendations = recommendNextSteps(state({
       unityGroundTruth: {
         status: "DETECTED",
         evidence: { assets: true, packages: true, projectSettings: true },
         projectVersion: { status: "AVAILABLE", version: "6000.3" },
-        manifest: { status: "NOT_GENERATED" },
+        manifest: { status },
       },
     }));
-    expect(recommendations[0]).toMatchObject({ id: "import-unity-ground-truth", target: "Unity" });
+    expect(recommendations[0]).toMatchObject({
+      id: "complete-unity-ground-truth",
+      title: "Complete Unity GroundTruth",
+      reason: "A Unity project is connected, but this ForgeMind project has no GroundTruth export attached yet.",
+      actionLabel: "Review Unity Evidence",
+      target: "Unity",
+    });
+  });
+
+  it("recommends reviewing partial Unity evidence without implying refresh can fix exporter coverage", () => {
+    const current = state();
+    const unityGroundTruth = structuredClone(current.unityGroundTruth!);
+    unityGroundTruth.manifest.summary!.coverageErrorCount = 1;
+    unityGroundTruth.manifest.summary!.coverageIssues = [
+      { category: "SERIALIZED_FIELDS", code: "SERIALIZED_FIELDS_TRUNCATED", kind: "BOUNDED_TRUNCATION" },
+    ];
+    const recommendation = recommendNextSteps(state({ unityGroundTruth }))[0];
+    expect(recommendation).toMatchObject({
+      id: "review-partial-unity-evidence",
+      title: "Review Partial Unity Evidence",
+      reason: "1 GroundTruth coverage issue limits the current Unity evidence.",
+      actionLabel: "Review Unity Evidence",
+    });
+    expect(recommendation.title).not.toMatch(/refresh|complete/i);
+  });
+
+  it("does not recommend Unity completion when valid GroundTruth has complete coverage", () => {
+    expect(recommendNextSteps(state()).some(({ target }) => target === "Unity")).toBe(false);
   });
 
   it.each(["UNVERIFIED", "OUT_OF_SYNC", "CONFLICT"] as const)("recommends review for %s Alignment", (status) => {

@@ -29,6 +29,7 @@ pub enum UnityVersionStatus {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum GroundTruthManifestStatus {
+    NotAttached,
     NotGenerated,
     Available,
     InvalidOrUnsupported,
@@ -268,11 +269,16 @@ enum ManifestLoadError {
     UnsupportedVersion,
 }
 
-pub fn inspect(workspace_root: &Path, project_id: &str) -> UnityGroundTruthResult {
+pub fn inspect(
+    source_root: &Path,
+    project_root: &Path,
+    project_id: &str,
+    detached_source: bool,
+) -> UnityGroundTruthResult {
     let evidence = UnityProjectEvidence {
-        assets: workspace_root.join("Assets").is_dir(),
-        packages: workspace_root.join("Packages").is_dir(),
-        project_settings: workspace_root.join("ProjectSettings").is_dir(),
+        assets: source_root.join("Assets").is_dir(),
+        packages: source_root.join("Packages").is_dir(),
+        project_settings: source_root.join("ProjectSettings").is_dir(),
     };
     let status = if evidence.assets && evidence.packages && evidence.project_settings {
         UnityProjectStatus::Detected
@@ -281,8 +287,8 @@ pub fn inspect(workspace_root: &Path, project_id: &str) -> UnityGroundTruthResul
     };
     UnityGroundTruthResult {
         status,
-        project_version: read_project_version(workspace_root),
-        manifest: read_manifest_evidence(workspace_root, project_id),
+        project_version: read_project_version(source_root),
+        manifest: read_manifest_evidence(project_root, source_root, project_id, detached_source),
         evidence,
         message: (status == UnityProjectStatus::NotDetected).then(|| {
             "The active workspace does not contain all canonical Unity project directories. ForgeMind remains usable.".to_owned()
@@ -385,9 +391,29 @@ fn read_project_version(workspace_root: &Path) -> UnityVersionEvidence {
     }
 }
 
-fn read_manifest_evidence(workspace_root: &Path, project_id: &str) -> GroundTruthManifestEvidence {
-    let path = workspace_root.join(".forgemind").join(GROUNDTRUTH_FILE);
+fn read_manifest_evidence(
+    project_root: &Path,
+    source_root: &Path,
+    project_id: &str,
+    detached_source: bool,
+) -> GroundTruthManifestEvidence {
+    let path = project_root.join(".forgemind").join(GROUNDTRUTH_FILE);
     if !path.is_file() {
+        if detached_source {
+            let foreign_manifest_present = source_root
+                .join(".forgemind")
+                .join(GROUNDTRUTH_FILE)
+                .is_file();
+            return GroundTruthManifestEvidence {
+                status: GroundTruthManifestStatus::NotAttached,
+                summary: None,
+                message: Some(if foreign_manifest_present {
+                    "GroundTruth exists in the connected source, but is not attached to this ForgeMind project.".to_owned()
+                } else {
+                    "This ForgeMind project has no GroundTruth export attached yet.".to_owned()
+                }),
+            };
+        }
         return GroundTruthManifestEvidence {
             status: GroundTruthManifestStatus::NotGenerated,
             summary: None,
@@ -590,10 +616,14 @@ mod tests {
         fs::write(root.join(".forgemind").join(GROUNDTRUTH_FILE), serde_json::to_vec_pretty(value).unwrap()).unwrap();
     }
 
+    fn inspect_attached(root: &Path, project_id: &str) -> UnityGroundTruthResult {
+        inspect(root, root, project_id, false)
+    }
+
     #[test]
     fn non_unity_workspace_is_safe_and_usable() {
         let temp = tempfile::tempdir().unwrap();
-        let result = inspect(temp.path(), PROJECT_ID);
+        let result = inspect_attached(temp.path(), PROJECT_ID);
         assert_eq!(result.status, UnityProjectStatus::NotDetected);
         assert!(result.message.unwrap().contains("remains usable"));
         assert_eq!(result.manifest.status, GroundTruthManifestStatus::NotGenerated);
@@ -602,7 +632,7 @@ mod tests {
     #[test]
     fn detects_canonical_unity_project_evidence_and_version() {
         let temp = unity_project(Some("m_EditorVersion: 6000.3.23f1\nm_EditorVersionWithRevision: ignored\n"));
-        let result = inspect(temp.path(), PROJECT_ID);
+        let result = inspect_attached(temp.path(), PROJECT_ID);
         assert_eq!(result.status, UnityProjectStatus::Detected);
         assert_eq!(result.project_version.status, UnityVersionStatus::Available);
         assert_eq!(result.project_version.version.as_deref(), Some("6000.3.23f1"));
@@ -612,16 +642,16 @@ mod tests {
     #[test]
     fn missing_and_corrupt_project_versions_are_distinct_safe_states() {
         let missing = unity_project(None);
-        assert_eq!(inspect(missing.path(), PROJECT_ID).project_version.status, UnityVersionStatus::Missing);
+        assert_eq!(inspect_attached(missing.path(), PROJECT_ID).project_version.status, UnityVersionStatus::Missing);
         let corrupt = unity_project(Some("not a Unity project version"));
-        assert_eq!(inspect(corrupt.path(), PROJECT_ID).project_version.status, UnityVersionStatus::Invalid);
+        assert_eq!(inspect_attached(corrupt.path(), PROJECT_ID).project_version.status, UnityVersionStatus::Invalid);
     }
 
     #[test]
     fn loads_a_valid_versioned_manifest_as_a_safe_summary() {
         let temp = unity_project(Some("m_EditorVersion: 6000.3.23f1"));
         write_manifest(temp.path(), &valid_manifest());
-        let result = inspect(temp.path(), PROJECT_ID);
+        let result = inspect_attached(temp.path(), PROJECT_ID);
         assert_eq!(result.manifest.status, GroundTruthManifestStatus::Available);
         let summary = result.manifest.summary.as_ref().unwrap();
         assert_eq!(summary.observation_counts.scenes, 1);
@@ -697,6 +727,43 @@ mod tests {
             ),
             Err(ManifestLoadError::Invalid)
         );
+    }
+
+    #[test]
+    fn detached_source_keeps_portable_inspection_but_does_not_adopt_foreign_groundtruth() {
+        let active_project = tempfile::tempdir().unwrap();
+        let foreign_unity = unity_project(Some("m_EditorVersion: 6000.3.23f1"));
+        write_manifest(foreign_unity.path(), &valid_manifest());
+
+        let detached = inspect(foreign_unity.path(), active_project.path(), "project-a", true);
+        assert_eq!(detached.status, UnityProjectStatus::Detected);
+        assert_eq!(detached.project_version.version.as_deref(), Some("6000.3.23f1"));
+        assert_eq!(detached.manifest.status, GroundTruthManifestStatus::NotAttached);
+        assert!(detached.manifest.summary.is_none());
+        assert!(detached
+            .manifest
+            .message
+            .unwrap()
+            .contains("not attached to this ForgeMind project"));
+        assert!(alignment_evidence(active_project.path(), "project-a").is_empty());
+
+        let owning_project = inspect_attached(foreign_unity.path(), PROJECT_ID);
+        assert_eq!(owning_project.manifest.status, GroundTruthManifestStatus::Available);
+        assert!(!alignment_evidence(foreign_unity.path(), PROJECT_ID).is_empty());
+    }
+
+    #[test]
+    fn detached_source_still_loads_valid_groundtruth_owned_by_the_active_project() {
+        let active_project = tempfile::tempdir().unwrap();
+        let foreign_unity = unity_project(Some("m_EditorVersion: 6000.3.23f1"));
+        let mut active_manifest = valid_manifest();
+        active_manifest["projectId"] = json!("project-a");
+        write_manifest(active_project.path(), &active_manifest);
+
+        let result = inspect(foreign_unity.path(), active_project.path(), "project-a", true);
+        assert_eq!(result.status, UnityProjectStatus::Detected);
+        assert_eq!(result.manifest.status, GroundTruthManifestStatus::Available);
+        assert!(result.manifest.summary.is_some());
     }
 
     #[test]

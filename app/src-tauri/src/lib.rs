@@ -515,12 +515,22 @@ fn inspect_repository_reality(path: String) -> git_reality::RepositoryRealityRes
 fn inspect_unity_groundtruth(path: String) -> unity_groundtruth::UnityGroundTruthResult {
     match workspace::inspect(Path::new(&path)) {
         Ok(WorkspaceInspection::Valid { project, .. }) => {
+            let project_root = Path::new(&path);
             match reality_connections::resolved_path(
-                Path::new(&path),
+                project_root,
                 &project.project_id,
                 reality_connections::RealitySource::Unity,
             ) {
-                Ok(source_path) => unity_groundtruth::inspect(&source_path, &project.project_id),
+                Ok(source_path) => {
+                    let detached_source =
+                        source_path.canonicalize().ok() != project_root.canonicalize().ok();
+                    unity_groundtruth::inspect(
+                        &source_path,
+                        project_root,
+                        &project.project_id,
+                        detached_source,
+                    )
+                }
                 Err(_) => unity_groundtruth::inspection_failed(),
             }
         }

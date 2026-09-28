@@ -29,6 +29,15 @@ function displayEnum(value: string): string {
   return value.toLowerCase().split("_").map((part) => `${part[0]?.toUpperCase() ?? ""}${part.slice(1)}`).join(" ");
 }
 
+function unityManifestLabel(result: UnityGroundTruthResult): string {
+  switch (result.manifest.status) {
+    case "AVAILABLE": return "Available";
+    case "NOT_ATTACHED": return "Not attached";
+    case "INVALID_OR_UNSUPPORTED": return "Invalid";
+    default: return "Not generated";
+  }
+}
+
 function entryCountLabel(count: number): string {
   return `${count} ${count === 1 ? "entry" : "entries"}`;
 }
@@ -222,10 +231,10 @@ export function WikiPage({
               <dl>
                 <div><dt>Project</dt><dd>{unityReality.status === "DETECTED" ? "Detected" : unityReality.status === "NOT_DETECTED" ? "Not detected" : "Inspection failed"}</dd></div>
                 <div><dt>Unity version</dt><dd>{unityReality.projectVersion.version ?? "Unavailable"}</dd></div>
-                <div><dt>Manifest</dt><dd>{unityReality.manifest.status === "AVAILABLE" ? "Available" : unityReality.manifest.status === "INVALID_OR_UNSUPPORTED" ? "Invalid / unsupported" : "Not generated"}</dd></div>
+                <div><dt>Manifest</dt><dd>{unityManifestLabel(unityReality)}</dd></div>
                 {unityReality.manifest.summary ? <div><dt>Snapshot</dt><dd>{`${unityReality.manifest.summary.observationCounts.scenes} scenes, ${unityReality.manifest.summary.observationCounts.gameObjects} GameObjects, ${unityReality.manifest.summary.observationCounts.components} components, ${unityReality.manifest.summary.observationCounts.scriptableObjects} ScriptableObjects`}</dd></div> : null}
               </dl>
-              <p>{unityReality.status === "DETECTED" ? `VERIFIED FROM UNITY — project evidence only; manifest ${unityReality.manifest.status === "AVAILABLE" ? "available" : unityReality.manifest.status === "INVALID_OR_UNSUPPORTED" ? "invalid / unsupported" : "not generated"}.` : "Unity evidence is unavailable; no implementation fact is inferred."}</p>
+              <p>{unityReality.status === "DETECTED" ? `VERIFIED FROM UNITY — portable project inspection; project-owned manifest ${unityManifestLabel(unityReality).toLocaleLowerCase()}.` : "Unity evidence is unavailable; no implementation fact is inferred."}</p>
             </aside>
           ) : null}
           {areaAlignments.length > 0 ? (

@@ -245,10 +245,9 @@ pub fn sources(root: &Path) -> Result<AlignmentSourceCatalog, AlignmentError> {
     intent_sources.sort_by(|left, right| left.title.cmp(&right.title).then(left.source_id.cmp(&right.source_id)));
 
     let repository_root = reality_connections::resolved_path(root, &project_id, ConnectionSource::Repository).ok();
-    let unity_root = reality_connections::resolved_path(root, &project_id, ConnectionSource::Unity).ok();
     let mut reality_evidence = repository_root.as_deref().map(git_evidence).unwrap_or_default();
     reality_evidence.extend(
-        unity_root.as_deref().map(|path| unity_groundtruth::alignment_evidence(path, &project_id)).unwrap_or_default()
+        unity_groundtruth::alignment_evidence(root, &project_id)
             .into_iter()
             .map(|item| RealityEvidenceCandidate {
                 id: item.id,

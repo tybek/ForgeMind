@@ -59,13 +59,15 @@ describe("Unity GroundTruth", () => {
   });
 
   it.each([
-    "NOT_GENERATED",
-    "INVALID_OR_UNSUPPORTED",
-  ] as const)("renders the %s manifest state without fabricating evidence", async (status) => {
+    ["NOT_ATTACHED", "Not attached", "Portable inspection only"],
+    ["NOT_GENERATED", "Not generated", "Portable inspection only"],
+    ["INVALID_OR_UNSUPPORTED", "Invalid", "Portable inspection only"],
+  ] as const)("renders the %s manifest state without fabricating evidence", async (status, label, coverage) => {
     vi.mocked(inspectUnityGroundTruth).mockResolvedValue({ ...detected, manifest: { status, message: status === "INVALID_OR_UNSUPPORTED" ? "Safe invalid state." : undefined } });
     render(<UnityGroundTruthPage workspace={workspace} />);
     const projectSummary = await screen.findByLabelText("Unity project summary");
-    expect(within(projectSummary).getByText("Not available", { selector: "strong" })).toHaveClass(status === "INVALID_OR_UNSUPPORTED" ? "reality-status-error" : "reality-status-muted");
+    expect(within(projectSummary).getByText(label, { selector: "strong" })).toHaveClass(status === "INVALID_OR_UNSUPPORTED" ? "reality-status-error" : "reality-status-muted");
+    expect(within(projectSummary).getByText(coverage, { selector: "strong" })).toBeInTheDocument();
     expect(screen.queryByLabelText("GroundTruth observation counts")).not.toBeInTheDocument();
   });
 
@@ -83,7 +85,7 @@ describe("Unity GroundTruth", () => {
     expect(screen.getByText("ForgeMind remains usable.")).toBeInTheDocument();
     expect(screen.getByText("Project-owned GroundTruth").parentElement).toHaveTextContent("Not available");
     expect(screen.queryByRole("heading", { name: ".forgemind/unity-groundtruth.json" })).not.toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Refresh evidence" }));
+    await user.click(screen.getByRole("button", { name: "Refresh Evidence" }));
     expect(inspectUnityGroundTruth).toHaveBeenCalledTimes(2);
   });
 
@@ -140,5 +142,30 @@ describe("Unity GroundTruth", () => {
     expect(within(issues).getByText("SERIALIZED_FIELDS_TRUNCATED")).toBeInTheDocument();
     expect(within(issues).getByText(/minimum, not an exact total/)).toBeInTheDocument();
     expect(issues).not.toHaveTextContent("D:\\Games\\Sample");
+  });
+
+  it("keeps persistent partial coverage after a read-only refresh", async () => {
+    const partial = {
+      ...detected,
+      manifest: {
+        status: "AVAILABLE" as const,
+        summary: {
+          ...detected.manifest.summary!,
+          coverageErrorCount: 1,
+          coverageIssues: [
+            { category: "SERIALIZED_FIELDS" as const, code: "SERIALIZED_FIELDS_TRUNCATED", kind: "BOUNDED_TRUNCATION" as const },
+          ],
+        },
+      },
+    };
+    vi.mocked(inspectUnityGroundTruth).mockResolvedValue(partial);
+    const user = userEvent.setup();
+    render(<UnityGroundTruthPage workspace={workspace} />);
+    const summary = await screen.findByLabelText("Unity project summary");
+    expect(within(summary).getByText("Partial", { selector: "strong" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Refresh Evidence" }));
+    expect(inspectUnityGroundTruth).toHaveBeenCalledTimes(2);
+    expect(within(summary).getByText("Partial", { selector: "strong" })).toBeInTheDocument();
+    expect(screen.getByText(/does not run the Unity exporter or change exporter coverage/i)).toBeInTheDocument();
   });
 });
