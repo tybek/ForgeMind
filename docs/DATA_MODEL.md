@@ -2,7 +2,7 @@
 
 ## Scope
 
-This model establishes shared language and relationships. It is not a database schema or API contract. Milestone 0C serializes minimal Project identity in `.forgemind/project.json`; 0E adds approved onboarding evidence in `.forgemind/interview.json`; 0F adds separate versioned Compendium and Decision documents; 0G.3 adds non-authoritative specialist work history in `.forgemind/specialist-runs.json`; 0J.1 adds derived, reviewable Alignment history in `.forgemind/alignment.json`; 0K adds reviewed delivery artifacts in `.forgemind/feature-contracts.json`; NPC-1 maps a reviewed manual Project Foundation into the existing Project and Compendium documents; NPC-2 adds transient typed proposals plus compact accepted-origin metadata without creating a new truth store; NEXT-1 adds a transient derived recommendation model without persistence; and NEXT-1.1 adds machine-local project-scoped Reality connection settings without changing portable Project or evidence schemas.
+This model establishes shared language and relationships. It is not a database schema or API contract. Milestone 0C serializes minimal Project identity in `.forgemind/project.json`; 0E adds approved onboarding evidence in `.forgemind/interview.json`; 0F adds separate versioned Compendium and Decision documents; 0G.3 adds non-authoritative specialist work history in `.forgemind/specialist-runs.json`; 0J.1 adds derived, reviewable Alignment history in `.forgemind/alignment.json`; 0K adds reviewed delivery artifacts in `.forgemind/feature-contracts.json`; NPC-1 maps a reviewed manual Project Foundation into the existing Project and Compendium documents; NPC-2 adds transient typed proposals plus compact accepted-origin metadata without creating a new truth store; NEXT-1 adds a transient derived recommendation model without persistence; NEXT-1.1 adds machine-local project-scoped Reality connection settings without changing portable Project or evidence schemas; and AIW-0 adds bounded non-authoritative work history in `.forgemind/ai-workspace-sessions.json`.
 
 ## Core entities
 
@@ -62,11 +62,25 @@ Minimal attribution attached to created or changed artifacts. It may contain a s
 
 A reviewable record of one explicit specialist request. Format version `1` stores a run ID and timestamp, profile/task/model identities, selected Compendium and approved-Decision IDs, the user-authored scenario, success/failure status, either a normalized bounded result or safe error category/diagnostics, and optional usage/latency/cost metadata. Additive optional fields record `preferredTaskBudget`, `effectiveCompletionBudget`, and `knownModelMaxCompletionTokens` when available. Successful runs may also include `normalizationNotices` containing only a canonical list field plus returned and retained item counts; older format-version `1` records without these additive fields remain valid. It never stores credentials, authorization headers, absolute workspace paths, raw requests or provider responses, discarded overflow items, or hidden reasoning. A SpecialistRun is analysis history, not approved Project knowledge.
 
+### AIWorkspaceSession / Message
+
+A project-scoped non-authoritative work session with stable identity, surface, purpose, specialist-profile ID, title, timestamps, active/archive lifecycle, bounded user/assistant messages, aggregate source trace, usage-record references, and pending proposals. Messages store visible content only; system prompts, raw provider payloads, and hidden reasoning are excluded. An application-session ID plus usage timestamp references the canonical application-global usage record rather than duplicating provider/model/token/latency data in project history.
+
+### ContextPlan / SourceTrace
+
+A transient deterministic assembly of explicitly requested or supporting sources. Each item retains content plus source type, stable ID, human-readable label, authority class, selection priority, and optional navigation target. Approved Decisions, current Compendium knowledge, unresolved Open Questions, documented Markdown, explicitly integrated Reality evidence, and prior AI discussion remain distinct. SourceTrace is safe to persist; the assembled content package is not persisted as a raw prompt dump.
+
+### AIWorkspaceProposal
+
+A non-authoritative action envelope with stable identity, type, summary, source trace, timestamps, and `PENDING`, `ACCEPTED`, `APPLIED`, `REJECTED`, or `DISCARDED` review state. A proposed knowledge edit additionally preserves target, current value, proposed value, concise reason, and known affected references. `ACCEPTED` means the user accepted the proposal for action; it does not approve or mutate a target store. `APPLIED` records that a separate owning-domain action completed.
+
 ## Relationships
 
 - A Project contains many ProjectAreas and gives all other entities their context.
 - An approved InterviewCandidate belongs to one Project and may be explicitly imported into the Compendium. Startup never imports it automatically, and deterministic title-plus-statement matching prevents repeated import duplicates.
 - Specialist role profiles consume explicitly selected subsets of the same Project context; they do not own separate project truth or independent knowledge databases. A SpecialistRun preserves the working proposal and its evidence references without making that proposal authoritative. One selected finding may become a new Compendium entry only after explicit human editing and confirmation, with truthful AI provenance and source.
+- An AIWorkspaceSession belongs to exactly one Project and may reference only sources and prior messages from that same Project. Its ContextPlan and proposals retain authority labels without becoming authority themselves.
+- An AIWorkspaceProposal may point toward an owning-domain action, but only that domain's existing explicit command can change Compendium, Decisions, Open Questions, or another authoritative artifact.
 - A ProjectArea groups KnowledgeEntries; one entry may relate to several Systems.
 - A Decision may reference KnowledgeEntries. An approved successor may supersede one approved predecessor; the predecessor remains stored as `SUPERSEDED` history.
 - A Milestone references the Systems, Decisions, and FeatureContracts in its scope.
@@ -91,6 +105,8 @@ Brainstorming, AI analysis, alternatives, and rejected ideas are temporary unles
 For the 0E workflow, questions, answers, provider responses, and pending or discarded candidates remain transient. Only edited and explicitly approved candidates are serialized to `.forgemind/interview.json`.
 
 For the specialist workflow, normalized proposals and safe failure metadata may remain durable work history in `.forgemind/specialist-runs.json`. Persistence alone is not approval: history is never imported into the Compendium or Decisions automatically. Game Wiki reads that history as non-authoritative analysis; it is an aggregated view and adds no `wiki.json` storage.
+
+For AIW-0, visible multi-turn discussion and proposal review state may persist in `.forgemind/ai-workspace-sessions.json`. Persistence, proposal acceptance, and proposal application markers are not project truth. A separate explicit owning-domain action remains required, and that domain retains its own lifecycle and approval semantics.
 
 ### Current versus superseded decisions
 
@@ -165,6 +181,17 @@ Approval answers whether a person has accepted an artifact; it does not replace 
 - Specialist history is never treated as approved knowledge and has no automatic promotion path.
 - Omitted empty diagnostic lists in previously written format-version `1` failures deserialize as empty lists; this is backward compatibility, not a schema migration.
 - Invalid history is not discarded during startup. Explicit recovery archives only the history document and creates a valid empty replacement without changing Project, interview, Compendium, or Decision data.
+
+## AIW-0 AI Workspace invariants
+
+- `.forgemind/ai-workspace-sessions.json` is a human-readable format-version `1` work-history document tied to one portable Project ID; it is not Project truth.
+- The document is bounded to 50 sessions, 200 messages and 50 proposals per session, and 20 sources per trace/context request. Invalid or unsupported history is never repaired silently; explicit recovery archives only this document and creates an empty replacement.
+- Session lifecycle is `ACTIVE` or `ARCHIVED`. Archived sessions are read-only. Messages contain only visible `USER` or `ASSISTANT` content; hidden reasoning, raw prompts/provider payloads, credentials, authorization data, and absolute workspace paths are excluded.
+- Context selection is explicit and project-isolated. Supporting context orders approved Decisions before established Compendium knowledge, unresolved Open Questions, documented Markdown, explicitly integrated Reality evidence, and prior AI discussion. Explicit selections remain first in user order.
+- Markdown context must be an explicitly supplied project-relative `.md` or `.markdown` path outside `.forgemind`; each extraction and the total package are bounded. Markdown is `DOCUMENTED`, never automatically Canon.
+- Source trace keeps source type, stable ID, readable label, authority, and optional navigation target. Prior AI messages are always `AI_GENERATED`; they cannot be relabeled as knowledge, approved Intent, or Reality evidence.
+- Proposal transitions are `PENDING -> ACCEPTED | REJECTED | DISCARDED` and `ACCEPTED -> APPLIED`. Acceptance does not invoke an owning domain or imply its approval; AIW-0 exposes no command that mutates Compendium, Decisions, Open Questions, Wiki, Git, or Unity.
+- Usage references identify an existing canonical application-global usage record by application session and timestamp. Project history does not duplicate token, latency, provider, model, pricing, or raw request records.
 
 ## 0I.1 Unity GroundTruth invariants
 

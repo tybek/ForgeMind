@@ -2,7 +2,7 @@
 
 ## Status and scope
 
-This document defines the future product direction for ForgeMind Studios: task-oriented specialist workspaces built on one shared framework. Every phase in this document is **FUTURE PLANNED WORK — NOT STARTED**. It does not authorize implementation, expand the current MVP, or change the status of 0K Feature Contract.
+This document defines the future product direction for ForgeMind Studios: task-oriented specialist workspaces built on one shared framework. Every S0-S9 phase in this document is **FUTURE PLANNED WORK — NOT STARTED**. AIW-0 Shared AI Workspace Foundation is complete as lower-level session/context/source/proposal infrastructure, but it does not start a Studio, expand the current MVP, or implement a user-facing specialist experience.
 
 The current MVP loop remains:
 
@@ -18,7 +18,7 @@ Studios extend that loop only after it is proven. They must preserve the product
 
 The existing [AI Specialists and Content Production Direction](AI_SPECIALISTS_AND_PRODUCTION.md) remains the broader reference for specialist profiles, content-production orchestration, and local model evaluation. This document specifies how those capabilities should converge into consistent user-facing workspaces rather than unrelated agents.
 
-[Context Builder and Task Router Architecture](CONTEXT_AND_ROUTING.md) is the CR-0 shared-infrastructure specification beneath Studios. It defines task classification, Context Plans, authority-preserving selection and compaction, source trace, freshness, model-evaluation evidence, and staged CR-1 through CR-6 work. CR-0 is documentation only and does not start S0, S9, or any Context + Routing implementation phase.
+[Context Builder and Task Router Architecture](CONTEXT_AND_ROUTING.md) is the broader CR-0 shared-infrastructure specification beneath Studios. AIW-0 implements the bounded explicit-source Context Plan and source-trace subset needed by Writers' Room and Chronicler; classification, compaction, freshness, routing, model recommendation, and staged CR-1 through CR-6 work remain planned. AIW-0 does not start S0, S9, or a general Context + Routing phase.
 
 ## Core concept
 
@@ -74,7 +74,7 @@ Before implementation, every Studio must specify:
 - provenance, usage, error, and history behavior;
 - focused offline validation and any separate manual validation.
 
-A common proposal envelope may identify the task type, selected context references, model/provider, generated sections, assumptions, uncertainties, provenance, usage, and proposal status. This is a conceptual interoperability direction, not a committed persistence schema. Studio-specific content belongs in typed sections appropriate to the task.
+AIW-0 now supplies the common non-authoritative envelope for proposal identity/type, source trace, review status, and an optional current/proposed knowledge edit. Studio-specific generated sections, assumptions, uncertainties, provider execution, and artifact-specific validation remain typed behavior owned by each future Studio. Acceptance still does not approve or mutate the destination domain.
 
 ### Shared result interaction
 
@@ -90,7 +90,7 @@ Across Studios, prefer:
 
 Regeneration must remain explicit and scoped. **Apply all** must not silently overwrite reviewed human content. No proposal is automatically saved. Users should not need to copy AI output between large text forms to continue a normal workflow.
 
-Specialist-run history may preserve safe working analysis, selected context references, normalized output, model identity, usage, and safe diagnostics. It remains non-authoritative and must not persist raw provider responses, hidden reasoning, credentials, authorization data, or machine-specific absolute paths.
+Specialist-run history may preserve its existing safe flow-specific analysis, selected context references, normalized output, model identity, usage, and safe diagnostics. AI Workspace history separately preserves shared multi-turn work and proposals. Both remain non-authoritative and must not persist raw provider responses, hidden reasoning, credentials, authorization data, or machine-specific absolute paths; existing Specialist history is not migrated merely for architectural uniformity.
 
 ### Shared safety and authority rules
 
@@ -127,11 +127,11 @@ The router connects to Studios; it does not replace their focused workspaces, sc
 
 ## S0 — Shared Studio framework planning
 
-**Priority:** prerequisite. **Status:** planned, not started.
+**Priority:** prerequisite. **Status:** planned, not started; AIW-0 supplies reusable lower-level primitives but not the Studio contract.
 
 Define the reusable Studio contract, proposal/review interaction, context-builder rules, provenance vocabulary, history boundaries, provider capability routing, task-type registry direction, and local evaluation interface. Reuse current Specialist, Project Brain, model registry, usage, and approval infrastructure where it fits; do not generalize prematurely or migrate existing behavior without a separately authorized implementation brief.
 
-Use [Context Builder and Task Router Architecture](CONTEXT_AND_ROUTING.md) as the shared baseline rather than redefining context loading, authority, freshness, provenance, evaluation, or model-routing policy per Studio. S0 remains responsible for the Studio-specific reusable contract and adoption plan; the existence of CR-0 does not mark S0 as started.
+Use AIW-0 and [Context Builder and Task Router Architecture](CONTEXT_AND_ROUTING.md) as the shared baseline rather than redefining sessions, explicit context loading, source trace, proposal review, authority, freshness, provenance, evaluation, or model-routing policy per Studio. S0 remains responsible for the Studio-specific reusable contract and adoption plan; AIW-0 does not mark S0 as started.
 
 S0 should leave each later Studio with a consistent specification and a narrow way to add task-specific behavior without creating independent agents or truth stores.
 
@@ -166,7 +166,7 @@ For a request such as “Develop the occupying faction; they should be brutal wi
 
 Users may save reviewed output as Canon or Project Knowledge, create a Decision, keep an Open Question, continue exploring, or discard it. Lore Studio must preserve canon consistency, provenance, proposed-versus-approved status, and links to Decisions and Open Questions. It must not force users through a large template or make exploratory prose canonical automatically.
 
-Lore Studio is a strong early candidate because it can build on current Project Brain, Decisions, Token Factory, specialist-history, and human-review infrastructure with relatively low integration cost.
+Lore Studio is a strong early candidate because it can build on AIW-0 sessions/context/proposals plus the current Project Brain, Decisions, Token Factory, specialist-history, and human-review infrastructure with relatively low integration cost. WR-1 Writers' Room remains a separately scoped product phase and is not implemented here.
 
 ## S2 — Design Studio
 

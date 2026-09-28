@@ -292,11 +292,12 @@ Logs and histories should avoid:
 
 Safe diagnostic metadata may include provider ID, model ID, task category, timestamp, latency, token usage, success, structured error category, bounded provider request ID, and explicitly reviewed redacted metadata.
 
-The three record types have different purposes:
+The record types have different purposes:
 
 - **Development diagnostics:** short-lived, opt-in where private payload detail is truly needed, clearly labeled, and still credential-safe. Normal development commands and tests remain offline.
 - **Persisted product history:** project-owned normalized artifacts and safe failures needed for the workflow. It must not become a raw request/response archive.
 - **Provider usage history:** minimal application-local accounting such as provider/model, task, tokens, latency, estimated cost when known, success, and error category. It excludes prompts and responses.
+- **AI Workspace work history:** visible user/assistant turns, compact source trace, canonical usage-record references, and proposal review state. It is non-authoritative and excludes raw provider payloads, hidden reasoning, credentials, and duplicated usage metrics.
 
 The current fixed-prompt `ai-smoke` command prints normalized successful response text for that diagnostic only; it does not accept private prompt text. Future general logging must not copy that exception into ordinary project workflows.
 
@@ -317,7 +318,7 @@ Prompt-injection handling is defense in depth, not complete immunity. Future tes
 
 ## Project-local storage
 
-Project-owned `.forgemind` storage may contain Compendium knowledge, Decisions, approved interview knowledge, specialist analysis history, Alignment, Feature Contracts, Unity GroundTruth, and future reviewed metadata. These files may be committed or shared according to the project's own repository policy.
+Project-owned `.forgemind` storage may contain Compendium knowledge, Decisions, approved interview knowledge, specialist analysis history, AI Workspace work history, Alignment, Feature Contracts, Unity GroundTruth, and future reviewed metadata. These files may be committed or shared according to the project's own repository policy.
 
 It must not intentionally contain provider API keys, access tokens, passwords, private keys, authorization data, hidden model reasoning, raw provider responses, or unnecessary machine-specific secrets. Absolute workspace roots are runtime UI/native state, not portable project content; durable evidence paths should be project-relative.
 
@@ -531,9 +532,10 @@ These statuses describe repository evidence as of SEC-0. `READY` means the named
 | Frontend/native privilege boundary | `READY` | React has narrow Tauri commands, no generic filesystem/shell/network capability, a restrictive CSP, and only the native dialog plugin permission. | Future plugins and adapters require the same least-privilege review. |
 | Local project storage | `READY` | Versioned human-readable domain files live under project-owned `.forgemind`; provider usage is application-local instead of project-local. | The files are valuable unencrypted IP and rely on host/repository access controls. |
 | Persisted-domain secret/path safeguards | `PARTIAL` | Interview, specialist history, usage, Alignment, and Feature Contract tests exclude raw provider data, credentials, reasoning, or absolute workspace paths; Feature Contracts reject a narrow set of credential/path patterns. | Compendium and Decision free text is not a general secret scanner; safeguards are domain-specific rather than shared. |
-| Provider request construction | `PARTIAL` | Native workflow builders create bounded requests; Specialist uses explicitly selected entries/approved Decisions; Feature Contract drafting uses captured trace and current fields; provider payload sets `store: false`. | No shared Context Plan, exact final-payload preview, or Security Preflight exists. Provider-side retention remains subject to provider policy. |
+| AI Workspace isolation and history | `READY` | AIW-0 verifies active workspace/project identity on every read/write, rejects cross-project session/context access, bounds sessions/messages/proposals/sources, rejects credential-like persisted content, and provides explicit file-only recovery. | This is the AI Workspace domain boundary, not a universal scanner or outbound Security Preflight for all existing AI flows. |
+| Provider request construction | `PARTIAL` | Native workflow builders create bounded requests; Specialist uses explicitly selected entries/approved Decisions; Feature Contract drafting uses captured trace and current fields; AIW-0 supplies bounded source plans for future consumers; provider payload sets `store: false`. | No exact final-payload preview or shared Security Preflight exists. AIW-0 does not call a provider. Provider-side retention remains subject to provider policy. |
 | Outbound context visibility | `PARTIAL` | Users select Specialist context and can inspect Feature Contract source trace/current draft; completed Specialist runs show selected references. | No unified pre-send **View Context Being Sent** across AI workflows. |
-| Context minimization | `PARTIAL` | Current workflows use bounded task-specific prompts, selected references, strict lengths, and completion limits. | No shared task/source budget, omission trace, or final assembled-package enforcement. |
+| Context minimization | `PARTIAL` | Current workflows use bounded task-specific prompts, selected references, strict lengths, and completion limits. AIW-0 adds a 20-source, 12,000-character-per-document, 48,000-character-total explicit context bound. | No token budget, omission trace, compaction, or final provider-package enforcement exists. |
 | Secret scanning | `MISSING` | Feature Contract validation catches a few unsafe text patterns. | No deterministic scan of every final outbound request and no shared block/redaction result. |
 | Prompt-injection handling | `MISSING` | Task-specific system prompts constrain output and selected context is serialized as data. | No shared untrusted-content policy enforcement, adversarial fixtures, or preflight rule prevents embedded instructions from influencing a provider. |
 | Safe errors and logging | `PARTIAL` | Provider errors retain controlled metadata; usage history omits prompts/responses/credentials; ordinary source contains no general prompt logging; the fixed smoke prompt has bounded output. | No centralized logging/redaction policy enforcement or cross-adapter audit surface exists. |

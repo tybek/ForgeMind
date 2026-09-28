@@ -1,4 +1,5 @@
 pub mod ai;
+pub mod ai_workspace;
 pub mod alignment;
 pub mod compendium;
 pub mod creator_ai;
@@ -21,6 +22,12 @@ use std::sync::OnceLock;
 use workspace::{WorkspaceError, WorkspaceInspection};
 
 use ai::{AIError, AIRequest, AIResponse};
+use ai_workspace::{
+    AiWorkspaceContextPlan, AiWorkspaceDocument, AiWorkspaceError, AiWorkspaceProfile,
+    AppendAiWorkspaceMessageRequest, BuildAiWorkspaceContextRequest,
+    CreateAiWorkspaceProposalRequest, CreateAiWorkspaceSessionRequest,
+    ReviewAiWorkspaceProposalRequest, AiWorkspaceSessionActionRequest,
+};
 use alignment::{
     AlignmentCheck, AlignmentDocument, AlignmentError, AlignmentSourceCatalog,
     ReviewAlignmentRequest,
@@ -143,6 +150,65 @@ fn list_models() -> Result<Vec<ModelEntry>, ModelRegistryError> {
 #[tauri::command]
 fn list_specialist_profiles() -> Vec<SpecialistProfile> {
     specialists::profiles()
+}
+
+#[tauri::command]
+fn list_ai_workspace_profiles() -> Vec<AiWorkspaceProfile> {
+    ai_workspace::profiles()
+}
+
+#[tauri::command]
+fn load_ai_workspace_sessions(path: String) -> Result<Option<AiWorkspaceDocument>, AiWorkspaceError> {
+    ai_workspace::load(Path::new(&path))
+}
+
+#[tauri::command]
+fn create_ai_workspace_session(
+    request: CreateAiWorkspaceSessionRequest,
+) -> Result<AiWorkspaceDocument, AiWorkspaceError> {
+    ai_workspace::create_session(request)
+}
+
+#[tauri::command]
+fn append_ai_workspace_message(
+    request: AppendAiWorkspaceMessageRequest,
+) -> Result<AiWorkspaceDocument, AiWorkspaceError> {
+    ai_workspace::append_message(request)
+}
+
+#[tauri::command]
+fn archive_ai_workspace_session(
+    request: AiWorkspaceSessionActionRequest,
+) -> Result<AiWorkspaceDocument, AiWorkspaceError> {
+    ai_workspace::archive_session(request)
+}
+
+#[tauri::command]
+fn create_ai_workspace_proposal(
+    request: CreateAiWorkspaceProposalRequest,
+) -> Result<AiWorkspaceDocument, AiWorkspaceError> {
+    ai_workspace::create_proposal(request)
+}
+
+#[tauri::command]
+fn review_ai_workspace_proposal(
+    request: ReviewAiWorkspaceProposalRequest,
+) -> Result<AiWorkspaceDocument, AiWorkspaceError> {
+    ai_workspace::review_proposal(request)
+}
+
+#[tauri::command]
+fn build_ai_workspace_context(
+    request: BuildAiWorkspaceContextRequest,
+) -> Result<AiWorkspaceContextPlan, AiWorkspaceError> {
+    ai_workspace::build_context(request)
+}
+
+#[tauri::command]
+fn archive_and_reset_ai_workspace_history(
+    path: String,
+) -> Result<ai_workspace::AiWorkspaceRecovery, AiWorkspaceError> {
+    ai_workspace::archive_and_reset(Path::new(&path))
 }
 
 #[tauri::command]
@@ -556,6 +622,15 @@ pub fn run() {
             get_creator_ai_preflight,
             list_models,
             list_specialist_profiles,
+            list_ai_workspace_profiles,
+            load_ai_workspace_sessions,
+            create_ai_workspace_session,
+            append_ai_workspace_message,
+            archive_ai_workspace_session,
+            create_ai_workspace_proposal,
+            review_ai_workspace_proposal,
+            build_ai_workspace_context,
+            archive_and_reset_ai_workspace_history,
             run_specialist_analysis,
             load_specialist_runs,
             promote_specialist_finding,
