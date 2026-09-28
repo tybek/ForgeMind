@@ -10,6 +10,8 @@ import {
   listAiWorkspaceProfiles,
   loadAiWorkspaceSessions,
   reviewAiWorkspaceProposal,
+  setAiWorkspaceMarkdownContext,
+  applyAiWorkspaceProposal,
 } from "./aiWorkspace";
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
@@ -30,6 +32,8 @@ describe("AI Workspace platform boundary", () => {
     await createAiWorkspaceProposal("D:\\Game", "project-1", "session-1", "CREATE_DECISION", "Decision", "Proposal only.");
     await reviewAiWorkspaceProposal("D:\\Game", "project-1", "session-1", "proposal-1", "ACCEPTED");
     await archiveAndResetAiWorkspaceHistory("D:\\Game");
+    await setAiWorkspaceMarkdownContext("D:\\Game", "project-1", "session-1", ["FACTIONS.md"]);
+    await applyAiWorkspaceProposal("D:\\Game", "project-1", "session-1", "proposal-1");
 
     expect(invoke).toHaveBeenNthCalledWith(1, "list_ai_workspace_profiles");
     expect(invoke).toHaveBeenNthCalledWith(2, "load_ai_workspace_sessions", { path: "D:\\Game" });
@@ -40,5 +44,11 @@ describe("AI Workspace platform boundary", () => {
       request: { rootPath: "D:\\Game", projectId: "project-1", sources: [{ sourceType: "DOCUMENT", relativePath: "FACTIONS.md", priority: "EXPLICIT" }] },
     });
     expect(invoke).toHaveBeenNthCalledWith(9, "archive_and_reset_ai_workspace_history", { path: "D:\\Game" });
+    expect(invoke).toHaveBeenNthCalledWith(10, "set_ai_workspace_markdown_context", {
+      request: { rootPath: "D:\\Game", projectId: "project-1", sessionId: "session-1", relativePaths: ["FACTIONS.md"] },
+    });
+    expect(invoke).toHaveBeenNthCalledWith(11, "apply_ai_workspace_proposal", {
+      request: { rootPath: "D:\\Game", projectId: "project-1", sessionId: "session-1", proposalId: "proposal-1" },
+    });
   });
 });

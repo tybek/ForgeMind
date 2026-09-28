@@ -1,5 +1,10 @@
-use crate::compendium::{self, KnowledgeArea, KnowledgeStatus};
-use crate::decisions::{self, DecisionStatus};
+use crate::ai::{AIError, ProviderDiagnostics};
+use crate::compendium::{
+    self, CreateAiWorkspaceKnowledgeRequest, KnowledgeArea, KnowledgeProvenance,
+    KnowledgeStatus,
+};
+use crate::decisions::{self, CreateDecisionRequest, DecisionStatus};
+use crate::model_registry::CREATOR_DEFAULT_MODEL_ID;
 use crate::specialists::{self, AI_BEHAVIOR_DESIGNER_ID};
 use crate::workspace::{self, WorkspaceInspection};
 use chrono::{DateTime, SecondsFormat, Utc};
@@ -16,6 +21,7 @@ const MAX_SESSIONS: usize = 50;
 const MAX_MESSAGES: usize = 200;
 const MAX_PROPOSALS: usize = 50;
 const MAX_CONTEXT_SOURCES: usize = 20;
+const MAX_MARKDOWN_DOCUMENTS: usize = 5;
 const MAX_MESSAGE_CHARS: usize = 16_000;
 const MAX_DOCUMENT_CHARS: usize = 12_000;
 const MAX_CONTEXT_CHARS: usize = 48_000;
@@ -109,6 +115,8 @@ pub struct AiWorkspaceMessage {
     pub id: String,
     pub role: AiWorkspaceMessageRole,
     pub content: String,
+    #[serde(default)]
+    pub questions: Vec<String>,
     pub created_at: String,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub source_trace: Vec<AiWorkspaceSourceTrace>,
@@ -134,6 +142,8 @@ pub struct AiWorkspaceProposal {
     pub proposal_type: AiWorkspaceProposalType,
     pub title: String,
     pub summary: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reason: Option<String>,
     pub status: AiWorkspaceProposalStatus,
     pub created_at: String,
     pub updated_at: String,
@@ -156,6 +166,8 @@ pub struct AiWorkspaceSession {
     pub updated_at: String,
     pub status: AiWorkspaceSessionStatus,
     pub messages: Vec<AiWorkspaceMessage>,
+    #[serde(default)]
+    pub selected_markdown_paths: Vec<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub source_trace: Vec<AiWorkspaceSourceTrace>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -228,6 +240,8 @@ pub struct CreateAiWorkspaceProposalRequest {
     pub title: String,
     pub summary: String,
     #[serde(default)]
+    pub reason: Option<String>,
+    #[serde(default)]
     pub source_trace: Vec<AiWorkspaceSourceTrace>,
     #[serde(default)]
     pub proposed_edit: Option<AiWorkspaceProposedEdit>,
@@ -241,6 +255,63 @@ pub struct ReviewAiWorkspaceProposalRequest {
     pub session_id: String,
     pub proposal_id: String,
     pub status: AiWorkspaceProposalStatus,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct SetAiWorkspaceMarkdownContextRequest {
+    pub root_path: String,
+    pub project_id: String,
+    pub session_id: String,
+    pub relative_paths: Vec<String>,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ApplyAiWorkspaceProposalRequest {
+    pub root_path: String,
+    pub project_id: String,
+    pub session_id: String,
+    pub proposal_id: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum AiWorkspaceAppliedTarget {
+    ProjectKnowledge,
+    Decision,
+    OpenQuestion,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AiWorkspaceApplyResult {
+    pub document: AiWorkspaceDocument,
+    pub target: AiWorkspaceAppliedTarget,
+    pub target_id: String,
+}
+
+#[derive(Clone, Debug)]
+pub struct AiWorkspaceGeneratedProposal {
+    pub proposal_type: AiWorkspaceProposalType,
+    pub title: String,
+    pub summary: String,
+    pub reason: String,
+    pub source_trace: Vec<AiWorkspaceSourceTrace>,
+}
+
+#[derive(Clone, Debug)]
+pub struct CompleteAiWorkspaceRun {
+    pub root_path: String,
+    pub project_id: String,
+    pub session_id: String,
+    pub append_user_message: bool,
+    pub user_message: String,
+    pub assistant_message: String,
+    pub questions: Vec<String>,
+    pub source_trace: Vec<AiWorkspaceSourceTrace>,
+    pub usage_reference: AiWorkspaceUsageReference,
+    pub proposals: Vec<AiWorkspaceGeneratedProposal>,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -312,15 +383,21 @@ pub struct AiWorkspaceRecovery {
 pub struct AiWorkspaceError {
     pub code: String,
     pub message: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub diagnostics: Option<ProviderDiagnostics>,
 }
 
 impl AiWorkspaceError {
-    fn new(code: &str, message: &str) -> Self {
-        Self { code: code.to_owned(), message: message.to_owned() }
+    pub fn new(code: &str, message: &str) -> Self {
+        Self { code: code.to_owned(), message: message.to_owned(), diagnostics: None }
     }
 
-    fn invalid(message: &str) -> Self {
+    pub fn invalid(message: &str) -> Self {
         Self::new("INVALID_AI_WORKSPACE_REQUEST", message)
+    }
+
+    pub fn from_ai(error: AIError) -> Self {
+        Self { code: error.code, message: error.message, diagnostics: error.diagnostics }
     }
 }
 
@@ -342,12 +419,13 @@ pub fn profiles() -> Vec<AiWorkspaceProfile> {
             &existing_specialist.display_name,
             &existing_specialist.description,
             project_brain.clone(),
+            None,
             true,
         ),
-        profile("lore_architect", "Lore Architect", "Develop source-aware lore proposals.", project_brain.clone(), false),
-        profile("character_dialogue", "Character & Dialogue", "Develop character and dialogue proposals.", project_brain.clone(), false),
-        profile("continuity_editor", "Continuity", "Review narrative continuity against selected sources.", project_brain.clone(), false),
-        profile("wiki_chronicler", "Wiki Chronicler", "Retrieve Project Brain sources and prepare reviewed knowledge proposals.", project_brain, false),
+        profile("lore_architect", "Lore Architect", "Develop source-aware lore, factions, places, history, cultures, conflicts, and implications.", project_brain.clone(), Some(CREATOR_DEFAULT_MODEL_ID), true),
+        profile("character_dialogue", "Character & Dialogue", "Develop characters, motivations, relationships, voice, dialogue, and interpersonal conflict.", project_brain.clone(), Some(CREATOR_DEFAULT_MODEL_ID), true),
+        profile("continuity_editor", "Continuity Editor", "Compare narrative ideas with established, documented, and unresolved Project Brain context.", project_brain.clone(), Some(CREATOR_DEFAULT_MODEL_ID), true),
+        profile("wiki_chronicler", "Wiki Chronicler", "Retrieve Project Brain sources and prepare reviewed knowledge proposals.", project_brain, None, false),
     ]
 }
 
@@ -356,6 +434,7 @@ fn profile(
     display_name: &str,
     task_purpose: &str,
     allowed_context_categories: Vec<AiWorkspaceSourceType>,
+    preferred_model_id: Option<&str>,
     available_for_runs: bool,
 ) -> AiWorkspaceProfile {
     AiWorkspaceProfile {
@@ -363,7 +442,7 @@ fn profile(
         display_name: display_name.to_owned(),
         task_purpose: task_purpose.to_owned(),
         allowed_context_categories,
-        preferred_model_id: None,
+        preferred_model_id: preferred_model_id.map(str::to_owned),
         output_expectations: "Return bounded source-aware output without hidden reasoning.".to_owned(),
         review_expectations: "AI output remains non-authoritative until a human reviews and applies an owning-domain action.".to_owned(),
         available_for_runs,
@@ -401,6 +480,7 @@ pub fn create_session(request: CreateAiWorkspaceSessionRequest) -> Result<AiWork
         updated_at: now,
         status: AiWorkspaceSessionStatus::Active,
         messages: Vec::new(),
+        selected_markdown_paths: Vec::new(),
         source_trace: Vec::new(),
         proposals: Vec::new(),
     });
@@ -425,10 +505,90 @@ pub fn append_message(request: AppendAiWorkspaceMessageRequest) -> Result<AiWork
         id: Uuid::new_v4().to_string(),
         role: request.role,
         content: request.content.trim().to_owned(),
+        questions: Vec::new(),
         created_at: now.clone(),
         source_trace: request.source_trace.clone(),
         usage_reference: request.usage_reference,
     });
+    merge_trace(&mut session.source_trace, request.source_trace);
+    session.updated_at = now;
+    save(root, document)
+}
+
+pub fn complete_run(request: CompleteAiWorkspaceRun) -> Result<AiWorkspaceDocument, AiWorkspaceError> {
+    let root = Path::new(&request.root_path);
+    verify_project(root, &request.project_id)?;
+    validate_safe_content(&request.user_message, 1, MAX_MESSAGE_CHARS, "User message")?;
+    validate_safe_content(&request.assistant_message, 1, MAX_MESSAGE_CHARS, "Assistant message")?;
+    validate_trace(&request.source_trace)?;
+    validate_usage_reference(&request.usage_reference)?;
+    if request.questions.len() > 3
+        || request.questions.iter().any(|question| validate_safe_content(question, 1, 500, "Question").is_err())
+    {
+        return Err(AiWorkspaceError::invalid("A Writers' Room response may contain at most 3 focused questions."));
+    }
+    if request.proposals.len() > 5 {
+        return Err(AiWorkspaceError::invalid("A Writers' Room response may contain at most 5 proposals."));
+    }
+    for proposal in &request.proposals {
+        validate_safe_content(&proposal.title, 1, 160, "Proposal title")?;
+        validate_safe_content(&proposal.summary, 1, 4_000, "Proposal summary")?;
+        validate_safe_content(&proposal.reason, 1, 2_000, "Proposal reason")?;
+        validate_trace(&proposal.source_trace)?;
+        if !matches!(
+            proposal.proposal_type,
+            AiWorkspaceProposalType::SaveKnowledge
+                | AiWorkspaceProposalType::CreateDecision
+                | AiWorkspaceProposalType::CreateOpenQuestion
+        ) {
+            return Err(AiWorkspaceError::invalid("The generated proposal type is not available in Writers' Room."));
+        }
+    }
+
+    let mut document = required_document(root, &request.project_id)?;
+    let session = active_session_mut(&mut document, &request.session_id)?;
+    let added_messages = if request.append_user_message { 2 } else { 1 };
+    if session.messages.len() + added_messages > MAX_MESSAGES {
+        return Err(AiWorkspaceError::invalid("This AI Workspace session has reached its bounded message limit."));
+    }
+    if session.proposals.len() + request.proposals.len() > MAX_PROPOSALS {
+        return Err(AiWorkspaceError::invalid("This AI Workspace session has reached its bounded proposal limit."));
+    }
+    let now = timestamp();
+    if request.append_user_message {
+        session.messages.push(AiWorkspaceMessage {
+            id: Uuid::new_v4().to_string(),
+            role: AiWorkspaceMessageRole::User,
+            content: request.user_message.trim().to_owned(),
+            questions: Vec::new(),
+            created_at: now.clone(),
+            source_trace: Vec::new(),
+            usage_reference: None,
+        });
+    }
+    session.messages.push(AiWorkspaceMessage {
+        id: Uuid::new_v4().to_string(),
+        role: AiWorkspaceMessageRole::Assistant,
+        content: request.assistant_message.trim().to_owned(),
+        questions: request.questions.into_iter().map(|question| question.trim().to_owned()).collect(),
+        created_at: now.clone(),
+        source_trace: request.source_trace.clone(),
+        usage_reference: Some(request.usage_reference),
+    });
+    for proposal in request.proposals {
+        session.proposals.push(AiWorkspaceProposal {
+            id: Uuid::new_v4().to_string(),
+            proposal_type: proposal.proposal_type,
+            title: proposal.title.trim().to_owned(),
+            summary: proposal.summary.trim().to_owned(),
+            reason: Some(proposal.reason.trim().to_owned()),
+            status: AiWorkspaceProposalStatus::Pending,
+            created_at: now.clone(),
+            updated_at: now.clone(),
+            source_trace: proposal.source_trace,
+            proposed_edit: None,
+        });
+    }
     merge_trace(&mut session.source_trace, request.source_trace);
     session.updated_at = now;
     save(root, document)
@@ -450,6 +610,9 @@ pub fn create_proposal(request: CreateAiWorkspaceProposalRequest) -> Result<AiWo
     verify_project(root, &request.project_id)?;
     validate_safe_content(&request.title, 1, 160, "Proposal title")?;
     validate_safe_content(&request.summary, 1, 4_000, "Proposal summary")?;
+    if let Some(reason) = request.reason.as_deref() {
+        validate_safe_content(reason, 1, 2_000, "Proposal reason")?;
+    }
     validate_trace(&request.source_trace)?;
     if let Some(edit) = request.proposed_edit.as_ref() {
         validate_proposed_edit(edit)?;
@@ -470,6 +633,7 @@ pub fn create_proposal(request: CreateAiWorkspaceProposalRequest) -> Result<AiWo
         proposal_type: request.proposal_type,
         title: request.title.trim().to_owned(),
         summary: request.summary.trim().to_owned(),
+        reason: request.reason.map(|value| value.trim().to_owned()),
         status: AiWorkspaceProposalStatus::Pending,
         created_at: now.clone(),
         updated_at: now.clone(),
@@ -479,6 +643,145 @@ pub fn create_proposal(request: CreateAiWorkspaceProposalRequest) -> Result<AiWo
     merge_trace(&mut session.source_trace, request.source_trace);
     session.updated_at = now;
     save(root, document)
+}
+
+pub fn set_markdown_context(
+    request: SetAiWorkspaceMarkdownContextRequest,
+) -> Result<AiWorkspaceDocument, AiWorkspaceError> {
+    let root = Path::new(&request.root_path);
+    verify_project(root, &request.project_id)?;
+    if request.relative_paths.len() > MAX_MARKDOWN_DOCUMENTS {
+        return Err(AiWorkspaceError::invalid(
+            "A Writers' Room session may include at most 5 Markdown documents.",
+        ));
+    }
+    let mut unique = HashSet::new();
+    let mut normalized = Vec::with_capacity(request.relative_paths.len());
+    for relative_path in request.relative_paths {
+        let (source_id, _, _) = read_markdown_document(root, &relative_path)?;
+        if !unique.insert(source_id.clone()) {
+            return Err(AiWorkspaceError::invalid(
+                "The same Markdown document cannot be selected more than once.",
+            ));
+        }
+        normalized.push(source_id);
+    }
+    let mut document = required_document(root, &request.project_id)?;
+    let session = active_session_mut(&mut document, &request.session_id)?;
+    session.selected_markdown_paths = normalized;
+    session.updated_at = timestamp();
+    save(root, document)
+}
+
+pub fn apply_proposal(
+    request: ApplyAiWorkspaceProposalRequest,
+) -> Result<AiWorkspaceApplyResult, AiWorkspaceError> {
+    let root = Path::new(&request.root_path);
+    verify_project(root, &request.project_id)?;
+    let mut document = required_document(root, &request.project_id)?;
+    let session = active_session_mut(&mut document, &request.session_id)?;
+    let proposal = session
+        .proposals
+        .iter()
+        .find(|proposal| proposal.id == request.proposal_id)
+        .cloned()
+        .ok_or_else(|| AiWorkspaceError::invalid("The selected AI Workspace proposal does not exist."))?;
+    if proposal.status != AiWorkspaceProposalStatus::Accepted {
+        return Err(AiWorkspaceError::invalid(
+            "Review and accept the proposal before applying it.",
+        ));
+    }
+
+    let (target, target_id) = match proposal.proposal_type {
+        AiWorkspaceProposalType::SaveKnowledge => {
+            let (_, id) = compendium::create_ai_workspace_entry(CreateAiWorkspaceKnowledgeRequest {
+                root_path: request.root_path.clone(),
+                project_id: request.project_id.clone(),
+                area: KnowledgeArea::WorldNarrative,
+                title: proposal.title.clone(),
+                statement: proposal.summary.clone(),
+                status: KnowledgeStatus::Direction,
+                provenance: KnowledgeProvenance::AiInferred,
+            })
+            .map_err(|error| AiWorkspaceError::new(&error.code, &error.message))?;
+            (AiWorkspaceAppliedTarget::ProjectKnowledge, id)
+        }
+        AiWorkspaceProposalType::CreateOpenQuestion => {
+            let (_, id) = compendium::create_ai_workspace_entry(CreateAiWorkspaceKnowledgeRequest {
+                root_path: request.root_path.clone(),
+                project_id: request.project_id.clone(),
+                area: KnowledgeArea::OpenQuestions,
+                title: proposal.title.clone(),
+                statement: proposal.summary.clone(),
+                status: KnowledgeStatus::Tbd,
+                provenance: KnowledgeProvenance::Unresolved,
+            })
+            .map_err(|error| AiWorkspaceError::new(&error.code, &error.message))?;
+            (AiWorkspaceAppliedTarget::OpenQuestion, id)
+        }
+        AiWorkspaceProposalType::CreateDecision => {
+            if decisions::load(root)
+                .map_err(|error| AiWorkspaceError::new(&error.code, &error.message))?
+                .is_some_and(|document| {
+                    let title = normalized_key(&proposal.title);
+                    let statement = normalized_key(&proposal.summary);
+                    document.decisions.iter().any(|decision| {
+                        normalized_key(&decision.title) == title
+                            && normalized_key(&decision.statement) == statement
+                    })
+                })
+            {
+                return Err(AiWorkspaceError::new(
+                    "DUPLICATE_DECISION",
+                    "A matching Decision already exists.",
+                ));
+            }
+            let related_knowledge_entry_ids = proposal
+                .source_trace
+                .iter()
+                .filter(|source| source.source_type == AiWorkspaceSourceType::Compendium)
+                .map(|source| source.source_id.clone())
+                .collect();
+            let created = decisions::create(CreateDecisionRequest {
+                root_path: request.root_path.clone(),
+                project_id: request.project_id.clone(),
+                title: proposal.title.clone(),
+                statement: proposal.summary.clone(),
+                rationale: proposal
+                    .reason
+                    .clone()
+                    .unwrap_or_else(|| "Created from an explicitly reviewed Writers' Room proposal.".to_owned()),
+                area: KnowledgeArea::WorldNarrative,
+                author: "Writers' Room AI proposal".to_owned(),
+                supersedes_decision_id: None,
+                related_knowledge_entry_ids,
+            })
+            .map_err(|error| AiWorkspaceError::new(&error.code, &error.message))?;
+            let id = created
+                .decisions
+                .last()
+                .map(|decision| decision.id.clone())
+                .ok_or_else(|| AiWorkspaceError::new("DECISION_CREATE_FAILED", "ForgeMind could not create the proposed Decision."))?;
+            (AiWorkspaceAppliedTarget::Decision, id)
+        }
+        _ => {
+            return Err(AiWorkspaceError::invalid(
+                "This proposal type cannot be applied from Writers' Room.",
+            ))
+        }
+    };
+
+    let session = active_session_mut(&mut document, &request.session_id)?;
+    let proposal = session
+        .proposals
+        .iter_mut()
+        .find(|proposal| proposal.id == request.proposal_id)
+        .ok_or_else(|| AiWorkspaceError::invalid("The selected AI Workspace proposal does not exist."))?;
+    proposal.status = AiWorkspaceProposalStatus::Applied;
+    proposal.updated_at = timestamp();
+    session.updated_at = proposal.updated_at.clone();
+    let document = save(root, document)?;
+    Ok(AiWorkspaceApplyResult { document, target, target_id })
 }
 
 pub fn review_proposal(request: ReviewAiWorkspaceProposalRequest) -> Result<AiWorkspaceDocument, AiWorkspaceError> {
@@ -742,6 +1045,13 @@ fn validate_document(document: &AiWorkspaceDocument, expected_project_id: &str) 
                 || DateTime::parse_from_rfc3339(&session.updated_at).is_err()
                 || session.messages.len() > MAX_MESSAGES
                 || session.proposals.len() > MAX_PROPOSALS
+                || session.selected_markdown_paths.len() > MAX_MARKDOWN_DOCUMENTS
+                || session.selected_markdown_paths.iter().any(|path| {
+                    !valid_stored_text(path, 1, 500)
+                        || Path::new(path).is_absolute()
+                        || Path::new(path).components().any(|component| !matches!(component, Component::Normal(_)))
+                        || !matches!(Path::new(path).extension().and_then(|value| value.to_str()).map(str::to_ascii_lowercase).as_deref(), Some("md") | Some("markdown"))
+                })
                 || validate_trace(&session.source_trace).is_err()
                 || !valid_messages(&session.messages)
                 || !valid_proposals(&session.proposals)
@@ -759,6 +1069,8 @@ fn valid_messages(messages: &[AiWorkspaceMessage]) -> bool {
             && ids.insert(message.id.as_str())
             && valid_safe_stored_content(&message.content, 1, MAX_MESSAGE_CHARS)
             && DateTime::parse_from_rfc3339(&message.created_at).is_ok()
+            && message.questions.len() <= 3
+            && message.questions.iter().all(|question| valid_safe_stored_content(question, 1, 500))
             && validate_trace(&message.source_trace).is_ok()
             && message.usage_reference.as_ref().map_or(true, |reference| validate_usage_reference(reference).is_ok())
     })
@@ -771,6 +1083,7 @@ fn valid_proposals(proposals: &[AiWorkspaceProposal]) -> bool {
             && ids.insert(proposal.id.as_str())
             && valid_safe_stored_content(&proposal.title, 1, 160)
             && valid_safe_stored_content(&proposal.summary, 1, 4_000)
+            && proposal.reason.as_ref().map_or(true, |reason| valid_safe_stored_content(reason, 1, 2_000))
             && DateTime::parse_from_rfc3339(&proposal.created_at).is_ok()
             && DateTime::parse_from_rfc3339(&proposal.updated_at).is_ok()
             && validate_trace(&proposal.source_trace).is_ok()
@@ -895,6 +1208,10 @@ fn contains_absolute_path(value: &str) -> bool {
     })
 }
 
+fn normalized_key(value: &str) -> String {
+    value.split_whitespace().collect::<Vec<_>>().join(" ").to_lowercase()
+}
+
 fn verify_project(root: &Path, expected_project_id: &str) -> Result<(), AiWorkspaceError> {
     if workspace_project_id(root)? != expected_project_id {
         return Err(AiWorkspaceError::new("PROJECT_ID_MISMATCH", "AI Workspace data does not belong to the selected project."));
@@ -927,7 +1244,10 @@ fn timestamp() -> String { Utc::now().to_rfc3339_opts(SecondsFormat::Millis, tru
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::compendium::{CreateKnowledgeEntryRequest, KnowledgeArea, KnowledgeStatus};
+    use crate::compendium::{
+        CreateKnowledgeEntryRequest, KnowledgeArea, KnowledgeProvenance, KnowledgeSource,
+        KnowledgeStatus,
+    };
     use crate::decisions::{CreateDecisionRequest, DecisionActionRequest};
     use tempfile::TempDir;
 
@@ -1093,6 +1413,7 @@ mod tests {
         let proposed = create_proposal(CreateAiWorkspaceProposalRequest {
             root_path: directory.path().display().to_string(), project_id: project_id.clone(), session_id: session_id.clone(),
             proposal_type: AiWorkspaceProposalType::UpdateKnowledge, title: "Update faction tone".to_owned(), summary: "Make the faction less militaristic.".to_owned(),
+            reason: None,
             source_trace: vec![target.clone()], proposed_edit: Some(AiWorkspaceProposedEdit {
                 target, current_value: "A disciplined militia.".to_owned(), proposed_value: "A loose civic coalition.".to_owned(),
                 reason: "Match the requested tone.".to_owned(), affected_references: Vec::new(),
@@ -1122,6 +1443,7 @@ mod tests {
         let proposed = create_proposal(CreateAiWorkspaceProposalRequest {
             root_path: directory.path().display().to_string(), project_id: project_id.clone(), session_id: session_id.clone(),
             proposal_type: AiWorkspaceProposalType::CreateDecision, title: "Potential decision".to_owned(), summary: "Proposal only.".to_owned(),
+            reason: None,
             source_trace: Vec::new(), proposed_edit: None,
         }).unwrap();
         let proposal_id = proposed.sessions[0].proposals[0].id.clone();
@@ -1151,5 +1473,88 @@ mod tests {
         assert!(!serialized.to_ascii_lowercase().contains("authorization"));
         assert!(!serialized.contains("apiKey"));
         assert!(!serialized.contains(&directory.path().display().to_string()));
+    }
+
+    #[test]
+    fn markdown_context_is_session_scoped_persisted_and_bounded_to_five() {
+        let (directory, project_id) = workspace();
+        let created = create_session(create_request(directory.path(), &project_id)).unwrap();
+        let session_id = created.sessions[0].id.clone();
+        for index in 0..6 {
+            fs::write(directory.path().join(format!("DOC-{index}.md")), format!("# Document {index}")) .unwrap();
+        }
+        let selected = set_markdown_context(SetAiWorkspaceMarkdownContextRequest {
+            root_path: directory.path().display().to_string(),
+            project_id: project_id.clone(),
+            session_id: session_id.clone(),
+            relative_paths: (0..5).map(|index| format!("DOC-{index}.md")).collect(),
+        }).unwrap();
+        assert_eq!(selected.sessions[0].selected_markdown_paths.len(), 5);
+        assert_eq!(load(directory.path()).unwrap().unwrap().sessions[0].selected_markdown_paths.len(), 5);
+        let error = set_markdown_context(SetAiWorkspaceMarkdownContextRequest {
+            root_path: directory.path().display().to_string(),
+            project_id,
+            session_id,
+            relative_paths: (0..6).map(|index| format!("DOC-{index}.md")).collect(),
+        }).unwrap_err();
+        assert_eq!(error.code, "INVALID_AI_WORKSPACE_REQUEST");
+    }
+
+    #[test]
+    fn accepted_knowledge_and_open_question_proposals_apply_with_ai_origin_only_on_explicit_action() {
+        let (directory, project_id) = workspace();
+        let created = create_session(create_request(directory.path(), &project_id)).unwrap();
+        let session_id = created.sessions[0].id.clone();
+        for (proposal_type, title, summary, expected_area, expected_status, expected_provenance) in [
+            (AiWorkspaceProposalType::SaveKnowledge, "Black Tide", "A disputed coastal faction.", KnowledgeArea::WorldNarrative, KnowledgeStatus::Direction, KnowledgeProvenance::AiInferred),
+            (AiWorkspaceProposalType::CreateOpenQuestion, "Faction loyalty", "What keeps members loyal?", KnowledgeArea::OpenQuestions, KnowledgeStatus::Tbd, KnowledgeProvenance::Unresolved),
+        ] {
+            let proposed = create_proposal(CreateAiWorkspaceProposalRequest {
+                root_path: directory.path().display().to_string(), project_id: project_id.clone(), session_id: session_id.clone(),
+                proposal_type, title: title.to_owned(), summary: summary.to_owned(), reason: Some("Source-aware narrative proposal.".to_owned()),
+                source_trace: Vec::new(), proposed_edit: None,
+            }).unwrap();
+            let proposal_id = proposed.sessions[0].proposals.last().unwrap().id.clone();
+            let before = compendium::load(directory.path()).unwrap();
+            assert!(before.as_ref().is_none_or(|document| document.entries.iter().all(|entry| entry.title != title)));
+            review_proposal(ReviewAiWorkspaceProposalRequest {
+                root_path: directory.path().display().to_string(), project_id: project_id.clone(), session_id: session_id.clone(),
+                proposal_id: proposal_id.clone(), status: AiWorkspaceProposalStatus::Accepted,
+            }).unwrap();
+            let applied = apply_proposal(ApplyAiWorkspaceProposalRequest {
+                root_path: directory.path().display().to_string(), project_id: project_id.clone(), session_id: session_id.clone(), proposal_id,
+            }).unwrap();
+            assert_eq!(applied.document.sessions[0].proposals.last().unwrap().status, AiWorkspaceProposalStatus::Applied);
+            let entry = compendium::load(directory.path()).unwrap().unwrap().entries.into_iter().find(|entry| entry.title == title).unwrap();
+            assert_eq!(entry.area, expected_area);
+            assert_eq!(entry.status, expected_status);
+            assert_eq!(entry.provenance, expected_provenance);
+            assert_eq!(entry.source, KnowledgeSource::WritersRoom);
+        }
+    }
+
+    #[test]
+    fn decision_apply_uses_existing_lifecycle_and_never_auto_approves() {
+        let (directory, project_id) = workspace();
+        let created = create_session(create_request(directory.path(), &project_id)).unwrap();
+        let session_id = created.sessions[0].id.clone();
+        let proposed = create_proposal(CreateAiWorkspaceProposalRequest {
+            root_path: directory.path().display().to_string(), project_id: project_id.clone(), session_id: session_id.clone(),
+            proposal_type: AiWorkspaceProposalType::CreateDecision, title: "Elect the Tide Speaker".to_owned(),
+            summary: "The faction elects its leader.".to_owned(), reason: Some("Preserve political tension.".to_owned()),
+            source_trace: Vec::new(), proposed_edit: None,
+        }).unwrap();
+        let proposal_id = proposed.sessions[0].proposals[0].id.clone();
+        assert!(decisions::load(directory.path()).unwrap().is_none());
+        review_proposal(ReviewAiWorkspaceProposalRequest {
+            root_path: directory.path().display().to_string(), project_id: project_id.clone(), session_id: session_id.clone(),
+            proposal_id: proposal_id.clone(), status: AiWorkspaceProposalStatus::Accepted,
+        }).unwrap();
+        apply_proposal(ApplyAiWorkspaceProposalRequest {
+            root_path: directory.path().display().to_string(), project_id, session_id, proposal_id,
+        }).unwrap();
+        let decision = decisions::load(directory.path()).unwrap().unwrap().decisions[0].clone();
+        assert_eq!(decision.status, DecisionStatus::Proposed);
+        assert_eq!(decision.author, "Writers' Room AI proposal");
     }
 }

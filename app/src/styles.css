@@ -9,6 +9,444 @@
   color-scheme: dark;
 }
 
+/* WR-1 Writers' Room */
+.writers-room {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(12rem, 14rem) minmax(0, 1fr);
+  min-height: min(42rem, calc(100vh - 11rem));
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.writers-room-session-panel,
+.writers-room-workbench,
+.writers-room-context-drawer {
+  min-width: 0;
+}
+
+.writers-room-session-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  border-right: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-surface-raised) 76%, transparent);
+}
+
+.writers-room-session-panel > header,
+.writers-room-toolbar,
+.writers-room-context-drawer > header,
+.writers-room-preflight > header,
+.writers-room-create-dialog > header,
+.writers-room-message > header,
+.writers-room-proposal > header,
+.writers-room-composer > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.writers-room-session-panel h2,
+.writers-room-toolbar h3,
+.writers-room-context-drawer h3,
+.writers-room-preflight h2,
+.writers-room-create-dialog h2,
+.writers-room-proposals h3 {
+  margin: 0;
+}
+
+.writers-room-session-panel > header {
+  align-items: flex-start;
+  flex-direction: column;
+}
+
+.writers-room-session-list {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  flex-direction: column;
+  gap: var(--space-2);
+  overflow-y: auto;
+}
+
+.writers-room-session {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.writers-room-session.is-active {
+  border-color: var(--color-accent);
+  box-shadow: inset 3px 0 0 var(--color-accent);
+}
+
+.writers-room-session > button:first-child {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.2rem;
+  padding: var(--space-3);
+  border: 0;
+  background: transparent;
+  text-align: left;
+}
+
+.writers-room-session strong,
+.writers-room-session span,
+.writers-room-session small {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.writers-room-session span,
+.writers-room-session small,
+.writers-room-composer span,
+.writers-room-run-metadata,
+.writers-room-proposal-actions span {
+  color: var(--color-text-muted);
+}
+
+.writers-room-archive {
+  margin: 0 var(--space-3) var(--space-3);
+  padding: 0;
+  border: 0;
+  color: var(--color-text-muted);
+  background: transparent;
+  font-size: var(--font-size-xs);
+}
+
+.writers-room-workbench {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+}
+
+.writers-room-toolbar {
+  flex: 0 0 auto;
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.writers-room-toolbar > div:last-child,
+.writers-room-proposal-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.writers-room-conversation {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 16rem;
+  flex-direction: column;
+  gap: var(--space-4);
+  overflow-y: auto;
+  padding: var(--space-5);
+  background-image: linear-gradient(rgb(255 255 255 / 1.5%) 1px, transparent 1px);
+  background-size: 100% 2.75rem;
+}
+
+.writers-room-empty,
+.writers-room-no-session {
+  max-width: 42rem;
+  margin: auto;
+  padding: var(--space-6);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-raised);
+}
+
+.writers-room-empty > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-block: var(--space-4);
+}
+
+.writers-room-message {
+  width: min(46rem, 92%);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-raised);
+}
+
+.writers-room-message--user {
+  align-self: flex-end;
+  border-color: color-mix(in srgb, var(--color-accent) 45%, var(--color-border));
+  background: color-mix(in srgb, var(--color-accent) 8%, var(--color-surface-raised));
+}
+
+.writers-room-message > p,
+.writers-room-proposal > p {
+  white-space: pre-wrap;
+}
+
+.writers-room-message time {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.writers-room-sources {
+  margin-top: var(--space-3);
+}
+
+.writers-room-sources > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.writers-room-source-card {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  text-align: left;
+}
+
+.writers-room-source-card small {
+  color: var(--color-text-muted);
+  font-size: 0.65rem;
+  letter-spacing: 0.06em;
+}
+
+.writers-room-proposals {
+  display: grid;
+  gap: var(--space-3);
+  width: min(48rem, 100%);
+}
+
+.writers-room-proposal {
+  padding: var(--space-4);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 35%, var(--color-border));
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--color-accent) 5%, var(--color-surface-raised));
+}
+
+.writers-room-proposal h4 {
+  margin-bottom: var(--space-2);
+}
+
+.writers-room-proposal-reason {
+  color: var(--color-text-muted);
+}
+
+.writers-room-composer {
+  flex: 0 0 auto;
+  padding: var(--space-4) var(--space-5);
+  border-top: 1px solid var(--color-border);
+  background: var(--color-surface-raised);
+}
+
+.writers-room-composer label {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.writers-room-composer textarea {
+  min-height: 5rem;
+  max-height: 12rem;
+  resize: vertical;
+}
+
+.writers-room-composer > div {
+  margin-top: var(--space-3);
+}
+
+.writers-room-context-drawer {
+  position: absolute;
+  z-index: 4;
+  inset: 0 0 0 auto;
+  width: min(24rem, 88%);
+  overflow-y: auto;
+  padding: var(--space-5);
+  border-left: 1px solid var(--color-border);
+  background: rgb(17 22 29 / 98%);
+  box-shadow: -1rem 0 2rem rgb(0 0 0 / 35%);
+}
+
+.writers-room-context-drawer section {
+  margin-block: var(--space-5);
+}
+
+.writers-room-context-drawer ul {
+  display: grid;
+  gap: var(--space-2);
+  padding: 0;
+  list-style: none;
+}
+
+.writers-room-context-drawer li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.writers-room-context-drawer li span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.writers-room-dialog-backdrop {
+  position: fixed;
+  z-index: 20;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: var(--space-5);
+  background: rgb(0 0 0 / 72%);
+}
+
+.writers-room-preflight,
+.writers-room-create-dialog {
+  width: min(44rem, 100%);
+  max-height: calc(100vh - 3rem);
+  overflow-y: auto;
+  padding: var(--space-5);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-raised);
+  box-shadow: var(--shadow-lg);
+}
+
+.writers-room-preflight-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+  margin-block: var(--space-5);
+}
+
+.writers-room-preflight-grid > div {
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.writers-room-preflight-grid dt,
+.writers-room-preflight-grid dd {
+  margin: 0;
+}
+
+.writers-room-preflight-grid dt {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.writers-room-model-select,
+.writers-room-create-dialog label {
+  display: grid;
+  gap: var(--space-2);
+  margin-block: var(--space-4);
+}
+
+.writers-room-context-summary {
+  padding: var(--space-4);
+  border-left: 3px solid var(--color-accent);
+  background: var(--color-surface);
+}
+
+.writers-room-preflight > footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-top: var(--space-5);
+}
+
+.writers-room-preflight > footer p {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.writers-room-error {
+  margin: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--color-danger);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--color-danger) 8%, var(--color-surface));
+}
+
+.writers-room-running {
+  color: var(--color-accent);
+}
+
+@media (max-width: 900px) {
+  .writers-room {
+    grid-template-columns: 1fr;
+    overflow: visible;
+  }
+
+  .writers-room-session-panel {
+    max-height: 13rem;
+    border-right: 0;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .writers-room-session-panel > header {
+    align-items: center;
+    flex-direction: row;
+  }
+
+  .writers-room-session-list {
+    display: grid;
+    grid-auto-columns: minmax(12rem, 70%);
+    grid-auto-flow: column;
+    overflow-x: auto;
+  }
+
+  .writers-room-message {
+    width: 100%;
+  }
+}
+
+@media (max-width: 620px) {
+  .writers-room-toolbar,
+  .writers-room-composer > div,
+  .writers-room-preflight > footer,
+  .writers-room-context-drawer > header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .writers-room-toolbar > div:last-child {
+    width: 100%;
+  }
+
+  .writers-room-toolbar > div:last-child button,
+  .writers-room-composer button {
+    flex: 1 1 auto;
+  }
+
+  .writers-room-preflight-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .writers-room-dialog-backdrop {
+    padding: var(--space-2);
+  }
+}
+
 .feature-contract-page {
   display: grid;
   gap: 1rem;

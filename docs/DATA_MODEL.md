@@ -64,7 +64,7 @@ A reviewable record of one explicit specialist request. Format version `1` store
 
 ### AIWorkspaceSession / Message
 
-A project-scoped non-authoritative work session with stable identity, surface, purpose, specialist-profile ID, title, timestamps, active/archive lifecycle, bounded user/assistant messages, aggregate source trace, usage-record references, and pending proposals. Messages store visible content only; system prompts, raw provider payloads, and hidden reasoning are excluded. An application-session ID plus usage timestamp references the canonical application-global usage record rather than duplicating provider/model/token/latency data in project history.
+A project-scoped non-authoritative work session with stable identity, surface, purpose, specialist-profile ID, title, timestamps, active/archive lifecycle, bounded user/assistant messages, up to five project-relative Markdown references, aggregate source trace, usage-record references, and pending proposals. WR-1 assistant messages may also store up to three focused questions. Messages store visible content only; system prompts, raw provider payloads, and hidden reasoning are excluded. An application-session ID plus usage timestamp references the canonical application-global usage record rather than duplicating provider/model/token/latency data in project history.
 
 ### ContextPlan / SourceTrace
 
@@ -107,6 +107,8 @@ For the 0E workflow, questions, answers, provider responses, and pending or disc
 For the specialist workflow, normalized proposals and safe failure metadata may remain durable work history in `.forgemind/specialist-runs.json`. Persistence alone is not approval: history is never imported into the Compendium or Decisions automatically. Game Wiki reads that history as non-authoritative analysis; it is an aggregated view and adds no `wiki.json` storage.
 
 For AIW-0, visible multi-turn discussion and proposal review state may persist in `.forgemind/ai-workspace-sessions.json`. Persistence, proposal acceptance, and proposal application markers are not project truth. A separate explicit owning-domain action remains required, and that domain retains its own lifecycle and approval semantics.
+
+WR-1 adds runnable narrative messages and reviewed proposal application without changing that distinction. Applied Project Knowledge uses `AI_INFERRED` provenance and `writers_room` source; applied Open Questions use the existing `OpenQuestions` / `TBD` / `UNRESOLVED` representation; applied Decisions use the existing `PROPOSED` initial state.
 
 ### Current versus superseded decisions
 
@@ -182,7 +184,7 @@ Approval answers whether a person has accepted an artifact; it does not replace 
 - Omitted empty diagnostic lists in previously written format-version `1` failures deserialize as empty lists; this is backward compatibility, not a schema migration.
 - Invalid history is not discarded during startup. Explicit recovery archives only the history document and creates a valid empty replacement without changing Project, interview, Compendium, or Decision data.
 
-## AIW-0 AI Workspace invariants
+## AIW-0 / WR-1 AI Workspace invariants
 
 - `.forgemind/ai-workspace-sessions.json` is a human-readable format-version `1` work-history document tied to one portable Project ID; it is not Project truth.
 - The document is bounded to 50 sessions, 200 messages and 50 proposals per session, and 20 sources per trace/context request. Invalid or unsupported history is never repaired silently; explicit recovery archives only this document and creates an empty replacement.
@@ -190,8 +192,10 @@ Approval answers whether a person has accepted an artifact; it does not replace 
 - Context selection is explicit and project-isolated. Supporting context orders approved Decisions before established Compendium knowledge, unresolved Open Questions, documented Markdown, explicitly integrated Reality evidence, and prior AI discussion. Explicit selections remain first in user order.
 - Markdown context must be an explicitly supplied project-relative `.md` or `.markdown` path outside `.forgemind`; each extraction and the total package are bounded. Markdown is `DOCUMENTED`, never automatically Canon.
 - Source trace keeps source type, stable ID, readable label, authority, and optional navigation target. Prior AI messages are always `AI_GENERATED`; they cannot be relabeled as knowledge, approved Intent, or Reality evidence.
-- Proposal transitions are `PENDING -> ACCEPTED | REJECTED | DISCARDED` and `ACCEPTED -> APPLIED`. Acceptance does not invoke an owning domain or imply its approval; AIW-0 exposes no command that mutates Compendium, Decisions, Open Questions, Wiki, Git, or Unity.
+- Proposal transitions are `PENDING -> ACCEPTED | REJECTED | DISCARDED` and `ACCEPTED -> APPLIED`. Acceptance does not invoke an owning domain or imply its approval. WR-1 Apply accepts only reviewed Writers' Room knowledge, Decision, or Open Question proposals and delegates to the existing owning API; no natural-language message writes project truth.
 - Usage references identify an existing canonical application-global usage record by application session and timestamp. Project history does not duplicate token, latency, provider, model, pricing, or raw request records.
+- Selected Markdown references are unique, project-relative, `.md`/`.markdown` only, capped at five per session, and revalidated for containment and availability whenever context is prepared.
+- A Writers' Room run includes at most twelve recent messages and a bounded deterministic Context Plan. Source references outside that plan invalidate the structured response before session persistence.
 
 ## 0I.1 Unity GroundTruth invariants
 

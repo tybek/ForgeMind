@@ -9,6 +9,8 @@ import { RepositoryPage } from "./RepositoryPage";
 import { UnityGroundTruthPage } from "./UnityGroundTruthPage";
 import { AlignmentPage } from "./AlignmentPage";
 import { FeatureContractsPage } from "./FeatureContractsPage";
+import { WritersRoomPage } from "./WritersRoomPage";
+import type { AiWorkspaceSourceTrace } from "./platform/aiWorkspace";
 import {
   emptyProjectFoundation,
   NewProjectCreator,
@@ -59,6 +61,7 @@ const workspaceAreas = [
   "Decisions",
   "Alignment",
   "Feature Contracts",
+  "Writers' Room",
 ] as const;
 
 type WorkspaceArea = (typeof workspaceAreas)[number];
@@ -83,9 +86,9 @@ const navigationGroups: readonly NavigationGroup[] = [
     items: ["Game Design", "Narrative", "Technical", "Roadmap", "Decisions", "Project Interview"],
   },
   {
-    label: "AI tools",
+    label: "AI Studio",
     suite: "AI_STUDIO",
-    items: ["AI Behavior Designer", "AI Evaluation"],
+    items: ["Writers' Room", "AI Behavior Designer", "AI Evaluation"],
   },
   {
     label: "Delivery",
@@ -111,6 +114,7 @@ const workspaceAreaIcons: Record<WorkspaceView, IconName> = {
   "Project Interview": "message",
   "AI Behavior Designer": "ai",
   "AI Evaluation": "gauge",
+  "Writers' Room": "message",
 };
 
 const workspaceAreaDescriptions: Record<WorkspaceView, string> = {
@@ -128,9 +132,11 @@ const workspaceAreaDescriptions: Record<WorkspaceView, string> = {
   "Project Interview": "Draft initial Compendium knowledge for explicit human review.",
   "AI Behavior Designer": "Run bounded, non-authoritative game-behavior analysis.",
   "AI Evaluation": "Evaluate configured models through the explicit provider boundary.",
+  "Writers' Room": "Develop lore, characters, dialogue, and continuity through source-aware AI conversation.",
 };
 
 function milestoneFor(area: WorkspaceView): string {
+  if (area === "Writers' Room") return "WR-1 · Headless validated";
   if (area === "Project Interview") return "0E · Complete";
   if (area === "AI Behavior Designer") return "0G · Specialist";
   if (area === "Game Wiki") return "0G.8 · Implemented";
@@ -507,7 +513,7 @@ function Overview({ workspace }: { workspace: Workspace }) {
   );
 }
 
-function Placeholder({ area }: { area: Exclude<WorkspaceArea, "Overview" | "Repository / Git Reality" | "Game Wiki" | "Unity" | "Alignment"> }) {
+function Placeholder({ area }: { area: Exclude<WorkspaceArea, "Overview" | "Repository / Git Reality" | "Game Wiki" | "Unity" | "Alignment" | "Writers' Room"> }) {
   return (
     <EmptyState
       title={area}
@@ -574,6 +580,14 @@ export function WorkspaceShell({
 
   function openFeatureContractReality(source: "GIT" | "UNITY") {
     openArea(source === "GIT" ? "Repository / Git Reality" : "Unity");
+  }
+
+  function openWritersRoomSource(source: AiWorkspaceSourceTrace) {
+    if (source.sourceType === "COMPENDIUM" || source.sourceType === "OPEN_QUESTION") {
+      editKnowledgeAtSource(source.sourceId);
+    } else if (source.sourceType === "DECISION") {
+      openArea("Decisions");
+    }
   }
 
   function viewFeatureContracts(area: KnowledgeArea) {
@@ -649,6 +663,8 @@ export function WorkspaceShell({
             <SpecialistPage workspace={workspace} onEditKnowledge={editKnowledgeAtSource} />
           ) : activeArea === "AI Evaluation" ? (
             <EvaluationPage projectId={workspace.projectId} />
+          ) : activeArea === "Writers' Room" ? (
+            <WritersRoomPage workspace={workspace} onOpenSource={openWritersRoomSource} />
           ) : activeArea === "Overview" ? (
             <Overview workspace={workspace} />
           ) : activeArea === "Repository / Git Reality" ? (

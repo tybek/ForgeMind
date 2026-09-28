@@ -1,0 +1,564 @@
+import { useEffect, useMemo, useRef, useState } from "react";
+import { open } from "@tauri-apps/plugin-dialog";
+import type { Workspace } from "./App";
+import {
+  applyAiWorkspaceProposal,
+  archiveAiWorkspaceSession,
+  archiveAndResetAiWorkspaceHistory,
+  createAiWorkspaceSession,
+  listAiWorkspaceProfiles,
+  loadAiWorkspaceSessions,
+  reviewAiWorkspaceProposal,
+  setAiWorkspaceMarkdownContext,
+  type AiWorkspaceDocument,
+  type AiWorkspaceProfile,
+  type AiWorkspaceProposal,
+  type AiWorkspaceSession,
+  type AiWorkspaceSourceTrace,
+  type AiWorkspaceUsageReference,
+} from "./platform/aiWorkspace";
+import {
+  loadWritersRoomPreflight,
+  loadWritersRoomUsage,
+  runWritersRoom,
+  type WritersRoomPreflight,
+  type WritersRoomRunMode,
+  type WritersRoomUsageRecord,
+} from "./platform/writersRoom";
+
+const WRITERS_ROOM_PROFILE_IDS = ["lore_architect", "character_dialogue", "continuity_editor"];
+
+const starters: Record<string, string[]> = {
+  lore_architect: ["Develop a faction", "Explore a location", "Define a historical conflict", "Test this worldbuilding idea"],
+  character_dialogue: ["Develop a character", "Explore a relationship", "Draft a conversation", "Refine a character voice"],
+  continuity_editor: ["Check this idea against established lore", "Find contradictions", "Show unresolved questions", "Summarize what is established about a subject"],
+};
+
+interface WritersRoomError {
+  code?: string;
+  message?: string;
+}
+
+function safeError(error: unknown): WritersRoomError {
+  if (error && typeof error === "object") return error as WritersRoomError;
+  return { code: "WRITERS_ROOM_FAILED", message: "Writers' Room could not complete the action." };
+}
+
+function providerLabel(provider: string): string {
+  return provider === "nebius_token_factory" ? "Nebius Token Factory" : provider;
+}
+
+function authorityLabel(authority: AiWorkspaceSourceTrace["authority"]): string {
+  return authority.replaceAll("_", " ");
+}
+
+function proposalLabel(proposal: AiWorkspaceProposal): string {
+  if (proposal.proposalType === "SAVE_KNOWLEDGE") return "Add Project Knowledge";
+  if (proposal.proposalType === "CREATE_DECISION") return "Create Decision";
+  if (proposal.proposalType === "CREATE_OPEN_QUESTION") return "Create Open Question";
+  return proposal.proposalType.replaceAll("_", " ");
+}
+
+function relativeMarkdownPaths(workspacePath: string, selected: string[]): string[] {
+  const root = workspacePath.replaceAll("/", "\\").replace(/\\+$/, "");
+  const prefix = `${root.toLowerCase()}\\`;
+  return selected.map((path) => {
+    const normalized = path.replaceAll("/", "\\");
+    if (!normalized.toLowerCase().startsWith(prefix)) {
+      throw new Error("Selected Markdown must be inside the current project.");
+    }
+    const relative = normalized.slice(root.length + 1).replaceAll("\\", "/");
+    if (!/\.(md|markdown)$/i.test(relative)) throw new Error("Only Markdown files can be added.");
+    return relative;
+  });
+}
+
+function usageKey(reference: AiWorkspaceUsageReference): string {
+  return `${reference.applicationSessionId}:${reference.usageTimestamp}`;
+}
+
+function recordKey(record: WritersRoomUsageRecord): string {
+  return `${record.sessionId}:${record.timestamp}`;
+}
+
+function formatLatency(preflight: WritersRoomPreflight): string {
+  if (!preflight.historyAvailable) return "Local history unavailable";
+  const history = preflight.historicalLatency;
+  if (!history) return "Not enough local history";
+  if (history.observationCount === 1) return `Last observed: ~${(history.lastMs / 1000).toFixed(1)} s`;
+  return `Recent: ~${(history.minimumMs / 1000).toFixed(1)}–${(history.maximumMs / 1000).toFixed(1)} s`;
+}
+
+function SourceCards({ sources, onOpenSource }: { sources: AiWorkspaceSourceTrace[]; onOpenSource?: (source: AiWorkspaceSourceTrace) => void }) {
+  if (sources.length === 0) return null;
+  return (
+    <section className="writers-room-sources" aria-label="Sources used">
+      <strong>Sources used</strong>
+      <div>
+        {sources.map((source) => (
+          <button
+            type="button"
+            key={`${source.sourceType}:${source.sourceId}`}
+            className="writers-room-source-card"
+            disabled={!source.navigationTarget || !onOpenSource}
+            onClick={() => onOpenSource?.(source)}
+          >
+            <span>{source.label}</span>
+            <small>{authorityLabel(source.authority)}</small>
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function ProposalCard({
+  proposal,
+  busy,
+  onReview,
+  onDiscard,
+  onApply,
+}: {
+  proposal: AiWorkspaceProposal;
+  busy: boolean;
+  onReview: () => void;
+  onDiscard: () => void;
+  onApply: () => void;
+}) {
+  return (
+    <article className="writers-room-proposal">
+      <header>
+        <span>{proposalLabel(proposal)}</span>
+        <strong>{proposal.status}</strong>
+      </header>
+      <h4>{proposal.title}</h4>
+      <p>{proposal.summary}</p>
+      {proposal.reason ? <p className="writers-room-proposal-reason"><strong>Why:</strong> {proposal.reason}</p> : null}
+      <SourceCards sources={proposal.sourceTrace} />
+      {proposal.status === "PENDING" ? (
+        <div className="writers-room-proposal-actions">
+          <button type="button" disabled={busy} onClick={onReview}>Review</button>
+          <button type="button" disabled={busy} onClick={onDiscard}>Discard proposal</button>
+        </div>
+      ) : null}
+      {proposal.status === "ACCEPTED" ? (
+        <div className="writers-room-proposal-actions">
+          <button className="primary-button" type="button" disabled={busy} onClick={onApply}>Apply</button>
+          <span>Uses the owning Project Brain workflow.</span>
+        </div>
+      ) : null}
+    </article>
+  );
+}
+
+function PreflightDialog({
+  preflight,
+  loading,
+  error,
+  selectedModelId,
+  onModelChange,
+  onCancel,
+  onRun,
+}: {
+  preflight: WritersRoomPreflight | null;
+  loading: boolean;
+  error: WritersRoomError | null;
+  selectedModelId: string;
+  onModelChange: (modelId: string) => void;
+  onCancel: () => void;
+  onRun: () => void;
+}) {
+  const model = preflight?.models.find((candidate) => candidate.modelId === selectedModelId);
+  return (
+    <div className="writers-room-dialog-backdrop">
+      <section className="writers-room-preflight" role="dialog" aria-modal="true" aria-labelledby="writers-room-preflight-title">
+        <header>
+          <div>
+            <span className="section-label">Credit-aware preflight</span>
+            <h2 id="writers-room-preflight-title">{preflight?.taskLabel ?? "Preparing Writers' Room request"}</h2>
+          </div>
+          <button type="button" onClick={onCancel}>Cancel</button>
+        </header>
+        {preflight ? (
+          <>
+            <dl className="writers-room-preflight-grid">
+              <div><dt>Task / profile</dt><dd>{preflight.profileName}</dd></div>
+              <div><dt>Provider</dt><dd>{providerLabel(preflight.provider)}</dd></div>
+              <div><dt>Estimated input</dt><dd>~{preflight.estimatedInputTokens.minimum}–{preflight.estimatedInputTokens.maximum} tokens</dd></div>
+              <div><dt>Usage band</dt><dd><span className={`creator-usage-band creator-usage-band--${preflight.usageBand}`}>{preflight.usageBand.toUpperCase()}</span></dd></div>
+              <div><dt>Local latency</dt><dd>{formatLatency(preflight)}</dd></div>
+              <div><dt>Provider cost</dt><dd>{preflight.estimatedCostUsd ? `~$${preflight.estimatedCostUsd.minimumUsd.toFixed(4)}–$${preflight.estimatedCostUsd.maximumUsd.toFixed(4)}` : "Exact estimate unavailable"}</dd></div>
+            </dl>
+            <label className="writers-room-model-select">
+              Model
+              <select value={selectedModelId} disabled={loading} onChange={(event) => onModelChange(event.target.value)}>
+                {preflight.models.map((candidate) => <option value={candidate.modelId} key={candidate.modelId}>{candidate.displayName}{candidate.modelId === preflight.defaultModelId ? " — profile default" : ""}</option>)}
+              </select>
+              {model ? <small>{model.displayName} · {model.modelId}</small> : null}
+            </label>
+            <section className="writers-room-context-summary">
+              <strong>Context summary</strong>
+              <ul>{preflight.contextSummary.map((item) => <li key={item}>{item}</li>)}</ul>
+            </section>
+          </>
+        ) : null}
+        {error ? <p role="alert" className="writers-room-error"><strong>{error.code ?? "PREFLIGHT_FAILED"}</strong> {error.message}</p> : null}
+        <footer>
+          <p>One confirmation sends exactly one provider request. Cancel sends nothing.</p>
+          <button className="primary-button" type="button" disabled={!preflight || loading || Boolean(error)} onClick={onRun}>{loading ? "Preparing…" : "Send request"}</button>
+        </footer>
+      </section>
+    </div>
+  );
+}
+
+export function WritersRoomPage({
+  workspace,
+  onOpenSource,
+}: {
+  workspace: Workspace;
+  onOpenSource?: (source: AiWorkspaceSourceTrace) => void;
+}) {
+  const [document, setDocument] = useState<AiWorkspaceDocument | null>(null);
+  const [profiles, setProfiles] = useState<AiWorkspaceProfile[]>([]);
+  const [usage, setUsage] = useState<WritersRoomUsageRecord[]>([]);
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
+  const [composer, setComposer] = useState("");
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [newTitle, setNewTitle] = useState("");
+  const [newProfileId, setNewProfileId] = useState("lore_architect");
+  const [preflightMode, setPreflightMode] = useState<WritersRoomRunMode | null>(null);
+  const [preflightMessage, setPreflightMessage] = useState<string | undefined>();
+  const [preflight, setPreflight] = useState<WritersRoomPreflight | null>(null);
+  const [selectedModelId, setSelectedModelId] = useState("");
+  const [loadingPreflight, setLoadingPreflight] = useState(false);
+  const [running, setRunning] = useState(false);
+  const [busyProposalId, setBusyProposalId] = useState<string | null>(null);
+  const [error, setError] = useState<WritersRoomError | null>(null);
+  const [persistenceError, setPersistenceError] = useState<WritersRoomError | null>(null);
+  const requestLock = useRef(false);
+
+  const sessions = document?.sessions ?? [];
+  const selectedSession = sessions.find((session) => session.id === selectedSessionId) ?? null;
+  const activeProfile = profiles.find((profile) => profile.id === selectedSession?.specialistProfileId) ?? null;
+  const runnableProfiles = profiles.filter((profile) => WRITERS_ROOM_PROFILE_IDS.includes(profile.id));
+  const usageByReference = useMemo(() => new Map(usage.map((record) => [recordKey(record), record])), [usage]);
+
+  useEffect(() => {
+    setError(null);
+    setPersistenceError(null);
+    Promise.all([listAiWorkspaceProfiles(), loadWritersRoomUsage(workspace.projectId)])
+      .then(([loadedProfiles, loadedUsage]) => {
+        setProfiles(loadedProfiles);
+        setUsage(loadedUsage);
+      })
+      .catch((reason) => setError(safeError(reason)));
+    loadAiWorkspaceSessions(workspace.path)
+      .then((loaded) => {
+        setDocument(loaded);
+        const active = loaded?.sessions.filter((session) => session.surface === "writers_room" && session.status === "ACTIVE").at(-1);
+        const latest = active ?? loaded?.sessions.filter((session) => session.surface === "writers_room").at(-1);
+        setSelectedSessionId(latest?.id ?? null);
+      })
+      .catch((reason) => setPersistenceError(safeError(reason)));
+  }, [workspace.path, workspace.projectId]);
+
+  async function createSession() {
+    if (!newTitle.trim()) return;
+    setError(null);
+    try {
+      const updated = await createAiWorkspaceSession(
+        workspace.path,
+        workspace.projectId,
+        "writers_room",
+        "Develop narrative ideas through source-aware conversation and reviewed proposals.",
+        newProfileId,
+        newTitle.trim(),
+      );
+      setDocument(updated);
+      setSelectedSessionId(updated.sessions.at(-1)?.id ?? null);
+      setNewTitle("");
+      setCreateOpen(false);
+    } catch (reason) { setError(safeError(reason)); }
+  }
+
+  async function archiveSession(session: AiWorkspaceSession) {
+    setError(null);
+    try {
+      const updated = await archiveAiWorkspaceSession(workspace.path, workspace.projectId, session.id);
+      setDocument(updated);
+    } catch (reason) { setError(safeError(reason)); }
+  }
+
+  async function chooseMarkdown() {
+    if (!selectedSession || selectedSession.status !== "ACTIVE") return;
+    setError(null);
+    try {
+      const picked = await open({ multiple: true, directory: false, filters: [{ name: "Markdown", extensions: ["md", "markdown"] }] });
+      if (!picked) return;
+      const selected = Array.isArray(picked) ? picked : [picked];
+      const relative = relativeMarkdownPaths(workspace.path, selected);
+      const combined = [...new Set([...selectedSession.selectedMarkdownPaths, ...relative])];
+      if (combined.length > 5) throw new Error("A Writers' Room session can include at most 5 Markdown documents.");
+      setDocument(await setAiWorkspaceMarkdownContext(workspace.path, workspace.projectId, selectedSession.id, combined));
+      setDrawerOpen(true);
+    } catch (reason) { setError(safeError(reason)); }
+  }
+
+  async function removeMarkdown(relativePath: string) {
+    if (!selectedSession) return;
+    setError(null);
+    try {
+      setDocument(await setAiWorkspaceMarkdownContext(
+        workspace.path,
+        workspace.projectId,
+        selectedSession.id,
+        selectedSession.selectedMarkdownPaths.filter((path) => path !== relativePath),
+      ));
+    } catch (reason) { setError(safeError(reason)); }
+  }
+
+  async function openPreflight(mode: WritersRoomRunMode) {
+    if (!selectedSession || running) return;
+    const message = mode === "SEND" ? composer.trim() : undefined;
+    if (mode === "SEND" && !message) return;
+    setPreflightMode(mode);
+    setPreflightMessage(message);
+    setPreflight(null);
+    setError(null);
+    setLoadingPreflight(true);
+    try {
+      const prepared = await loadWritersRoomPreflight({
+        rootPath: workspace.path,
+        projectId: workspace.projectId,
+        sessionId: selectedSession.id,
+        mode,
+        message,
+      });
+      setPreflight(prepared);
+      setSelectedModelId(prepared.modelId);
+    } catch (reason) { setError(safeError(reason)); }
+    finally { setLoadingPreflight(false); }
+  }
+
+  async function changeModel(modelId: string) {
+    if (!selectedSession || !preflightMode) return;
+    setSelectedModelId(modelId);
+    setLoadingPreflight(true);
+    setError(null);
+    try {
+      setPreflight(await loadWritersRoomPreflight({
+        rootPath: workspace.path,
+        projectId: workspace.projectId,
+        sessionId: selectedSession.id,
+        mode: preflightMode,
+        message: preflightMessage,
+        modelId,
+      }));
+    } catch (reason) { setError(safeError(reason)); }
+    finally { setLoadingPreflight(false); }
+  }
+
+  async function confirmRun() {
+    if (!selectedSession || !preflightMode || !preflight || running || requestLock.current) return;
+    requestLock.current = true;
+    const mode = preflightMode;
+    const message = preflightMessage;
+    setPreflightMode(null);
+    setPreflightMessage(undefined);
+    setRunning(true);
+    setError(null);
+    try {
+      const result = await runWritersRoom({
+        rootPath: workspace.path,
+        projectId: workspace.projectId,
+        sessionId: selectedSession.id,
+        modelId: selectedModelId,
+        mode,
+        message,
+      });
+      setDocument(result.document);
+      setUsage(await loadWritersRoomUsage(workspace.projectId));
+      if (mode === "SEND") setComposer("");
+    } catch (reason) { setError(safeError(reason)); }
+    finally { requestLock.current = false; setRunning(false); }
+  }
+
+  async function reviewProposal(proposal: AiWorkspaceProposal, status: "ACCEPTED" | "DISCARDED") {
+    if (!selectedSession) return;
+    setBusyProposalId(proposal.id);
+    setError(null);
+    try {
+      setDocument(await reviewAiWorkspaceProposal(workspace.path, workspace.projectId, selectedSession.id, proposal.id, status));
+    } catch (reason) { setError(safeError(reason)); }
+    finally { setBusyProposalId(null); }
+  }
+
+  async function applyProposal(proposal: AiWorkspaceProposal) {
+    if (!selectedSession) return;
+    setBusyProposalId(proposal.id);
+    setError(null);
+    try {
+      const result = await applyAiWorkspaceProposal(workspace.path, workspace.projectId, selectedSession.id, proposal.id);
+      setDocument(result.document);
+    } catch (reason) { setError(safeError(reason)); }
+    finally { setBusyProposalId(null); }
+  }
+
+  async function recoverHistory() {
+    try {
+      const recovery = await archiveAndResetAiWorkspaceHistory(workspace.path);
+      setDocument(recovery.document);
+      setSelectedSessionId(null);
+      setPersistenceError(null);
+    } catch (reason) { setPersistenceError(safeError(reason)); }
+  }
+
+  const profileStarters = activeProfile ? starters[activeProfile.id] ?? [] : [];
+  const hasAssistant = selectedSession?.messages.some((message) => message.role === "ASSISTANT") ?? false;
+
+  return (
+    <section className="writers-room" aria-label="Writers' Room workspace">
+      <aside className="writers-room-session-panel">
+        <header>
+          <div><span className="section-label">Non-authoritative work history</span><h2>Sessions</h2></div>
+          <button className="primary-button" type="button" onClick={() => setCreateOpen(true)}>New Session</button>
+        </header>
+        <div className="writers-room-session-list">
+          {sessions.filter((session) => session.surface === "writers_room").map((session) => {
+            const profile = profiles.find((candidate) => candidate.id === session.specialistProfileId);
+            return (
+              <article className={session.id === selectedSessionId ? "writers-room-session is-active" : "writers-room-session"} key={session.id}>
+                <button type="button" onClick={() => { setSelectedSessionId(session.id); setError(null); }}>
+                  <strong>{session.title}</strong>
+                  <span>{profile?.displayName ?? session.specialistProfileId}</span>
+                  <small>{session.status === "ARCHIVED" ? "Archived" : new Date(session.updatedAt).toLocaleString()}</small>
+                </button>
+                {session.status === "ACTIVE" ? <button className="writers-room-archive" type="button" aria-label={`Archive ${session.title}`} onClick={() => void archiveSession(session)}>Archive</button> : null}
+              </article>
+            );
+          })}
+          {sessions.every((session) => session.surface !== "writers_room") ? <p className="scope-note">Create a session to begin a source-aware narrative conversation.</p> : null}
+        </div>
+      </aside>
+
+      <section className="writers-room-workbench">
+        {persistenceError ? (
+          <div className="writers-room-error" role="alert">
+            <strong>{persistenceError.code ?? "INVALID_AI_WORKSPACE_HISTORY"}</strong>
+            <p>{persistenceError.message}</p>
+            <button type="button" onClick={() => void recoverHistory()}>Archive invalid history and reset</button>
+          </div>
+        ) : null}
+        {selectedSession ? (
+          <>
+            <header className="writers-room-toolbar">
+              <div><span className="section-label">{activeProfile?.displayName ?? selectedSession.specialistProfileId}</span><h3>{selectedSession.title}</h3></div>
+              <div>
+                <button type="button" onClick={() => setDrawerOpen((open) => !open)} aria-expanded={drawerOpen}>Context / Sources</button>
+                <button type="button" disabled={selectedSession.status !== "ACTIVE"} onClick={() => void chooseMarkdown()}>Add Markdown Context</button>
+              </div>
+            </header>
+
+            <div className="writers-room-conversation" aria-live="polite">
+              {selectedSession.messages.length === 0 ? (
+                <section className="writers-room-empty">
+                  <span className="section-label">Creative workspace</span>
+                  <h3>{activeProfile?.displayName}</h3>
+                  <p>{activeProfile?.taskPurpose}</p>
+                  <div>{profileStarters.map((starter) => <button type="button" key={starter} onClick={() => setComposer(starter)}>{starter}</button>)}</div>
+                  <small>Conversation is exploratory. Nothing becomes project truth until you explicitly review and apply a proposal.</small>
+                </section>
+              ) : null}
+              {selectedSession.messages.map((message) => {
+                const record = message.usageReference ? usageByReference.get(usageKey(message.usageReference)) : undefined;
+                return (
+                  <article className={`writers-room-message writers-room-message--${message.role.toLowerCase()}`} key={message.id}>
+                    <header><strong>{message.role === "USER" ? "You" : activeProfile?.displayName ?? "Writers' Room"}</strong><time>{new Date(message.createdAt).toLocaleTimeString()}</time></header>
+                    <p>{message.content}</p>
+                    {message.questions.length > 0 ? <section><strong>Focused questions</strong><ul>{message.questions.map((question) => <li key={question}>{question}</li>)}</ul></section> : null}
+                    <SourceCards sources={message.sourceTrace} onOpenSource={onOpenSource} />
+                    {record ? <small className="writers-room-run-metadata">{providerLabel(record.provider)} · {record.modelId} · {record.latencyMs ?? "?"} ms · {record.inputTokens ?? "?"}/{record.outputTokens ?? "?"}/{record.totalTokens ?? "?"} tokens</small> : null}
+                  </article>
+                );
+              })}
+              {selectedSession.proposals.length > 0 ? (
+                <section className="writers-room-proposals" aria-label="Writers' Room proposals">
+                  <div><span className="section-label">Review queue</span><h3>Proposals</h3></div>
+                  {selectedSession.proposals.map((proposal) => (
+                    <ProposalCard
+                      key={proposal.id}
+                      proposal={proposal}
+                      busy={busyProposalId === proposal.id}
+                      onReview={() => void reviewProposal(proposal, "ACCEPTED")}
+                      onDiscard={() => void reviewProposal(proposal, "DISCARDED")}
+                      onApply={() => void applyProposal(proposal)}
+                    />
+                  ))}
+                </section>
+              ) : null}
+              {running ? <p className="writers-room-running" role="status">Writers' Room is preparing a bounded response…</p> : null}
+            </div>
+
+            {error && !preflightMode ? <p className="writers-room-error" role="alert"><strong>{error.code ?? "WRITERS_ROOM_FAILED"}</strong> {error.message}</p> : null}
+            <footer className="writers-room-composer">
+              <label>
+                Continue the conversation
+                <textarea value={composer} disabled={selectedSession.status !== "ACTIVE" || running} maxLength={16000} onChange={(event) => setComposer(event.target.value)} placeholder={selectedSession.status === "ARCHIVED" ? "Archived sessions are read-only." : "Explore an idea, test continuity, or ask for a proposal…"} />
+              </label>
+              <div>
+                <span>AI output is proposal-only.</span>
+                {hasAssistant ? <button type="button" disabled={running || selectedSession.status !== "ACTIVE"} onClick={() => void openPreflight("REGENERATE")}>Regenerate</button> : null}
+                <button className="primary-button" type="button" disabled={!composer.trim() || running || selectedSession.status !== "ACTIVE"} onClick={() => void openPreflight("SEND")}>Send</button>
+              </div>
+            </footer>
+          </>
+        ) : (
+          <section className="writers-room-no-session">
+            <span className="section-label">Writers' Room</span>
+            <h2>Build narrative with your Project Brain in view.</h2>
+            <p>Create a session, choose a focused profile, and keep every generated idea separate from established project truth.</p>
+            <button className="primary-button" type="button" onClick={() => setCreateOpen(true)}>New Session</button>
+          </section>
+        )}
+      </section>
+
+      {drawerOpen && selectedSession ? (
+        <aside className="writers-room-context-drawer" aria-label="Context and sources">
+          <header><div><span className="section-label">Bounded context</span><h3>Context / Sources</h3></div><button type="button" onClick={() => setDrawerOpen(false)}>Close</button></header>
+          <section>
+            <strong>Selected Markdown</strong>
+            {selectedSession.selectedMarkdownPaths.length ? <ul>{selectedSession.selectedMarkdownPaths.map((path) => <li key={path}><span>{path}</span><button type="button" disabled={selectedSession.status !== "ACTIVE"} onClick={() => void removeMarkdown(path)}>Remove</button></li>)}</ul> : <p>No Markdown selected. Files must stay inside this project and are DOCUMENTED context, not Canon.</p>}
+          </section>
+          <SourceCards sources={selectedSession.sourceTrace} onOpenSource={onOpenSource} />
+          <p className="scope-note">Context plans are bounded and deterministic. Git Reality, Unity GroundTruth, and Feature Contracts are excluded by default.</p>
+        </aside>
+      ) : null}
+
+      {createOpen ? (
+        <div className="writers-room-dialog-backdrop">
+          <section className="writers-room-create-dialog" role="dialog" aria-modal="true" aria-labelledby="new-writers-room-session-title">
+            <header><div><span className="section-label">New non-authoritative session</span><h2 id="new-writers-room-session-title">Start a Writers' Room session</h2></div><button type="button" onClick={() => setCreateOpen(false)}>Cancel</button></header>
+            <label>Session title<input value={newTitle} maxLength={160} autoFocus onChange={(event) => setNewTitle(event.target.value)} /></label>
+            <label>Profile<select value={newProfileId} onChange={(event) => setNewProfileId(event.target.value)}>{runnableProfiles.map((profile) => <option value={profile.id} key={profile.id}>{profile.displayName}</option>)}</select></label>
+            <p>{runnableProfiles.find((profile) => profile.id === newProfileId)?.taskPurpose}</p>
+            <button className="primary-button" type="button" disabled={!newTitle.trim()} onClick={() => void createSession()}>Create Session</button>
+          </section>
+        </div>
+      ) : null}
+
+      {preflightMode ? (
+        <PreflightDialog
+          preflight={preflight}
+          loading={loadingPreflight}
+          error={error}
+          selectedModelId={selectedModelId}
+          onModelChange={(modelId) => void changeModel(modelId)}
+          onCancel={() => { setPreflightMode(null); setPreflightMessage(undefined); setError(null); }}
+          onRun={() => void confirmRun()}
+        />
+      ) : null}
+    </section>
+  );
+}

@@ -172,7 +172,7 @@ The future shell direction combines three layers:
 2. persistent global navigation for **Overview**, **Game Wiki**, **Repository / Git Reality**, **Unity**, and **Alignment**;
 3. a contextual lower sidebar section for the active Suite.
 
-Project may eventually contain the guided Creator, Project Foundation, Game Design, Narrative, Technical, Roadmap, Decisions, and Project Interview. AI Studio may contain the existing AI Behavior Designer and Model Evaluation entry points plus explicitly authorized future Studios. Reality may later add focused tools while the core Reality shortcuts remain globally available. Delivery may contain Feature Contracts and future Implementation Brief workflows. This order suggests movement from idea toward implementation, not a rigid waterfall; users may move between Suites freely.
+Project may eventually contain the guided Creator, Project Foundation, Game Design, Narrative, Technical, Roadmap, Decisions, and Project Interview. The current **AI Studio** sidebar group contains Writers' Room, AI Behavior Designer, and Model Evaluation without implementing the future Suite switcher or full navigation consolidation. Reality may later add focused tools while the core Reality shortcuts remain globally available. Delivery may contain Feature Contracts and future Implementation Brief workflows. This order suggests movement from idea toward implementation, not a rigid waterfall; users may move between Suites freely.
 
 The current shell only prepares typed metadata and restrained global/contextual grouping. It does not render a Suite switcher, change routes, or claim that a Studio exists. Existing future placeholders remain explicitly labeled **Planned**. Use an icon plus label for each destination and preserve existing ownership until a scoped phase authorizes more.
 
@@ -219,6 +219,12 @@ Model recommendations should eventually use local task-specific evaluation data,
 NPC-2.1 keeps the New Project Creator prose headings at a readable line length while allowing fields and AI proposal regions to grow across more of the desktop stage. At the default `1180x760` window, proposal grids should favor two readable columns; a third Design Pillar column is reserved for genuinely wide viewports, and narrow layouts stack to one. Vertical page scrolling is acceptable, horizontal scrolling is not, and the Tauri default dimensions remain unchanged.
 
 Manual Design Pillars use full-width row/cards: title and explanation share the row where space permits, Remove has a stable action position, and AI-assisted provenance remains a small secondary badge near the title rather than a dedicated grid column. The compact preflight is modal because it gates a provider request; session-only Creator AI History is a closed-by-default right drawer because it is secondary recovery state, not project truth or a permanent default-width column.
+
+### Implemented Writers' Room layout guidance
+
+WR-1 uses a compact session rail plus one primary conversation workbench. Context/Sources is a closed-by-default right drawer so the default `1180x760` window never forces sessions, conversation, and context into three narrow permanent columns. At constrained width, sessions become a bounded horizontal rail and the workbench remains single-column; no page-level horizontal scroll is intended.
+
+Conversation uses workshop-style source chips, proposal review cards, local run feedback, and a persistent composer rather than generic chat chrome. Profile purpose and prompt starters explain the empty state without inventing project content. Provider preflight is modal because it gates credits; model choice remains secondary. Authority, proposal status, source labels, and canonical usage metadata stay visible without exposing raw prompts or provider payloads.
 
 ## Feature Contract follow-up from 0K dogfooding
 

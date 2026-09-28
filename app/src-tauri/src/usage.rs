@@ -27,6 +27,7 @@ pub enum TaskCategory {
     FeatureContract,
     NewProjectCoreLoop,
     NewProjectDesignPillars,
+    NarrativeWorkspace,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]

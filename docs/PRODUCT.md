@@ -2,7 +2,7 @@
 
 ## Status
 
-This document defines the product direction. **CURRENT:** 0K Feature Contracts, UI-1, UI-2, NPC-1, and NPC-2 are complete. NEXT-1 and the bounded NEXT-1.1 actionability/Reality-connection follow-up are implemented and headless-validated with an updated manual recheck pending. The local workspace includes Project Interview, Compendium knowledge, Decisions, one bounded specialist profile, Game Wiki aggregation, Repository Reality, completed Unity GroundTruth and Alignment workflows, the reviewed Feature Contract workbench, the manual-first New Project Creator with explicit confirmed Core Loop and Design Pillar AI proposals, first-class existing-project pillar maintenance, explicit detached Reality connections, and local explainable Home guidance. Optional NEXT-2 AI refinement remains unimplemented. Everything described as future direction below is **NOT IMPLEMENTED** unless explicitly identified otherwise.
+This document defines the product direction. **CURRENT:** 0K Feature Contracts, UI-1, UI-2, NPC-1, NPC-2, NEXT-1, AIW-0, and the headless-validated WR-1 Writers' Room implementation are complete at their documented automated boundaries. Writers' Room adds project-scoped narrative sessions for Lore Architect, Character & Dialogue, and Continuity Editor with bounded source-aware conversation, explicit provider preflight, and reviewed proposal actions; manual desktop and optional low-cost live-AI checks remain pending. Optional NEXT-2 AI refinement, Wiki Chronicler, a general Router, and the broader future direction remain unimplemented unless explicitly identified otherwise.
 
 ## Problem
 
@@ -48,6 +48,8 @@ The full intended ForgeMind 1.0 narrative is: **New or Existing Game Project -> 
 ## Project memory and decision history
 
 Temporary discussion includes brainstorming, alternatives, rough analysis, and rejected ideas. It should not silently become project truth. Durable project knowledge includes approved decisions, design direction, canon, technical constraints, roadmap scope, and Feature Contracts. A future explicit action such as **Save to Project** may promote selected discussion into portable, reviewable files.
+
+WR-1 implements that boundary for narrative work: conversation and generated proposals persist only as non-authoritative work history. **Add Project Knowledge**, **Create Decision**, and **Create Open Question** require explicit Review and Apply actions that route through the existing owning stores. AI-origin provenance remains visible, created Decisions begin `PROPOSED`, and selected Markdown is `DOCUMENTED` context rather than Canon.
 
 0K Feature Contracts are project-owned, versioned delivery artifacts derived from an approved Alignment Review, current Compendium entry, or approved Decision. They capture immutable source traceability plus human-reviewed implementation scope, begin `DRAFT`, and require explicit approval. Drafts may be saved incomplete, edited, or explicitly deleted; approved and historical states are preserved through lifecycle actions. **Draft with AI** may propose bounded sections from captured Intent, approved Alignment, Reality, and current human text, but never applies, saves, approves, or invents paths automatically. **Preview / Copy Implementation Brief** produces one deterministic bounded handoff from reviewed contract content and evidence-supported locations. Contracts are not a competing truth store, task board, coding runtime, or authority to execute changes.
 
@@ -107,7 +109,7 @@ These are product concepts, not commitments to separate technical services or st
 The long-term product journey should consolidate those concepts into four clearer groups:
 
 - **Project:** define what the game is and why through the Foundation, Overview, Game Wiki, Decisions, and Roadmap / Production.
-- **AI Studio:** expand and review it through project-aware Specialists and Model Evaluation / Model Lab.
+- **AI Studio:** expand and review it through Writers' Room, project-aware Specialists, and Model Evaluation / Model Lab.
 - **Reality:** connect Repository, Unity, and Alignment evidence.
 - **Delivery:** Feature Contracts and Implementation Briefs.
 
@@ -137,7 +139,7 @@ The [ForgeMind Studios Roadmap](STUDIOS_ROADMAP.md) defines how future task-orie
 
 The future shared behavior underneath those workspaces is specified in [Context Builder and Task Router Architecture](CONTEXT_AND_ROUTING.md). It defines the Project Brain as a logical aggregate over existing authoritative stores, plans and budgets only task-relevant context, preserves source authority through compaction, routes deterministic actions without unnecessary AI classification, and makes model recommendations only from task-specific evidence. CR-0 is documentation only: no Context Builder, Task Router, model recommender, or natural-language **Ask ForgeMind** route is implemented.
 
-Future MVP direction also reserves **AIW-0 Shared AI Workspace Foundation** for both **WR-1 Writers' Room MVP** and **CHR-1/CHR-2 Wiki Chronicler**. Writers' Room focuses on creative narrative development. Chronicler focuses on Project Brain navigation/retrieval and source-traced edit proposals. Both must reuse one bounded context/proposal/review foundation, and all durable edits remain **proposal -> human review -> project truth**. None of these phases is implemented by NEXT-1.1.
+**AIW-0 Shared AI Workspace Foundation** is now used by the implemented **WR-1 Writers' Room MVP**. Writers' Room focuses on creative narrative development while preserving **conversation -> proposal -> human review -> explicit owning-domain action -> project truth**. **CHR-1/CHR-2 Wiki Chronicler** remains future work and must reuse this foundation rather than create another session, context, provider, or proposal stack.
 
 [Security and Privacy Architecture](SECURITY_AND_PRIVACY.md) defines ForgeMind's local-first, BYOK-friendly security stance and the future shared AI Data Boundary, Context Preview, Security Preflight, Secret Guard, and credential diagnostics. SEC-0 is documentation only. Current factual safeguards remain limited to the native environment-backed Nebius credential path, narrow Tauri permissions, bounded workflow-specific requests, and privacy-minimized local histories; SEC-1 through SEC-6 are not implemented.
 

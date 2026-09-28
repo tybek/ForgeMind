@@ -54,6 +54,7 @@ pub enum KnowledgeSource {
     Decision,
     SpecialistAnalysis,
     NewProjectCreator,
+    WritersRoom,
 }
 
 #[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq, Eq)]
@@ -189,6 +190,17 @@ pub struct PromoteSpecialistFindingRequest {
     pub status: KnowledgeStatus,
 }
 
+#[derive(Clone, Debug)]
+pub struct CreateAiWorkspaceKnowledgeRequest {
+    pub root_path: String,
+    pub project_id: String,
+    pub area: KnowledgeArea,
+    pub title: String,
+    pub statement: String,
+    pub status: KnowledgeStatus,
+    pub provenance: KnowledgeProvenance,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct InterviewImportResult {
@@ -242,6 +254,42 @@ pub fn create_entry(request: CreateKnowledgeEntryRequest) -> Result<CompendiumDo
         updated_at: now,
     });
     save(root, document)
+}
+
+pub fn create_ai_workspace_entry(
+    request: CreateAiWorkspaceKnowledgeRequest,
+) -> Result<(CompendiumDocument, String), CompendiumError> {
+    let root = Path::new(&request.root_path);
+    verify_project(root, &request.project_id)?;
+    validate_text(&request.title, 1, 120)?;
+    validate_text(&request.statement, 1, 2_000)?;
+    let mut document = load_for_project(root, &request.project_id)?
+        .unwrap_or_else(|| empty_document(&request.project_id));
+    let normalized_title = normalized_key(&request.title);
+    let normalized_statement = normalized_key(&request.statement);
+    if document.entries.iter().any(|entry| {
+        normalized_key(&entry.title) == normalized_title
+            && normalized_key(&entry.statement) == normalized_statement
+    }) {
+        return Err(CompendiumError::new(
+            "DUPLICATE_KNOWLEDGE_ENTRY",
+            "Matching project knowledge already exists.",
+        ));
+    }
+    let now = timestamp();
+    let id = Uuid::new_v4().to_string();
+    document.entries.push(KnowledgeEntry {
+        id: id.clone(),
+        area: request.area,
+        title: request.title.trim().to_owned(),
+        statement: request.statement.trim().to_owned(),
+        status: request.status,
+        provenance: request.provenance,
+        source: KnowledgeSource::WritersRoom,
+        created_at: now.clone(),
+        updated_at: now,
+    });
+    save(root, document).map(|document| (document, id))
 }
 
 pub fn initialize_foundation(
@@ -658,6 +706,10 @@ fn specialist_result_contains(
 
 fn is_duplicate(document: &CompendiumDocument, title: &str, statement: &str) -> bool {
     document.entries.iter().any(|entry| entry.title == title && entry.statement == statement)
+}
+
+fn normalized_key(value: &str) -> String {
+    value.split_whitespace().collect::<Vec<_>>().join(" ").to_lowercase()
 }
 
 fn save(root: &Path, mut document: CompendiumDocument) -> Result<CompendiumDocument, CompendiumError> {

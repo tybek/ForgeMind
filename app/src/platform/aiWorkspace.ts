@@ -44,6 +44,7 @@ export interface AiWorkspaceMessage {
   id: string;
   role: AiWorkspaceMessageRole;
   content: string;
+  questions: string[];
   createdAt: string;
   sourceTrace: AiWorkspaceSourceTrace[];
   usageReference?: AiWorkspaceUsageReference;
@@ -62,6 +63,7 @@ export interface AiWorkspaceProposal {
   proposalType: AiWorkspaceProposalType;
   title: string;
   summary: string;
+  reason?: string;
   status: AiWorkspaceProposalStatus;
   createdAt: string;
   updatedAt: string;
@@ -80,6 +82,7 @@ export interface AiWorkspaceSession {
   updatedAt: string;
   status: AiWorkspaceSessionStatus;
   messages: AiWorkspaceMessage[];
+  selectedMarkdownPaths: string[];
   sourceTrace: AiWorkspaceSourceTrace[];
   proposals: AiWorkspaceProposal[];
 }
@@ -211,4 +214,32 @@ export function buildAiWorkspaceContext(
 
 export function archiveAndResetAiWorkspaceHistory(path: string): Promise<AiWorkspaceRecovery> {
   return invoke<AiWorkspaceRecovery>("archive_and_reset_ai_workspace_history", { path });
+}
+
+export function setAiWorkspaceMarkdownContext(
+  rootPath: string,
+  projectId: string,
+  sessionId: string,
+  relativePaths: string[],
+): Promise<AiWorkspaceDocument> {
+  return invoke<AiWorkspaceDocument>("set_ai_workspace_markdown_context", {
+    request: { rootPath, projectId, sessionId, relativePaths },
+  });
+}
+
+export interface AiWorkspaceApplyResult {
+  document: AiWorkspaceDocument;
+  target: "PROJECT_KNOWLEDGE" | "DECISION" | "OPEN_QUESTION";
+  targetId: string;
+}
+
+export function applyAiWorkspaceProposal(
+  rootPath: string,
+  projectId: string,
+  sessionId: string,
+  proposalId: string,
+): Promise<AiWorkspaceApplyResult> {
+  return invoke<AiWorkspaceApplyResult>("apply_ai_workspace_proposal", {
+    request: { rootPath, projectId, sessionId, proposalId },
+  });
 }

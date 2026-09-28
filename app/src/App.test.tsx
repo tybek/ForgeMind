@@ -192,6 +192,7 @@ const requiredAreas = [
   "Decisions",
   "Alignment",
   "Feature Contracts",
+  "Writers' Room",
 ];
 
 function navigationName(area: string): string {
@@ -489,7 +490,7 @@ describe("ForgeMind local workspace", () => {
     expect(screen.queryByText(workspace.name, { selector: ".page-header .type-eyebrow" })).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Global", level: 2 })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Project tools", level: 2 })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "AI tools", level: 2 })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "AI Studio", level: 2 })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Delivery", level: 2 })).toBeInTheDocument();
     expect(screen.getAllByText("Planned")).toHaveLength(3);
     expect(screen.queryByText("WIP")).not.toBeInTheDocument();

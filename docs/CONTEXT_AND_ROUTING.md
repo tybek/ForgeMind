@@ -2,9 +2,9 @@
 
 ## Status and scope
 
-**CR-0 ARCHITECTURE SPECIFICATION; AIW-0 BOUNDED FOUNDATION COMPLETE.** This document defines the broader future infrastructure for task classification, project-context assembly, specialist/workflow routing, task-specific model recommendation, and proposal traceability. AIW-0 now implements a deliberately small explicit-source Context Plan, source trace, session, profile-metadata, and proposal-review subset for future Writers' Room and Chronicler work. It creates no provider request, retrieval index, Router, Studio, or UI.
+**CR-0 ARCHITECTURE SPECIFICATION; AIW-0 BOUNDED FOUNDATION COMPLETE; WR-1 CONSUMER IMPLEMENTED.** This document defines the broader future infrastructure for task classification, project-context assembly, specialist/workflow routing, task-specific model recommendation, and proposal traceability. AIW-0 implements the explicit-source Context Plan, source trace, session, profile-metadata, usage-reference, and proposal-review subset now consumed by Writers' Room. WR-1 adds a narrative-specific provider request and UI but no retrieval index, Router, general model recommender, or Studio framework.
 
-0K Feature Contracts and AIW-0 are complete. Project Rebaseline, remaining UI phases, ForgeMind Studios S0 through S9, and the broader Context + Routing phases CR-1 through CR-6 remain planned and not started except for the explicitly documented AIW-0 primitives. AIW-0 does not start 0L, Writers' Room, Chronicler, Studios, or general routing.
+0K Feature Contracts and AIW-0 are complete; WR-1 Writers' Room is implemented and headless validated. Project Rebaseline, remaining UI phases, ForgeMind Studios S0 through S9, and the broader Context + Routing phases CR-1 through CR-6 remain planned and not started except for the explicitly documented AIW-0 primitives used by WR-1. WR-1 does not start 0L, Chronicler, Studios, or general routing.
 
 The current MVP loop remains:
 
@@ -20,7 +20,7 @@ The future Context Builder and Task Router support that loop and other explicitl
 
 Related product and implementation boundaries are defined in [Product](PRODUCT.md), [Architecture](ARCHITECTURE.md), [Security and Privacy Architecture](SECURITY_AND_PRIVACY.md), [Conceptual Data Model](DATA_MODEL.md), [Workflows](WORKFLOWS.md), [Roadmap](ROADMAP.md), [ForgeMind Studios Roadmap](STUDIOS_ROADMAP.md), [Rebaseline Existing Project](PROJECT_REBASELINE.md), [ForgeMind UI Direction](UI_DIRECTION.md), and the [Coding Context Map](CODING_CONTEXT_MAP.md).
 
-The implemented **AIW-0 Shared AI Workspace Foundation** is the common initiating/context/proposal/review shell for future **WR-1 Writers' Room MVP** and **CHR-1/CHR-2 Wiki Chronicler**, not two independent routing stacks. Writers' Room will focus on creative narrative development; Chronicler will focus on Project Brain navigation, retrieval, and edit proposals. Both retain source trace and the boundary **proposal -> human review -> explicit owning-domain action -> project truth**. Those product phases remain unimplemented.
+The implemented **AIW-0 Shared AI Workspace Foundation** is the common initiating/context/proposal/review shell for the implemented **WR-1 Writers' Room MVP** and future **CHR-1/CHR-2 Wiki Chronicler**, not two independent routing stacks. Writers' Room focuses on creative narrative development; Chronicler will focus on Project Brain navigation, retrieval, and edit proposals. Both retain source trace and the boundary **proposal -> human review -> explicit owning-domain action -> project truth**.
 
 ## Problem and desired flow
 
@@ -630,7 +630,7 @@ These classifications describe readiness for future Context + Routing work, not 
 
 | Area | Status | Current repository evidence | Gap before shared routing |
 | --- | --- | --- | --- |
-| Specialist profile abstraction | `PARTIAL` | Native `SpecialistProfile` defines the runnable AI Behavior Designer; AIW-0 projects it into shared profile metadata and represents future working modes with purpose, allowed context, optional model preference, and review/output expectations. | Future profile prompts, task schemas, budgets, evaluation, and runnable registration remain flow-owned and unimplemented. |
+| Specialist profile abstraction | `PARTIAL` | Native `SpecialistProfile` defines the runnable AI Behavior Designer; AIW-0 provides shared profile metadata; WR-1 activates Lore Architect, Character & Dialogue, and Continuity Editor with flow-owned prompts, budgets, and response validation. | Additional profiles, cross-workflow evaluation, and general routing remain unimplemented. |
 | Provider abstraction | `READY` | `AIProvider` separates the normalized request/response boundary from the Nebius adapter, and tests use a mock provider. | Readiness is limited to a reusable boundary; provider capability routing and additional adapters are not implemented. |
 | Model registry | `PARTIAL` | Static native entries expose provider/model identity, enabled state, optional pricing, and a small capability record. | No discovery, task fitness, routing policy, evidence thresholds, or provider fallback. |
 | Usage metering | `PARTIAL` | Local records capture task category, model/provider, tokens, latency, estimated cost when known, success, and safe errors. | No Context Plan identity, prompt/schema version, acceptance signals, or task-specific evaluation aggregate. |
@@ -643,7 +643,7 @@ These classifications describe readiness for future Context + Routing work, not 
 | Reality freshness | `PARTIAL` | Git Reality is a refreshable transient snapshot; Unity GroundTruth records export time and coverage/issues. | No task-specific shared freshness policy, threshold metadata, or Context Plan enforcement. |
 | Deterministic context selection | `PARTIAL` | AIW-0 resolves bounded explicit/supporting Compendium, approved Decision, Open Question, project-relative Markdown, and same-project prior-message references with deterministic authority ordering. Existing Specialist and Feature Contract flows retain their own selection. | No tiered token allocator, freshness policy, omission reasons, inferred relevance, or migration of current flows. |
 | Task classifier | `MISSING` | Focused UI actions currently establish their own operation; no general classifier is needed for those flows. | No shared classification result or bounded natural-language classifier. |
-| Context Plan and Builder | `PARTIAL` | AIW-0 exposes a typed plan and bounded source package with retained trace for its future consumers. Markdown extraction is explicit, project-contained, and deterministic. | No provider prompt assembly, exact outbound preview, token budgeting, compaction, Reality reader integration, or general cross-workflow adoption. |
+| Context Plan and Builder | `PARTIAL` | AIW-0 exposes a typed plan and bounded source package with retained trace. WR-1 consumes it with deterministic lexical relevance, explicit project-contained Markdown, profile-specific caps, and a twelve-message recent-session bound. | No exact outbound payload preview, token-aware compaction, Reality reader integration, semantic retrieval, or general cross-workflow adoption. |
 | Security Preflight and AI Data Boundary | `MISSING` | Current native workflows have narrow credential, payload, and persistence safeguards. | No shared final-package secret scan, path/policy validation, exact Context Preview, or block/warning result exists. |
 | Model Evaluation Profile | `MISSING` | Matching specialist runs can be compared manually with their stored metrics. | No persistent evaluation profile, acceptance evidence, task-specific aggregation, scoring policy, or recommendation threshold. |
 | Task Router / Ask ForgeMind | `DEFERRED` | Studios S9 describes the future natural-language route. NEXT-1 navigates from fixed local rules and is not a Router. | Requires proven focused workflows, shared task/context contracts, and evaluation evidence. |
@@ -707,4 +707,4 @@ No broader CR phase is authorized by AIW-0. Each phase requires an explicit road
 
 The hackathon MVP remains centered on Intent -> Reality -> Alignment -> Feature Contract -> Implementation Brief. Context Builder and routing should enter MVP implementation only through an explicit, narrowly scoped decision showing material demo value without risking 0K closure.
 
-AIW-0 stops at explicit project-scoped sessions, deterministic bounded source assembly, source trace, and proposal review state. A general Context Builder, Task Router, model recommender, semantic retrieval, context preview, Studios, Writers' Room, and Chronicler UI remain unimplemented.
+AIW-0 stops at explicit project-scoped sessions, deterministic bounded source assembly, source trace, and proposal review state. WR-1 consumes those primitives for one narrative workspace. A general Context Builder, Task Router, model recommender, semantic retrieval, exact payload preview, Studios framework, and Chronicler UI remain unimplemented.

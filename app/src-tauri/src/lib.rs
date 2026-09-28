@@ -14,6 +14,7 @@ pub mod specialists;
 mod structured_output;
 pub mod usage;
 pub mod unity_groundtruth;
+pub mod writers_room;
 mod workspace;
 
 use std::path::Path;
@@ -27,6 +28,8 @@ use ai_workspace::{
     AppendAiWorkspaceMessageRequest, BuildAiWorkspaceContextRequest,
     CreateAiWorkspaceProposalRequest, CreateAiWorkspaceSessionRequest,
     ReviewAiWorkspaceProposalRequest, AiWorkspaceSessionActionRequest,
+    SetAiWorkspaceMarkdownContextRequest, ApplyAiWorkspaceProposalRequest,
+    AiWorkspaceApplyResult,
 };
 use alignment::{
     AlignmentCheck, AlignmentDocument, AlignmentError, AlignmentSourceCatalog,
@@ -67,6 +70,10 @@ use specialists::{
     SpecialistProfile,
 };
 use usage::{TaskCategory, UsageError, UsageSummary};
+use writers_room::{
+    WritersRoomPreflight, WritersRoomPreflightRequest, WritersRoomRunRequest,
+    WritersRoomRunResult,
+};
 
 static SESSION_ID: OnceLock<String> = OnceLock::new();
 
@@ -209,6 +216,62 @@ fn archive_and_reset_ai_workspace_history(
     path: String,
 ) -> Result<ai_workspace::AiWorkspaceRecovery, AiWorkspaceError> {
     ai_workspace::archive_and_reset(Path::new(&path))
+}
+
+#[tauri::command]
+fn set_ai_workspace_markdown_context(
+    request: SetAiWorkspaceMarkdownContextRequest,
+) -> Result<AiWorkspaceDocument, AiWorkspaceError> {
+    ai_workspace::set_markdown_context(request)
+}
+
+#[tauri::command]
+fn apply_ai_workspace_proposal(
+    request: ApplyAiWorkspaceProposalRequest,
+) -> Result<AiWorkspaceApplyResult, AiWorkspaceError> {
+    ai_workspace::apply_proposal(request)
+}
+
+#[tauri::command]
+fn get_writers_room_preflight(
+    request: WritersRoomPreflightRequest,
+) -> Result<WritersRoomPreflight, AiWorkspaceError> {
+    writers_room::preflight(request)
+}
+
+#[tauri::command]
+async fn run_writers_room(
+    request: WritersRoomRunRequest,
+) -> Result<WritersRoomRunResult, AiWorkspaceError> {
+    let prepared = writers_room::prepare_run(request)?;
+    let provider_result = ai::generate_with_nebius(prepared.ai_request.clone()).await;
+    let normalized = provider_result
+        .as_ref()
+        .map_err(|error| AiWorkspaceError::from_ai(error.clone()))
+        .and_then(|response| writers_room::normalize_response(response, &prepared));
+    let mut record = usage::record_for_result(
+        session_id(),
+        Some(&prepared.project_id),
+        &prepared.model,
+        Some(writers_room::task_category()),
+        &provider_result,
+    );
+    record.structured_output_success = provider_result.is_ok().then_some(normalized.is_ok());
+    usage::application_usage_path()
+        .and_then(|path| usage::append_record(&path, &record))
+        .map_err(|error| AiWorkspaceError::new(error.code, &error.message))?;
+    let response = provider_result.map_err(AiWorkspaceError::from_ai)?;
+    let normalized = normalized?;
+    writers_room::complete_run(prepared, normalized, &record, &response)
+}
+
+#[tauri::command]
+fn load_writers_room_usage(project_id: String) -> Result<Vec<usage::UsageRecord>, UsageError> {
+    let records = usage::load_records(&usage::application_usage_path()?)?;
+    Ok(records.into_iter().filter(|record| {
+        record.project_id.as_deref() == Some(project_id.as_str())
+            && record.task_category == Some(writers_room::task_category())
+    }).collect())
 }
 
 #[tauri::command]
@@ -631,6 +694,11 @@ pub fn run() {
             review_ai_workspace_proposal,
             build_ai_workspace_context,
             archive_and_reset_ai_workspace_history,
+            set_ai_workspace_markdown_context,
+            apply_ai_workspace_proposal,
+            get_writers_room_preflight,
+            run_writers_room,
+            load_writers_room_usage,
             run_specialist_analysis,
             load_specialist_runs,
             promote_specialist_finding,
