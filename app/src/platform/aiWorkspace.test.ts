@@ -118,4 +118,35 @@ describe("AI Workspace platform boundary", () => {
     expect(normalized.sessions[0].proposals[0].sourceTrace).toEqual([]);
     expect(normalized.recoveryWarnings).toEqual(["1 malformed session was skipped.", "Malformed session content was skipped."]);
   });
+
+  it("keeps normalized history project-scoped, uniquely keyed, and within native collection bounds", () => {
+    const session = (id: string, projectId = "project-1") => ({
+      id, projectId, surface: "writers_room", purpose: "Develop narrative ideas.", specialistProfileId: "lore_architect",
+      title: id, createdAt: "2026-09-28T12:00:00.000Z", updatedAt: "2026-09-28T12:00:00.000Z", status: "ACTIVE",
+      messages: Array.from({ length: 201 }, (_, index) => ({
+        id: `message-${index}`, role: "ASSISTANT", content: "Readable.", createdAt: "2026-09-28T12:01:00.000Z",
+      })),
+    });
+    const normalized = normalizeAiWorkspaceDocument({
+      formatVersion: 1,
+      projectId: "project-1",
+      updatedAt: "2026-09-28T12:00:00.000Z",
+      sessions: [
+        session("session-0"),
+        session("session-0"),
+        session("foreign-session", "project-2"),
+        ...Array.from({ length: 52 }, (_, index) => session(`session-${index + 1}`)),
+      ],
+    });
+
+    expect(normalized.sessions).toHaveLength(48);
+    expect(new Set(normalized.sessions.map((item) => item.id)).size).toBe(48);
+    expect(normalized.sessions.every((item) => item.projectId === "project-1")).toBe(true);
+    expect(normalized.sessions[0].messages).toHaveLength(200);
+    expect(normalized.recoveryWarnings).toEqual([
+      "2 malformed sessions were skipped.",
+      "Session history exceeded the display bound; excess sessions were skipped.",
+      "Malformed session content was skipped.",
+    ]);
+  });
 });

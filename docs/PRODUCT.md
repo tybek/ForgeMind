@@ -2,7 +2,7 @@
 
 ## Status
 
-This document defines the product direction. **CURRENT:** 0K Feature Contracts, UI-1, UI-2, NPC-1, NPC-2, NEXT-1, AIW-0, and the headless-validated WR-1 Writers' Room implementation are complete at their documented automated boundaries. Writers' Room adds project-scoped narrative sessions for Lore Architect, Character & Dialogue, and Continuity Editor with bounded source-aware conversation, explicit provider preflight, and reviewed proposal actions; manual desktop and optional low-cost live-AI checks remain pending. Optional NEXT-2 AI refinement, Wiki Chronicler, a general Router, and the broader future direction remain unimplemented unless explicitly identified otherwise.
+This document defines the product direction. **CURRENT:** 0K Feature Contracts, UI-1, UI-2, NPC-1, NPC-2, NEXT-1, AIW-0, and the headless-validated WR-1 Writers' Room implementation are complete at their documented automated boundaries. UI-3 Project Overview is implemented and headless validated, with manual responsive/visual closure pending. Writers' Room adds project-scoped narrative sessions for Lore Architect, Character & Dialogue, and Continuity Editor with bounded source-aware conversation, explicit provider preflight, and reviewed proposal actions; manual desktop and optional low-cost live-AI checks remain pending. Optional NEXT-2 AI refinement, Wiki Chronicler, a general Router, and the broader future direction remain unimplemented unless explicitly identified otherwise.
 
 ## Problem
 
@@ -94,7 +94,7 @@ Existing-project import must keep `VERIFIED FROM REALITY`, `DOCUMENTED`, `AI INF
 
 ## Major workspace areas
 
-- **Overview** — project identity, current priorities, health, and important unresolved items
+- **Overview** — a derived current-project control room for identity, explainable signals, recommendations, and important unresolved items
 - **Game Design** — mechanics, systems, rules, balance intent, and player experience
 - **Narrative** — setting, characters, events, terminology, and canon
 - **Technical** — architecture, constraints, interfaces, and engineering decisions
@@ -113,9 +113,9 @@ The long-term product journey should consolidate those concepts into four cleare
 - **Reality:** connect Repository, Unity, and Alignment evidence.
 - **Delivery:** Feature Contracts and Implementation Briefs.
 
-This is **FUTURE UI CONSOLIDATION DIRECTION**, not the current navigation or a rigid waterfall; users may move between Suites freely. The Game Wiki should become the main human-facing knowledge surface by aggregating authoritative stores such as Compendium, Decisions, Specialist analyses, Feature Contracts, GroundTruth, Alignment results, and technical documentation. A future topic such as Enemy AI may bring those sources together as Overview, Intent, Decisions, Behavior Contracts, Reality, Alignment, AI Analyses, and Open Questions. The Wiki remains a view over those sources and must not create a competing `wiki.json` source of truth.
+This is **FUTURE UI CONSOLIDATION DIRECTION**, not the current navigation or a rigid waterfall; users may move between Suites freely. UI-4 makes Game Wiki the current human-facing browser over Compendium, Decisions, Open Questions, non-authoritative Specialist analysis, and compact derived summaries while keeping every source domain authoritative. Local category/search/filter/detail projection creates no competing `wiki.json`, semantic index, or editable copy. Richer topic views such as Enemy AI and imported technical documentation remain future direction.
 
-The detailed dashboard, layout, workflow, artwork, and phased redesign plan lives in [ForgeMind UI Direction](UI_DIRECTION.md). The original visual identity, messaging, logo, color, typography, icon, voice, motion, and marketing guidance lives in the [ForgeMind Brandbook](BRANDBOOK.md). Both are future planning references; neither changes the current 0K milestone state or current application behavior.
+The detailed dashboard, layout, workflow, artwork, and phased redesign plan lives in [ForgeMind UI Direction](UI_DIRECTION.md). The original visual identity, messaging, logo, color, typography, icon, voice, motion, and marketing guidance lives in the [ForgeMind Brandbook](BRANDBOOK.md). UI-1 through UI-4 implement bounded parts of that direction without changing owning-domain authority or the current 0K product-truth model.
 
 ## Lightweight project state and delivery boundaries
 

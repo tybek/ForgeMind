@@ -2,13 +2,13 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { WikiPage } from "./WikiPage";
-import { loadDecisions } from "./platform/decisions";
-import { loadCompendium, type KnowledgeArea } from "./platform/projectKnowledge";
-import { loadSpecialistRuns } from "./platform/specialists";
-import { inspectRepositoryReality } from "./platform/repositoryReality";
-import { inspectUnityGroundTruth } from "./platform/unityGroundTruth";
 import { loadAlignmentResults, type AlignmentResult } from "./platform/alignment";
+import { loadDecisions } from "./platform/decisions";
 import { loadFeatureContracts, type FeatureContract } from "./platform/featureContracts";
+import { loadCompendium, type KnowledgeArea } from "./platform/projectKnowledge";
+import { inspectRepositoryReality } from "./platform/repositoryReality";
+import { loadSpecialistRuns } from "./platform/specialists";
+import { inspectUnityGroundTruth } from "./platform/unityGroundTruth";
 
 vi.mock("./platform/projectKnowledge", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./platform/projectKnowledge")>()),
@@ -25,8 +25,13 @@ const workspace = { path: "D:\\Games\\Sample" };
 const knowledge = {
   id: "knowledge-1", area: "systems" as const, title: "Perception model", statement: "Enemies act only on perceived facts.",
   status: "LOCKED" as const, provenance: "MANUAL" as const, source: "manual_entry" as const,
-  createdAt: "2026-09-20T10:00:00Z", updatedAt: "2026-09-20T10:00:00Z",
+  createdAt: "2026-09-20T10:00:00Z", updatedAt: "2026-09-20T10:30:00Z",
 };
+const question = {
+  ...knowledge, id: "question-1", area: "open_questions" as const, title: "Alert cadence?", statement: "How quickly should guards share alerts?",
+  status: "TBD" as const, provenance: "UNRESOLVED" as const,
+};
+const deprecated = { ...knowledge, id: "knowledge-old", title: "Exact sound coordinates", statement: "Sound reports exact coordinates.", status: "DEPRECATED" as const };
 const approved = {
   id: "decision-1", title: "No omniscience", statement: "Sound does not reveal exact identity.", rationale: "Fair tactical play.",
   status: "APPROVED" as const, area: "systems" as const, author: "Local User", createdAt: "2026-09-20T10:00:00Z",
@@ -43,206 +48,124 @@ const run = {
 const alignment: AlignmentResult = {
   id: "alignment-1", createdAt: "2026-09-21T11:00:00Z",
   intent: { sourceType: "COMPENDIUM", sourceId: knowledge.id, title: knowledge.title, statement: knowledge.statement, status: knowledge.status, area: knowledge.area, provenance: "DOCUMENTED" },
-  evidence: [{ evidenceId: "unity:component:0", source: "UNITY", summary: "HearingPerception exists.", capturedAt: "2026-09-21T10:00:00Z", provenance: "VERIFIED_FROM_UNITY", assessment: "INSUFFICIENT" }],
-  status: "UNVERIFIED", rationale: "Presence does not prove behavior.", confidence: "LOW",
-  uncertainty: "Runtime values are unavailable.", provenance: ["DOCUMENTED", "VERIFIED_FROM_UNITY", "MANUAL_ASSESSMENT"], reviewState: "PENDING_REVIEW",
+  evidence: [], status: "UNVERIFIED", rationale: "Runtime evidence is absent.", confidence: "LOW", uncertainty: "Runtime values are unavailable.", provenance: ["DOCUMENTED", "MANUAL_ASSESSMENT"], reviewState: "APPROVED",
 };
-
 const featureContract: FeatureContract = {
-  id: "contract-1", createdAt: "2026-09-21T12:00:00Z", updatedAt: "2026-09-21T12:00:00Z",
-  title: "Enemy sound knowledge", goal: "Keep sound uncertain.", currentRealitySummary: "Approved Alignment is UNVERIFIED.",
-  sources: {
-    origin: { sourceType: "ALIGNMENT", sourceId: alignment.id, title: knowledge.title, statement: knowledge.statement, status: "UNVERIFIED", area: "systems", provenance: "MANUAL_ASSESSMENT" },
-    intent: { sourceType: "COMPENDIUM", sourceId: knowledge.id, title: knowledge.title, statement: knowledge.statement, status: knowledge.status, area: knowledge.area, provenance: "DOCUMENTED" },
-    alignment: { alignmentId: alignment.id, status: "UNVERIFIED", rationale: alignment.rationale, createdAt: alignment.createdAt, reviewState: "APPROVED" },
-    realityEvidence: [],
-  },
-  affectedSystems: ["Enemy perception"], requiredBehavior: ["Omit exact coordinates."], outOfScope: ["Vision"], risks: [],
-  acceptanceCriteria: ["No exact coordinate."], deterministicTests: ["Sound-only knowledge test."], implementationNotes: "", likelyAffectedEvidenceIds: [],
-  status: "APPROVED", reviewState: "APPROVED", reviewedAt: "2026-09-21T12:01:00Z",
+  id: "contract-1", createdAt: "2026-09-21T12:00:00Z", updatedAt: "2026-09-21T12:00:00Z", title: "Enemy sound knowledge", goal: "Keep sound uncertain.", currentRealitySummary: "Approved Alignment is UNVERIFIED.",
+  sources: { origin: { sourceType: "ALIGNMENT", sourceId: alignment.id, title: knowledge.title, statement: knowledge.statement, status: "UNVERIFIED", area: "systems", provenance: "MANUAL_ASSESSMENT" }, intent: { sourceType: "COMPENDIUM", sourceId: knowledge.id, title: knowledge.title, statement: knowledge.statement, status: knowledge.status, area: knowledge.area, provenance: "DOCUMENTED" }, alignment: { alignmentId: alignment.id, status: "UNVERIFIED", rationale: alignment.rationale, createdAt: alignment.createdAt, reviewState: "APPROVED" }, realityEvidence: [] },
+  affectedSystems: [], requiredBehavior: ["Omit exact coordinates."], outOfScope: [], risks: [], acceptanceCriteria: ["Coordinates remain unknown."], deterministicTests: ["Sound-only test."], implementationNotes: "", likelyAffectedEvidenceIds: [], status: "APPROVED", reviewState: "APPROVED", reviewedAt: "2026-09-21T12:01:00Z",
 };
 
-async function renderWiki(onEditKnowledge?: (entryId: string) => void, onViewAlignmentHistory?: () => void, onViewFeatureContracts?: (area: KnowledgeArea) => void) {
+async function renderWiki(props: Partial<React.ComponentProps<typeof WikiPage>> = {}) {
   const user = userEvent.setup();
-  render(<WikiPage workspace={workspace} onEditKnowledge={onEditKnowledge} onViewAlignmentHistory={onViewAlignmentHistory} onViewFeatureContracts={onViewFeatureContracts} />);
-  await screen.findByRole("heading", { name: "Game Wiki" });
-  await screen.findByText("No project knowledge is associated with this area yet.");
-  await user.click(screen.getByRole("button", { name: /Systems/ }));
+  render(<WikiPage workspace={workspace} {...props} />);
+  await screen.findByRole("navigation", { name: "Wiki categories" });
   return user;
 }
 
-describe("Game Wiki", () => {
+describe("Game Wiki knowledge explorer", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(loadCompendium).mockResolvedValue({ formatVersion: 1, projectId: "project", updatedAt: "2026-09-20T10:00:00Z", entries: [knowledge] });
-    vi.mocked(loadDecisions).mockResolvedValue({ formatVersion: 1, projectId: "project", updatedAt: "2026-09-20T10:00:00Z", decisions: [approved, proposed] });
-    vi.mocked(loadSpecialistRuns).mockResolvedValue({ formatVersion: 1, projectId: "project", updatedAt: "2026-09-20T11:00:00Z", runs: [run] });
-    vi.mocked(inspectRepositoryReality).mockResolvedValue({
-      status: "DETECTED",
-      repository: {
-        branch: "main", detachedHead: false, workingTree: "DIRTY", totalChangedFiles: 2, changedFilesTruncated: false,
-        head: { hash: "a".repeat(40), shortHash: "aaaaaaa", subject: "Add Game Wiki", author: "Dev", timestamp: "2026-09-20T10:00:00Z" },
-        changedFiles: [{ path: "notes.txt", status: "UNTRACKED", staged: false, unstaged: true, untracked: true }],
-        diffStat: { filesChanged: 1, insertions: 2, deletions: 0 }, recentCommits: [],
-      },
-    });
-    vi.mocked(inspectUnityGroundTruth).mockResolvedValue({
-      status: "DETECTED",
-      evidence: { assets: true, packages: true, projectSettings: true },
-      projectVersion: { status: "AVAILABLE", version: "6000.3.23f1" },
-      manifest: { status: "AVAILABLE", summary: {
-        formatVersion: 1, generatedAt: "2026-09-20T12:00:00Z", unityVersion: "6000.3.23f1",
-        coverageCategories: ["SCENES"], coverageErrorCount: 0, coverageIssues: [],
-        observationCounts: { scenes: 2, gameObjects: 10, components: 14, serializedFields: 8, prefabReferences: 3, scriptableObjects: 2, tags: 4, layers: 2, inputActions: 6, tests: 12 },
-      } },
-    });
-    vi.mocked(loadAlignmentResults).mockResolvedValue({
-      formatVersion: 1, projectId: "project", updatedAt: "2026-09-21T11:00:00Z",
-      results: [alignment],
-    });
-    vi.mocked(loadFeatureContracts).mockResolvedValue({ formatVersion: 1, projectId: "project", updatedAt: "2026-09-21T12:01:00Z", contracts: [featureContract] });
+    vi.mocked(loadCompendium).mockResolvedValue({ formatVersion: 1, projectId: "project", updatedAt: knowledge.updatedAt, entries: [knowledge, question, deprecated] });
+    vi.mocked(loadDecisions).mockResolvedValue({ formatVersion: 1, projectId: "project", updatedAt: approved.createdAt, decisions: [approved, proposed] });
+    vi.mocked(loadSpecialistRuns).mockResolvedValue({ formatVersion: 1, projectId: "project", updatedAt: run.createdAt, runs: [run] });
+    vi.mocked(loadAlignmentResults).mockResolvedValue({ formatVersion: 1, projectId: "project", updatedAt: alignment.createdAt, results: [alignment] });
+    vi.mocked(loadFeatureContracts).mockResolvedValue({ formatVersion: 1, projectId: "project", updatedAt: featureContract.updatedAt, contracts: [featureContract] });
   });
 
-  it("renders aggregated Compendium knowledge under its existing Area", async () => {
-    await renderWiki();
-    const row = screen.getByText("Perception model").closest("details")!;
-    expect(within(row).getByText("Knowledge")).toBeInTheDocument();
-    expect(within(row).getByText("Locked")).toBeInTheDocument();
+  it("renders category, compact result, and selected-detail panes from existing stores", async () => {
+    const user = await renderWiki({ initialArea: "systems" });
+    expect(screen.getByRole("navigation", { name: "Wiki categories" })).toBeInTheDocument();
+    expect(screen.getByRole("listbox", { name: "Knowledge results" })).toBeInTheDocument();
+    await user.click(screen.getByRole("option", { name: /No omniscience/ }));
+    const detail = screen.getByLabelText("Selected knowledge detail");
+    expect(await within(detail).findByRole("heading", { name: "No omniscience" })).toBeInTheDocument();
+    expect(within(detail).getByText("Approved decision record")).toBeInTheDocument();
+    expect(within(detail).queryByText(/knowledge-1|decision-1/)).not.toBeInTheDocument();
   });
 
-  it("shows approved and proposed Decisions with distinct authority labels", async () => {
-    await renderWiki();
-    const approvedRow = screen.getByText("No omniscience").closest("details")!;
-    const proposedRow = screen.getByText("Shared alerts").closest("details")!;
-    expect(within(approvedRow.querySelector("summary")!).getByText("Decision")).toBeInTheDocument();
-    expect(within(approvedRow.querySelector("summary")!).getByText("Approved")).toBeInTheDocument();
-    expect(within(proposedRow.querySelector("summary")!).getByText("Decision")).toBeInTheDocument();
-    expect(within(proposedRow.querySelector("summary")!).getByText("Proposed")).toBeInTheDocument();
+  it("shows proposed decisions as not established and routes to their owner", async () => {
+    const onOpenDecisions = vi.fn();
+    const user = await renderWiki({ initialArea: "systems", onOpenDecisions });
+    await user.click(screen.getByRole("option", { name: /Shared alerts/ }));
+    expect(screen.getByText("Proposed decision — not established project direction")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Open Decisions" }));
+    expect(onOpenDecisions).toHaveBeenCalledOnce();
   });
 
-  it("excludes the derived Alignment summary from Area entry counts", async () => {
-    await renderWiki();
-    expect(screen.getByText("Systems", { selector: ".wiki-area-nav span" }).closest("button")).toHaveTextContent("4 entries");
-    expect(screen.getByRole("heading", { name: "Systems" }).nextElementSibling).toHaveTextContent("4 entries");
-    const summary = screen.getByLabelText("Alignment summary");
-    expect(within(summary).getByText("Derived summary · not a Wiki entry")).toBeInTheDocument();
-    expect(within(summary).getByText(/reviews are not counted as Wiki entries/)).toBeInTheDocument();
-  });
-
-  it("shows approved, pending, and total review counts with the latest approved status", async () => {
-    vi.mocked(loadAlignmentResults).mockResolvedValue({
-      formatVersion: 1, projectId: "project", updatedAt: "2026-09-21T13:00:00Z",
-      results: [
-        { ...alignment, id: "approved-latest", createdAt: "2026-09-21T12:00:00Z", status: "OUT_OF_SYNC", reviewState: "APPROVED" },
-        { ...alignment, id: "pending-newest", createdAt: "2026-09-21T13:00:00Z" },
-        { ...alignment, id: "approved-older", createdAt: "2026-09-21T10:00:00Z", status: "ALIGNED", reviewState: "APPROVED" },
-      ],
-    });
-    await renderWiki();
-    const summary = screen.getByLabelText("Alignment summary");
-    expect(within(summary).getByText("Latest approved status").parentElement).toHaveTextContent("Out Of Sync");
-    expect(within(summary).getByText("Approved reviews").parentElement).toHaveTextContent("2");
-    expect(within(summary).getByText("Pending reviews").parentElement).toHaveTextContent("1");
-    expect(within(summary).getByText("Total reviews").parentElement).toHaveTextContent("3");
-  });
-
-  it("routes the Alignment summary action to Review History", async () => {
-    const onViewAlignmentHistory = vi.fn();
-    const user = await renderWiki(undefined, onViewAlignmentHistory);
-    await user.click(screen.getByRole("button", { name: "View Alignment History" }));
-    expect(onViewAlignmentHistory).toHaveBeenCalledOnce();
-    expect(screen.getByRole("button", { name: "View Alignment History" })).toHaveClass("outline-button", "compact-action");
-  });
-
-  it("shows a compact read-only Feature Contract summary without changing Wiki entry counts", async () => {
-    const onViewFeatureContracts = vi.fn();
-    const user = await renderWiki(undefined, undefined, onViewFeatureContracts);
-    expect(screen.getByText("Systems", { selector: ".wiki-area-nav span" }).closest("button")).toHaveTextContent("4 entries");
-    const summary = screen.getByLabelText("Feature Contract summary");
-    expect(within(summary).getByText("Enemy sound knowledge")).toBeInTheDocument();
-    expect(within(summary).getByText("Approved contracts").parentElement).toHaveTextContent("1");
-    expect(within(summary).getByText(/editing remains in the Feature Contracts workspace/)).toBeInTheDocument();
-    expect(within(summary).queryByRole("textbox")).not.toBeInTheDocument();
-    await user.click(within(summary).getByRole("button", { name: "View Feature Contracts" }));
-    expect(onViewFeatureContracts).toHaveBeenCalledWith("systems");
-    expect(within(summary).getByRole("button", { name: "View Feature Contracts" })).toHaveClass("outline-button", "compact-action");
-  });
-
-  it("keeps specialist analysis visibly non-authoritative", async () => {
-    const user = await renderWiki();
-    const row = screen.getByText("Investigate under uncertainty.").closest("details")!;
-    expect(within(row).getByText("AI Analysis")).toBeInTheDocument();
-    expect(within(row).getByText("Reaction Model")).toBeInTheDocument();
-    await user.click(within(row).getByText("Investigate under uncertainty."));
-    expect(within(row).getByText("AI working analysis — not approved project knowledge")).toBeInTheDocument();
-  });
-
-  it("uses compact Area navigation to switch the visible group", async () => {
-    const user = await renderWiki();
-    expect(screen.getByRole("heading", { name: "Systems" })).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: /Technical/ }));
-    expect(screen.getByRole("heading", { name: "Technical" })).toBeInTheDocument();
-    expect(screen.queryByText("Perception model")).not.toBeInTheDocument();
-  });
-
-  it("shows only a compact Repository Reality summary under Technical", async () => {
-    const user = await renderWiki();
-    await user.click(screen.getByRole("button", { name: /Technical/ }));
-    const summary = screen.getByLabelText("Repository Reality summary");
-    expect(within(summary).getByText("main")).toBeInTheDocument();
-    expect(within(summary).getByText("2 changed, 1 untracked")).toBeInTheDocument();
-    expect(within(summary).getByText("HEAD").parentElement).toHaveTextContent("aaaaaaa — Add Game Wiki");
-    expect(within(summary).queryByText("notes.txt")).not.toBeInTheDocument();
-  });
-
-  it("shows a compact verified Unity Reality summary only under Technical", async () => {
-    const user = await renderWiki();
-    await user.click(screen.getByRole("button", { name: /Technical/ }));
-    const summary = screen.getByLabelText("Unity Reality summary");
-    expect(within(summary).getByText("Detected")).toBeInTheDocument();
-    expect(within(summary).getByText("6000.3.23f1")).toBeInTheDocument();
-    expect(within(summary).getByText("Available")).toBeInTheDocument();
-    expect(within(summary).getByText("2 scenes, 10 GameObjects, 14 components, 2 ScriptableObjects")).toBeInTheDocument();
-    expect(within(summary).getByText(/VERIFIED FROM UNITY/)).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: /Production/ }));
-    expect(screen.queryByLabelText("Unity Reality summary")).not.toBeInTheDocument();
-  });
-
-  it("expands and collapses compact knowledge rows", async () => {
-    const user = await renderWiki();
-    const row = screen.getByText("Perception model").closest("details")!;
-    expect(row).not.toHaveAttribute("open");
-    await user.click(screen.getByText("Perception model"));
-    expect(row).toHaveAttribute("open");
-    expect(within(row).getByText("Enemies act only on perceived facts.")).toBeInTheDocument();
-    await user.click(screen.getByText("Perception model"));
-    expect(row).not.toHaveAttribute("open");
-  });
-
-  it("keeps authoritative knowledge available when Analysis History cannot load", async () => {
-    vi.mocked(loadSpecialistRuns).mockRejectedValue({ message: "History is invalid." });
-    await renderWiki();
-    expect(screen.getByText("Perception model")).toBeInTheDocument();
-    expect(screen.getByRole("alert")).toHaveTextContent("Specialist History: History is invalid.");
-  });
-
-  it("searches by keyword and filters the aggregation by source type", async () => {
-    const user = await renderWiki();
-    await user.type(screen.getByRole("searchbox", { name: "Search" }), "orient");
-    expect(screen.getByText("Investigate under uncertainty.")).toBeInTheDocument();
-    expect(screen.queryByText("Perception model")).not.toBeInTheDocument();
-    await user.clear(screen.getByRole("searchbox", { name: "Search" }));
-    await user.selectOptions(screen.getByRole("combobox", { name: "Type" }), "DECISIONS");
-    expect(screen.getByText("No omniscience")).toBeInTheDocument();
-    expect(screen.queryByText("Perception model")).not.toBeInTheDocument();
-    expect(screen.queryByText("Investigate under uncertainty.")).not.toBeInTheDocument();
-  });
-
-  it("routes Knowledge editing back to the existing Compendium source", async () => {
+  it("keeps open questions distinct and routes the selected source id to Game Design", async () => {
     const onEditKnowledge = vi.fn();
-    const user = await renderWiki(onEditKnowledge);
-    await user.click(screen.getByText("Perception model"));
-    await user.click(screen.getByRole("button", { name: "Edit in Compendium" }));
-    expect(onEditKnowledge).toHaveBeenCalledWith(knowledge.id);
+    const user = await renderWiki({ onEditKnowledge });
+    await user.click(screen.getByRole("button", { name: /Open Questions/ }));
+    expect(await screen.findByRole("heading", { name: "Alert cadence?" })).toBeInTheDocument();
+    expect(screen.getByText("Unresolved project question")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Open question in Game Design" }));
+    expect(onEditKnowledge).toHaveBeenCalledWith("question-1");
+  });
+
+  it("searches case-insensitively, combines filters, and exposes historical records explicitly", async () => {
+    const user = await renderWiki({ initialArea: "systems" });
+    await user.type(screen.getByRole("searchbox", { name: "Search knowledge" }), "EXACT SOUND");
+    expect(screen.queryByRole("option", { name: /Exact sound coordinates/ })).not.toBeInTheDocument();
+    await user.selectOptions(screen.getByLabelText("Lifecycle"), "HISTORICAL");
+    expect(screen.getByRole("option", { name: /Exact sound coordinates/ })).toBeInTheDocument();
+    await user.selectOptions(screen.getByLabelText("Authority"), "MANUAL");
+    expect(screen.getByText("1 result")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Clear filters" }));
+    expect(screen.getByLabelText("Lifecycle")).toHaveValue("CURRENT");
+  });
+
+  it("keeps AI analysis visibly non-authoritative", async () => {
+    const user = await renderWiki({ initialArea: "systems" });
+    await user.click(screen.getByRole("option", { name: /Investigate under uncertainty/ }));
+    expect(screen.getByText("AI working analysis — not approved project knowledge")).toBeInTheDocument();
+    expect(screen.getByText("Non-authoritative AI working analysis")).toBeInTheDocument();
+    expect(screen.getByText("Orient before moving.")).toBeInTheDocument();
+  });
+
+  it("keeps derived summaries outside result counts and routes to existing owners", async () => {
+    const onViewAlignmentHistory = vi.fn();
+    const onViewFeatureContracts = vi.fn<(area: KnowledgeArea) => void>();
+    const user = await renderWiki({ initialArea: "systems", onViewAlignmentHistory, onViewFeatureContracts });
+    expect(screen.getByText("4 results")).toBeInTheDocument();
+    expect(within(screen.getByLabelText("Alignment summary")).getByText("Derived summary · not a Wiki entry")).toBeInTheDocument();
+    expect(within(screen.getByLabelText("Feature Contract summary")).getByText("Enemy sound knowledge")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "View Alignment History" }));
+    await user.click(screen.getByRole("button", { name: "View Feature Contracts" }));
+    expect(onViewAlignmentHistory).toHaveBeenCalledOnce();
+    expect(onViewFeatureContracts).toHaveBeenCalledWith("systems");
+  });
+
+  it("never starts Git or Unity inspection and only renders session evidence passed by the shell", async () => {
+    const user = await renderWiki({
+      repositoryReality: { status: "DETECTED", repository: { branch: "main", detachedHead: false, head: { hash: "a".repeat(40), shortHash: "aaaaaaa", subject: "Current", author: "Dev", timestamp: knowledge.updatedAt }, workingTree: "DIRTY", changedFiles: [], totalChangedFiles: 2, changedFilesTruncated: false, diffStat: { filesChanged: 2, insertions: 3, deletions: 1 }, recentCommits: [] } },
+      unityGroundTruth: { status: "DETECTED", evidence: { assets: true, packages: true, projectSettings: true }, projectVersion: { status: "AVAILABLE", version: "6000.3.23f1" }, manifest: { status: "NOT_ATTACHED" } },
+    });
+    expect(inspectRepositoryReality).not.toHaveBeenCalled();
+    expect(inspectUnityGroundTruth).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("button", { name: /Technical/ }));
+    expect(screen.getByLabelText("Repository Reality summary")).toHaveTextContent("2 changed");
+    expect(screen.getByLabelText("Unity Reality summary")).toHaveTextContent("Not attached");
+  });
+
+  it("isolates a failed source and preserves available authoritative knowledge", async () => {
+    vi.mocked(loadSpecialistRuns).mockRejectedValue(new Error("history unavailable"));
+    await renderWiki({ initialArea: "systems" });
+    expect(screen.getByRole("alert")).toHaveTextContent("Specialist History: history unavailable");
+    expect(screen.getByRole("option", { name: /Perception model/ })).toBeInTheDocument();
+  });
+
+  it("offers bounded source actions for a sparse project without generating content", async () => {
+    vi.mocked(loadCompendium).mockResolvedValue(null);
+    vi.mocked(loadDecisions).mockResolvedValue(null);
+    vi.mocked(loadSpecialistRuns).mockResolvedValue(null);
+    const onOpenProjectInterview = vi.fn();
+    const onOpenDecisions = vi.fn();
+    const onEditKnowledge = vi.fn();
+    const user = await renderWiki({ onOpenProjectInterview, onOpenDecisions, onEditKnowledge });
+    expect(screen.getByRole("heading", { name: "Build your project knowledge" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /generate|import|rebaseline/i })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Open Project Interview" }));
+    expect(onOpenProjectInterview).toHaveBeenCalledOnce();
   });
 });

@@ -10,6 +10,7 @@ import { UnityGroundTruthPage } from "./UnityGroundTruthPage";
 import { AlignmentPage } from "./AlignmentPage";
 import { FeatureContractsPage } from "./FeatureContractsPage";
 import { WritersRoomPage } from "./WritersRoomPage";
+import { ProjectOverviewPage } from "./ProjectOverviewPage";
 import type { AiWorkspaceSourceTrace } from "./platform/aiWorkspace";
 import {
   emptyProjectFoundation,
@@ -118,7 +119,7 @@ const workspaceAreaIcons: Record<WorkspaceView, IconName> = {
 };
 
 const workspaceAreaDescriptions: Record<WorkspaceView, string> = {
-  Overview: "Project identity and the capabilities available in this local workspace.",
+  Overview: "What is happening in this project, what needs attention, and where to continue.",
   "Repository / Git Reality": "Read-only Git evidence from the active project repository.",
   "Game Wiki": "Browse project knowledge while keeping each source and authority visible.",
   "Game Design": "Maintain reviewed Compendium knowledge for the game design.",
@@ -145,6 +146,7 @@ function milestoneFor(area: WorkspaceView): string {
   if (area === "Alignment") return "0J · Complete";
   if (area === "Feature Contracts") return "0K · Complete";
   if (area === "AI Evaluation") return "0D.1 · Model Lab";
+  if (area === "Overview") return "UI-3 · Headless validated";
   if (area === "Game Design" || area === "Decisions") return "0F · Project Intent";
   return "0C · Local Workspace";
 }
@@ -470,49 +472,6 @@ function LoadingWorkspace({ path }: { path: string }) {
   );
 }
 
-function Overview({ workspace }: { workspace: Workspace }) {
-  const statuses = [
-    ["Workspace", "Local workspace"],
-    ["AI", "Evaluation and local usage"],
-    ["Unity", "GroundTruth page"],
-    ["Git", "Repository Reality page"],
-  ];
-  const details = [
-    ["Project ID", workspace.projectId],
-    ["Project Path", workspace.path],
-    ["Created At", workspace.createdAt],
-    ["Format Version", String(workspace.formatVersion)],
-  ];
-
-  return (
-    <div className="page-stack">
-      <section className="overview-card">
-        <span className="section-label">Project metadata</span>
-        <h2>{workspace.name}</h2>
-        <dl className="project-details project-details--secondary">
-          {details.map(([label, value]) => (
-            <div key={label}>
-              <dt>{label}</dt>
-              <dd>{value}</dd>
-            </div>
-          ))}
-        </dl>
-      </section>
-      <section className="status-grid" aria-label="Workspace status">
-        {statuses.map(([label, value]) => (
-          <article className="status-card" key={label}>
-            <span>{label}</span>
-            <strong>{value}</strong>
-          </article>
-        ))}
-      </section>
-      <p className="scope-note">
-        Project identity is loaded from .forgemind/project.json. Other workspace features are not configured.
-      </p>
-    </div>
-  );
-}
-
 function Placeholder({ area }: { area: Exclude<WorkspaceArea, "Overview" | "Repository / Git Reality" | "Game Wiki" | "Unity" | "Alignment" | "Writers' Room"> }) {
   return (
     <EmptyState
@@ -527,6 +486,8 @@ export function WorkspaceShell({
   initialArea = "Overview",
   onHome,
   onOpen,
+  repositoryReality = null,
+  unityGroundTruth = null,
   onRepositoryRealityChange,
   onUnityGroundTruthChange,
 }: {
@@ -534,6 +495,8 @@ export function WorkspaceShell({
   initialArea?: WorkspaceView;
   onHome: () => void;
   onOpen: () => Promise<void>;
+  repositoryReality?: RepositoryRealityResult | null;
+  unityGroundTruth?: UnityGroundTruthResult | null;
   onRepositoryRealityChange?: (result: RepositoryRealityResult) => void;
   onUnityGroundTruthChange?: (result: UnityGroundTruthResult) => void;
 }) {
@@ -666,13 +629,31 @@ export function WorkspaceShell({
           ) : activeArea === "Writers' Room" ? (
             <WritersRoomPage workspace={workspace} onOpenSource={openWritersRoomSource} />
           ) : activeArea === "Overview" ? (
-            <Overview workspace={workspace} />
+            <ProjectOverviewPage
+              workspace={workspace}
+              repositoryReality={repositoryReality}
+              unityGroundTruth={unityGroundTruth}
+              onNavigate={openArea}
+            />
           ) : activeArea === "Repository / Git Reality" ? (
             <RepositoryPage workspace={workspace} onResult={onRepositoryRealityChange} />
           ) : activeArea === "Unity" ? (
             <UnityGroundTruthPage workspace={workspace} onResult={onUnityGroundTruthChange} />
           ) : activeArea === "Game Wiki" ? (
-            <WikiPage workspace={workspace} initialArea={wikiReturnArea} onEditKnowledge={editKnowledgeAtSource} onViewAlignmentHistory={viewAlignmentHistory} onViewFeatureContracts={viewFeatureContracts} />
+            <WikiPage
+              workspace={workspace}
+              initialArea={wikiReturnArea}
+              repositoryReality={repositoryReality}
+              unityGroundTruth={unityGroundTruth}
+              onEditKnowledge={(entryId) => entryId ? editKnowledgeAtSource(entryId) : openArea("Game Design")}
+              onOpenDecisions={() => openArea("Decisions")}
+              onOpenProjectInterview={() => openArea("Project Interview")}
+              onOpenSpecialist={() => openArea("AI Behavior Designer")}
+              onOpenRepository={() => openArea("Repository / Git Reality")}
+              onOpenUnity={() => openArea("Unity")}
+              onViewAlignmentHistory={viewAlignmentHistory}
+              onViewFeatureContracts={viewFeatureContracts}
+            />
           ) : activeArea === "Game Design" ? (
             <CompendiumPage workspace={workspace} onPromote={promoteToDecision} editEntryId={knowledgeEditTarget} />
           ) : activeArea === "Decisions" ? (
@@ -936,6 +917,8 @@ export default function App() {
           initialArea={view.initialArea}
           onHome={returnHome}
           onOpen={() => chooseProject("open")}
+          repositoryReality={repositoryReality?.path === view.workspace.path ? repositoryReality.result : null}
+          unityGroundTruth={unityGroundTruth?.path === view.workspace.path ? unityGroundTruth.result : null}
           onRepositoryRealityChange={(result) => setRepositoryReality({ path: view.workspace.path, result })}
           onUnityGroundTruthChange={(result) => setUnityGroundTruth({ path: view.workspace.path, result })}
         />

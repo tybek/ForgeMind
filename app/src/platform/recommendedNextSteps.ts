@@ -108,6 +108,16 @@ function hasGameVision(entries: KnowledgeEntry[]): boolean {
   );
 }
 
+export function foundationGaps(compendium: CompendiumDocument | null): string[] {
+  const entries = currentEntries(compendium);
+  return [
+    !hasGameVision(entries) ? "Game Vision" : null,
+    !hasCurrentKnowledge(entries, "core_loop") ? "Core Loop" : null,
+    !hasCurrentKnowledge(entries, "player_experience") ? "Player Experience" : null,
+    !hasDesignPillar(entries) ? "Design Pillars" : null,
+  ].filter((area): area is string => area !== null);
+}
+
 function countLabel(count: number, singular: string, plural = `${singular}s`): string {
   return `${count} ${count === 1 ? singular : plural}`;
 }
@@ -125,13 +135,7 @@ function addFoundationRecommendations(
   candidates: RankedRecommendation[],
   compendium: CompendiumDocument | null,
 ): void {
-  const entries = currentEntries(compendium);
-  const missingFoundationAreas = [
-    !hasGameVision(entries) ? "Game Vision" : null,
-    !hasCurrentKnowledge(entries, "core_loop") ? "Core Loop" : null,
-    !hasCurrentKnowledge(entries, "player_experience") ? "Player Experience" : null,
-    !hasDesignPillar(entries) ? "Design Pillars" : null,
-  ].filter((area): area is string => area !== null);
+  const missingFoundationAreas = foundationGaps(compendium);
 
   if (missingFoundationAreas.length > 0) {
     candidates.push({

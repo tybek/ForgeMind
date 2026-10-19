@@ -143,6 +143,12 @@ const PROPOSAL_TYPES = new Set<AiWorkspaceProposalType>([
   "SAVE_KNOWLEDGE", "CREATE_DECISION", "CREATE_OPEN_QUESTION", "UPDATE_KNOWLEDGE", "NAVIGATE_TO_SOURCE", "CONTINUE_EXPLORING",
 ]);
 const PROPOSAL_STATUSES = new Set<AiWorkspaceProposalStatus>(["PENDING", "ACCEPTED", "APPLIED", "REJECTED", "DISCARDED"]);
+const MAX_SESSIONS = 50;
+const MAX_MESSAGES = 200;
+const MAX_PROPOSALS = 50;
+const MAX_CONTEXT_SOURCES = 20;
+const MAX_MARKDOWN_DOCUMENTS = 5;
+const MAX_QUESTIONS = 3;
 const SOURCE_AUTHORITIES: Record<AiWorkspaceSourceType, AiWorkspaceAuthority> = {
   COMPENDIUM: "ESTABLISHED_KNOWLEDGE",
   DECISION: "AUTHORITATIVE_INTENT",
@@ -156,8 +162,10 @@ function record(value: unknown): Record<string, unknown> | null {
   return value !== null && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : null;
 }
 
-function strings(value: unknown): string[] {
-  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+function strings(value: unknown, maximum = Number.POSITIVE_INFINITY): string[] {
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === "string").slice(0, maximum)
+    : [];
 }
 
 function validTimestamp(value: unknown): value is string {
@@ -207,9 +215,9 @@ function normalizeMessage(value: unknown): AiWorkspaceMessage | null {
     id: message.id,
     role: message.role as AiWorkspaceMessageRole,
     content: message.content,
-    questions: strings(message.questions),
+    questions: strings(message.questions, MAX_QUESTIONS),
     createdAt: message.createdAt,
-    sourceTrace: Array.isArray(message.sourceTrace) ? message.sourceTrace.map(normalizeSource).filter((source): source is AiWorkspaceSourceTrace => source !== null) : [],
+    sourceTrace: Array.isArray(message.sourceTrace) ? message.sourceTrace.slice(0, MAX_CONTEXT_SOURCES).map(normalizeSource).filter((source): source is AiWorkspaceSourceTrace => source !== null) : [],
     ...(usageReference ? { usageReference } : {}),
   };
 }
@@ -226,7 +234,7 @@ function normalizeProposedEdit(value: unknown): AiWorkspaceProposedEdit | undefi
     currentValue: edit.currentValue,
     proposedValue: edit.proposedValue,
     reason: edit.reason,
-    affectedReferences: Array.isArray(edit.affectedReferences) ? edit.affectedReferences.map(normalizeSource).filter((source): source is AiWorkspaceSourceTrace => source !== null) : [],
+    affectedReferences: Array.isArray(edit.affectedReferences) ? edit.affectedReferences.slice(0, MAX_CONTEXT_SOURCES).map(normalizeSource).filter((source): source is AiWorkspaceSourceTrace => source !== null) : [],
   };
 }
 
@@ -251,16 +259,16 @@ function normalizeProposal(value: unknown): AiWorkspaceProposal | null {
     status: proposal.status as AiWorkspaceProposalStatus,
     createdAt: proposal.createdAt,
     updatedAt: proposal.updatedAt,
-    sourceTrace: Array.isArray(proposal.sourceTrace) ? proposal.sourceTrace.map(normalizeSource).filter((source): source is AiWorkspaceSourceTrace => source !== null) : [],
+    sourceTrace: Array.isArray(proposal.sourceTrace) ? proposal.sourceTrace.slice(0, MAX_CONTEXT_SOURCES).map(normalizeSource).filter((source): source is AiWorkspaceSourceTrace => source !== null) : [],
     ...(proposedEdit ? { proposedEdit } : {}),
   };
 }
 
-function normalizeSession(value: unknown): AiWorkspaceSession | null {
+function normalizeSession(value: unknown, expectedProjectId: string): AiWorkspaceSession | null {
   const session = record(value);
   if (!session
     || typeof session.id !== "string"
-    || typeof session.projectId !== "string"
+    || session.projectId !== expectedProjectId
     || typeof session.surface !== "string"
     || typeof session.purpose !== "string"
     || typeof session.specialistProfileId !== "string"
@@ -278,10 +286,10 @@ function normalizeSession(value: unknown): AiWorkspaceSession | null {
     createdAt: session.createdAt,
     updatedAt: session.updatedAt,
     status: session.status as AiWorkspaceSessionStatus,
-    messages: Array.isArray(session.messages) ? session.messages.map(normalizeMessage).filter((message): message is AiWorkspaceMessage => message !== null) : [],
-    selectedMarkdownPaths: strings(session.selectedMarkdownPaths),
-    sourceTrace: Array.isArray(session.sourceTrace) ? session.sourceTrace.map(normalizeSource).filter((source): source is AiWorkspaceSourceTrace => source !== null) : [],
-    proposals: Array.isArray(session.proposals) ? session.proposals.map(normalizeProposal).filter((proposal): proposal is AiWorkspaceProposal => proposal !== null) : [],
+    messages: Array.isArray(session.messages) ? session.messages.slice(0, MAX_MESSAGES).map(normalizeMessage).filter((message): message is AiWorkspaceMessage => message !== null) : [],
+    selectedMarkdownPaths: strings(session.selectedMarkdownPaths, MAX_MARKDOWN_DOCUMENTS),
+    sourceTrace: Array.isArray(session.sourceTrace) ? session.sourceTrace.slice(0, MAX_CONTEXT_SOURCES).map(normalizeSource).filter((source): source is AiWorkspaceSourceTrace => source !== null) : [],
+    proposals: Array.isArray(session.proposals) ? session.proposals.slice(0, MAX_PROPOSALS).map(normalizeProposal).filter((proposal): proposal is AiWorkspaceProposal => proposal !== null) : [],
   };
 }
 
@@ -296,14 +304,17 @@ export function normalizeAiWorkspaceDocument(value: unknown): AiWorkspaceDocumen
     throw { code: "INVALID_AI_WORKSPACE_HISTORY", message: "Saved AI Workspace history could not be loaded safely." };
   }
   const sessions: AiWorkspaceSession[] = [];
+  const sessionIds = new Set<string>();
   let skippedSessions = 0;
   let skippedNestedRecords = 0;
-  for (const value of document.sessions) {
-    const session = normalizeSession(value);
-    if (!session) {
+  const excessSessions = Math.max(0, document.sessions.length - MAX_SESSIONS);
+  for (const value of document.sessions.slice(0, MAX_SESSIONS)) {
+    const session = normalizeSession(value, document.projectId);
+    if (!session || sessionIds.has(session.id)) {
       skippedSessions += 1;
       continue;
     }
+    sessionIds.add(session.id);
     const rawSession = record(value)!;
     if (Array.isArray(rawSession.messages)) skippedNestedRecords += rawSession.messages.length - session.messages.length;
     if (Array.isArray(rawSession.proposals)) skippedNestedRecords += rawSession.proposals.length - session.proposals.length;
@@ -312,6 +323,7 @@ export function normalizeAiWorkspaceDocument(value: unknown): AiWorkspaceDocumen
   }
   const recoveryWarnings = [
     ...(skippedSessions > 0 ? [`${skippedSessions} malformed session${skippedSessions === 1 ? " was" : "s were"} skipped.`] : []),
+    ...(excessSessions > 0 ? ["Session history exceeded the display bound; excess sessions were skipped."] : []),
     ...(skippedNestedRecords > 0 ? ["Malformed session content was skipped."] : []),
   ];
   return {

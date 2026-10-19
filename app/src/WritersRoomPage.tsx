@@ -42,7 +42,12 @@ interface WritersRoomError {
 }
 
 function safeError(error: unknown): WritersRoomError {
-  if (error && typeof error === "object") return error as WritersRoomError;
+  if (error && typeof error === "object") {
+    const candidate = error as Record<string, unknown>;
+    const code = typeof candidate.code === "string" ? candidate.code : undefined;
+    const message = typeof candidate.message === "string" ? candidate.message : undefined;
+    if (code || message) return { code, message };
+  }
   return { code: "WRITERS_ROOM_FAILED", message: "Writers' Room could not complete the action." };
 }
 
@@ -84,9 +89,12 @@ function recordKey(record: WritersRoomUsageRecord): string {
 }
 
 function newestActiveSessionId(document: AiWorkspaceDocument | null, excludedId?: string): string | null {
-  return document?.sessions
-    .filter((session) => session.surface === "writers_room" && session.status === "ACTIVE" && session.id !== excludedId)
-    .sort((left, right) => Date.parse(right.updatedAt) - Date.parse(left.updatedAt))[0]?.id ?? null;
+  let newest: AiWorkspaceSession | null = null;
+  for (const session of document?.sessions ?? []) {
+    if (session.surface !== "writers_room" || session.status !== "ACTIVE" || session.id === excludedId) continue;
+    if (!newest || Date.parse(session.updatedAt) > Date.parse(newest.updatedAt)) newest = session;
+  }
+  return newest?.id ?? null;
 }
 
 function formatLatency(preflight: WritersRoomPreflight): string {
@@ -258,9 +266,11 @@ export function WritersRoomPage({
   const followNewestMessage = useRef(true);
 
   const sessions = document?.sessions ?? [];
-  const selectedSession = sessions.find((session) => session.id === selectedSessionId) ?? null;
-  const activeProfile = profiles.find((profile) => profile.id === selectedSession?.specialistProfileId) ?? null;
-  const runnableProfiles = profiles.filter((profile) => WRITERS_ROOM_PROFILE_IDS.includes(profile.id));
+  const sessionsById = useMemo(() => new Map(sessions.map((session) => [session.id, session])), [sessions]);
+  const profilesById = useMemo(() => new Map(profiles.map((profile) => [profile.id, profile])), [profiles]);
+  const selectedSession = selectedSessionId ? sessionsById.get(selectedSessionId) ?? null : null;
+  const activeProfile = selectedSession ? profilesById.get(selectedSession.specialistProfileId) ?? null : null;
+  const runnableProfiles = useMemo(() => profiles.filter((profile) => WRITERS_ROOM_PROFILE_IDS.includes(profile.id)), [profiles]);
   const usageByReference = useMemo(() => new Map(usage.map((record) => [recordKey(record), record])), [usage]);
   const writersRoomSessions = useMemo(() => sessions
     .filter((session) => session.surface === "writers_room")
@@ -529,7 +539,7 @@ export function WritersRoomPage({
         </header>
         <div className="writers-room-session-list" aria-label="Writers' Room sessions">
           {writersRoomSessions.map((session) => {
-            const profile = profiles.find((candidate) => candidate.id === session.specialistProfileId);
+            const profile = profilesById.get(session.specialistProfileId);
             return (
               <article className={session.id === selectedSessionId ? "writers-room-session is-active" : "writers-room-session"} key={session.id}>
                 <button type="button" onClick={() => { followNewestMessage.current = true; setSelectedSessionId(session.id); setError(null); }}>

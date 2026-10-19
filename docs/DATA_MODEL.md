@@ -104,7 +104,7 @@ Brainstorming, AI analysis, alternatives, and rejected ideas are temporary unles
 
 For the 0E workflow, questions, answers, provider responses, and pending or discarded candidates remain transient. Only edited and explicitly approved candidates are serialized to `.forgemind/interview.json`.
 
-For the specialist workflow, normalized proposals and safe failure metadata may remain durable work history in `.forgemind/specialist-runs.json`. Persistence alone is not approval: history is never imported into the Compendium or Decisions automatically. Game Wiki reads that history as non-authoritative analysis; it is an aggregated view and adds no `wiki.json` storage.
+For the specialist workflow, normalized proposals and safe failure metadata may remain durable work history in `.forgemind/specialist-runs.json`. Persistence alone is not approval: history is never imported into the Compendium or Decisions automatically. Game Wiki reads that history as non-authoritative analysis; it is an aggregated view and adds no `wiki.json` storage. UI-4 category, search, authority, lifecycle, selection, and sort state are transient React/read-model state rather than another durable domain.
 
 For AIW-0, visible multi-turn discussion and proposal review state may persist in `.forgemind/ai-workspace-sessions.json`. Persistence, proposal acceptance, and proposal application markers are not project truth. A separate explicit owning-domain action remains required, and that domain retains its own lifecycle and approval semantics.
 

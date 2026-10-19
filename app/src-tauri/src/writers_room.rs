@@ -435,7 +435,6 @@ fn build_narrative_context(
             priority: AiWorkspaceSelectionPriority::Explicit,
         }
     }).collect::<Vec<_>>();
-    let remaining = 20usize.saturating_sub(sources.len());
     let decision_cap = if continuity { 6 } else { 4 };
     let knowledge_cap = if continuity { 7 } else { 7 };
     let question_cap = if continuity { 4 } else { 2 };
@@ -446,7 +445,7 @@ fn build_narrative_context(
             .map(|(index, decision)| (relevance(&format!("{} {} {}", decision.title, decision.statement, decision.rationale), &query_words), index, decision.id.clone()))
             .filter(|(score, _, _)| continuity || *score > 0)
             .collect::<Vec<_>>();
-        for (_, _, id) in ranked(candidates).into_iter().take(decision_cap.min(remaining.saturating_sub(sources.len()))) {
+        for (_, _, id) in ranked(candidates).into_iter().take(decision_cap.min(ai_workspace::MAX_CONTEXT_SOURCES.saturating_sub(sources.len()))) {
             sources.push(AiWorkspaceContextSourceRequest::Decision { source_id: id, priority: AiWorkspaceSelectionPriority::Supporting });
         }
     }
@@ -456,7 +455,7 @@ fn build_narrative_context(
             .map(|(index, entry)| (relevance(&format!("{} {}", entry.title, entry.statement), &query_words), index, entry.id.clone()))
             .filter(|(score, _, _)| continuity || *score > 0)
             .collect::<Vec<_>>();
-        for (_, _, id) in ranked(knowledge).into_iter().take(knowledge_cap.min(remaining.saturating_sub(sources.len()))) {
+        for (_, _, id) in ranked(knowledge).into_iter().take(knowledge_cap.min(ai_workspace::MAX_CONTEXT_SOURCES.saturating_sub(sources.len()))) {
             sources.push(AiWorkspaceContextSourceRequest::Compendium { source_id: id, priority: AiWorkspaceSelectionPriority::Supporting });
         }
         let questions = document.entries.iter().enumerate()
@@ -464,7 +463,7 @@ fn build_narrative_context(
             .map(|(index, entry)| (relevance(&format!("{} {}", entry.title, entry.statement), &query_words), index, entry.id.clone()))
             .filter(|(score, _, _)| continuity || *score > 0)
             .collect::<Vec<_>>();
-        for (_, _, id) in ranked(questions).into_iter().take(question_cap.min(remaining.saturating_sub(sources.len()))) {
+        for (_, _, id) in ranked(questions).into_iter().take(question_cap.min(ai_workspace::MAX_CONTEXT_SOURCES.saturating_sub(sources.len()))) {
             sources.push(AiWorkspaceContextSourceRequest::OpenQuestion { source_id: id, priority: AiWorkspaceSelectionPriority::Supporting });
         }
     }
@@ -575,6 +574,7 @@ fn invalid_output(message: &str) -> AiWorkspaceError {
 mod tests {
     use super::*;
     use crate::compendium::{CreateKnowledgeEntryRequest, KnowledgeArea, KnowledgeStatus};
+    use crate::decisions::{self, CreateDecisionRequest, DecisionActionRequest};
     use crate::workspace::{self, WorkspaceInspection};
     use tempfile::TempDir;
 
@@ -655,6 +655,60 @@ mod tests {
         assert!(result.models.iter().any(|model| model.model_id == model_registry::CREATOR_DEFAULT_MODEL_ID));
         assert!(result.estimated_input_tokens.minimum > 0);
         assert!(result.estimated_cost_usd.is_none());
+    }
+
+    #[test]
+    fn selected_markdown_does_not_reduce_the_shared_context_capacity_twice() {
+        let (directory, project_id) = workspace();
+        let session_id = session(&directory, &project_id, "continuity_editor");
+        let mut markdown_paths = Vec::new();
+        for index in 0..5 {
+            let name = format!("LORE-{index}.md");
+            std::fs::write(directory.path().join(&name), format!("# Lore {index}\nDocumented context.")).unwrap();
+            markdown_paths.push(name);
+        }
+        ai_workspace::set_markdown_context(ai_workspace::SetAiWorkspaceMarkdownContextRequest {
+            root_path: directory.path().display().to_string(),
+            project_id: project_id.clone(),
+            session_id: session_id.clone(),
+            relative_paths: markdown_paths,
+        }).unwrap();
+        for index in 0..6 {
+            let decision = decisions::create(CreateDecisionRequest {
+                root_path: directory.path().display().to_string(), project_id: project_id.clone(),
+                title: format!("Decision {index}"), statement: "Established narrative rule.".to_owned(),
+                rationale: "Retain continuity.".to_owned(), area: KnowledgeArea::WorldNarrative,
+                author: "Tester".to_owned(), supersedes_decision_id: None, related_knowledge_entry_ids: Vec::new(),
+            }).unwrap().decisions.into_iter().last().unwrap();
+            decisions::approve(DecisionActionRequest {
+                root_path: directory.path().display().to_string(), project_id: project_id.clone(), decision_id: decision.id,
+            }).unwrap();
+        }
+        for index in 0..7 {
+            compendium::create_entry(CreateKnowledgeEntryRequest {
+                root_path: directory.path().display().to_string(), project_id: project_id.clone(), area: KnowledgeArea::WorldNarrative,
+                title: format!("Lore {index}"), statement: "Established narrative context.".to_owned(), status: KnowledgeStatus::Direction,
+            }).unwrap();
+        }
+        for index in 0..4 {
+            compendium::create_entry(CreateKnowledgeEntryRequest {
+                root_path: directory.path().display().to_string(), project_id: project_id.clone(), area: KnowledgeArea::OpenQuestions,
+                title: format!("Question {index}"), statement: "What remains unresolved?".to_owned(), status: KnowledgeStatus::Tbd,
+            }).unwrap();
+        }
+
+        let prepared = prepare_run(WritersRoomRunRequest {
+            root_path: directory.path().display().to_string(), project_id, session_id,
+            model_id: model_registry::CREATOR_DEFAULT_MODEL_ID.to_owned(), mode: WritersRoomRunMode::Send,
+            message: Some("Check all established and unresolved context.".to_owned()),
+        }).unwrap();
+        let counts = source_counts(&prepared.context_plan.source_trace);
+
+        assert_eq!(prepared.context_plan.items.len(), ai_workspace::MAX_CONTEXT_SOURCES);
+        assert_eq!(counts.get(&AiWorkspaceSourceType::Document), Some(&5));
+        assert_eq!(counts.get(&AiWorkspaceSourceType::Decision), Some(&6));
+        assert_eq!(counts.get(&AiWorkspaceSourceType::Compendium), Some(&7));
+        assert_eq!(counts.get(&AiWorkspaceSourceType::OpenQuestion), Some(&2));
     }
 
     #[test]

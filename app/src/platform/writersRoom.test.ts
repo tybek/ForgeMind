@@ -27,7 +27,14 @@ describe("Writers' Room platform boundary", () => {
       inputTokens: 447, outputTokens: 189, totalTokens: 636,
       usageReference: { applicationSessionId: "00000000-0000-4000-8000-000000000001", usageTimestamp: "2026-09-29T10:00:01.000Z", profileId: "lore_architect" },
     };
-    vi.mocked(invoke).mockImplementation((command) => Promise.resolve(command === "run_writers_room" ? rawRunResult : {}));
+    vi.mocked(invoke).mockImplementation((command) => Promise.resolve(
+      command === "run_writers_room" ? rawRunResult
+        : command === "load_writers_room_usage" ? [{
+          timestamp: "2026-09-29T10:00:01.000Z", sessionId: "00000000-0000-4000-8000-000000000001", projectId: "project-1",
+          provider: "nebius_token_factory", modelId: "nvidia/nemotron-3-super-120b-a12b", taskCategory: "narrative_workspace", success: true,
+        }]
+          : {},
+    ));
     const input = {
       rootPath: "D:\\Game",
       projectId: "project-1",
@@ -38,13 +45,15 @@ describe("Writers' Room platform boundary", () => {
     };
     await loadWritersRoomPreflight(input);
     const result = await runWritersRoom(input);
-    await loadWritersRoomUsage("project-1");
+    const usage = await loadWritersRoomUsage("project-1");
 
     expect(invoke).toHaveBeenNthCalledWith(1, "get_writers_room_preflight", { request: input });
     expect(invoke).toHaveBeenNthCalledWith(2, "run_writers_room", { request: input });
     expect(invoke).toHaveBeenNthCalledWith(3, "load_writers_room_usage", { projectId: "project-1" });
     expect(result.document.sessions[0]).toMatchObject({ proposals: [], sourceTrace: [] });
     expect(result.document.sessions[0].messages[1]).toMatchObject({ sourceTrace: [], questions: ["Who opposes them?", "What do they protect?", "What divides them?"] });
+    expect(usage).toEqual([expect.objectContaining({ projectId: "project-1", taskCategory: "narrative_workspace", success: true })]);
+    expect(usage[0].inputTokens).toBeUndefined();
   });
 
   it("returns a reload-only error when a persisted successful run cannot be normalized", async () => {
@@ -54,5 +63,18 @@ describe("Writers' Room platform boundary", () => {
       message: "Develop the faction.", modelId: "nvidia/nemotron-3-super-120b-a12b",
     })).rejects.toMatchObject({ code: "AI_WORKSPACE_RESPONSE_RENDER_FAILED", message: expect.stringContaining("without sending another request") });
     expect(invoke).toHaveBeenCalledTimes(1);
+  });
+
+  it("drops malformed, cross-project, and unrelated usage rows before rendering", async () => {
+    vi.mocked(invoke).mockResolvedValue([
+      { timestamp: "invalid", sessionId: "bad", projectId: "project-1", provider: "provider", modelId: "model", taskCategory: "narrative_workspace", success: true },
+      { timestamp: "2026-09-29T10:00:01.000Z", sessionId: "foreign", projectId: "project-2", provider: "provider", modelId: "model", taskCategory: "narrative_workspace", success: true },
+      { timestamp: "2026-09-29T10:00:01.000Z", sessionId: "other-task", projectId: "project-1", provider: "provider", modelId: "model", taskCategory: "feature_contract", success: true },
+      { timestamp: "2026-09-29T10:00:01.000Z", sessionId: "valid", projectId: "project-1", provider: "provider", modelId: "model", taskCategory: "narrative_workspace", success: true, latencyMs: -1 },
+    ]);
+
+    await expect(loadWritersRoomUsage("project-1")).resolves.toEqual([
+      expect.objectContaining({ sessionId: "valid", projectId: "project-1", latencyMs: undefined }),
+    ]);
   });
 });

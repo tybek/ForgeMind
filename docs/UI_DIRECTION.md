@@ -4,7 +4,7 @@
 
 This document records the agreed product and interface direction for ForgeMind. It distinguishes implemented presentation foundations from future dashboard and consistency work.
 
-**UI-1 AND UI-2 ARE COMPLETE.** Their shared foundation, Workspace Home, and manual visual passes are complete. NEXT-1 now fills the reserved Home recommendation region with deterministic project-aware guidance and is headless-validated; its short manual card/navigation check remains pending. UI-3 and later phases have not started. Do not rewrite working behavior solely to make it fit this direction or treat the completed phases as authorization for future information architecture.
+**UI-1 AND UI-2 ARE COMPLETE; UI-3 AND UI-4 ARE IMPLEMENTED AND HEADLESS VALIDATED.** The shared foundation and Workspace Home have manual visual passes. Project Overview and the Game Wiki Knowledge Explorer each retain a bounded responsive/visual check. UI-5 and the wider cross-workspace consistency work have not started. Do not treat implemented phases as authorization for future information architecture.
 
 Use this document with the [ForgeMind Brandbook](BRANDBOOK.md), [Product Direction](PRODUCT.md), and [Roadmap](ROADMAP.md). The Brandbook owns visual identity and voice; this document owns information architecture, dashboard behavior, layout, workflow, artwork policy inside the product, and phased UI implementation.
 
@@ -132,6 +132,8 @@ Show approved and proposed counts, the most relevant recent or current Decision,
 
 Use **AI Insights**, not **All Insights**. Possible content includes recent specialist analyses, unpromoted findings, the last specialist run, and analysis awaiting review. The primary action is **Open AI Studio**. Analysis remains non-authoritative.
 
+UI-3 defers this section. The authorized deterministic dashboard does not mix non-authoritative AI history into Project Signals without a separately scoped aggregation contract.
+
 ### Feature Contracts
 
 Show draft and approved counts, the latest or currently relevant contract, and one action to **Continue Contract**. Do not duplicate the contract editor on the dashboard.
@@ -150,6 +152,8 @@ Aggregate a bounded set of meaningful events from existing timestamps and domain
 - specialist run completed.
 
 This is a concise project narrative, not an enterprise audit log. Do not create a new competing event store merely to populate the first version.
+
+UI-3 defers Recent Activity because current domain timestamps represent different record lifecycle events and do not yet form one reliable cross-domain activity contract. The dashboard does not reinterpret mixed create/update/review timestamps merely to fill the layout.
 
 ### Continue Building
 
@@ -178,7 +182,7 @@ The current shell only prepares typed metadata and restrained global/contextual 
 
 ### UI-1 manual findings retained for later phases
 
-- Game Wiki remains a legacy, vertically dense surface. Its large derived-summary cards should be compacted only in the future UI-4 consistency pass.
+- Game Wiki's former vertically dense expandable-row surface was replaced in UI-4 by a compact category/list/detail explorer. Its responsive and visual closure remains pending.
 - Unity's bounded truncation semantics remain correct. A future copy pass may prefer **Partial coverage** and **10,000+ fields indexed** over developer-oriented `BOUNDED / TRUNCATED` wording without changing the underlying coverage classification.
 
 ## AI-assisted workflow direction
@@ -270,7 +274,7 @@ When no project image exists, use an abstract dark branded fallback. Home may us
 
 ## Phased implementation status
 
-These phases are recorded in the [Roadmap](ROADMAP.md). UI-1 and UI-2 are complete; UI-3 through UI-5 remain planned and not started.
+These phases are recorded in the [Roadmap](ROADMAP.md). UI-1 and UI-2 are complete; UI-3 and UI-4 are implemented and headless validated with manual closure pending; UI-5 remains planned and not started.
 
 ### UI-1 — Brand / Design System Foundation — COMPLETE
 
@@ -305,15 +309,19 @@ Exit direction: Home answers current project, project state, and next action wit
 - Recent Activity;
 - Continue Building.
 
-Project Overview will also surface project-specific Recommended Next Steps as one part of this richer dashboard. Workspace Home keeps the quick top-three guidance for the currently loaded project; UI-3 must reuse the same derived model rather than move, duplicate, or persist recommendations as a second source.
+Project Overview surfaces up to five project-specific Recommended Next Steps as one part of this richer dashboard. Workspace Home keeps the quick top-three guidance for the currently loaded project; both call the same derived NEXT-1 model rather than move, duplicate, or persist recommendations as a second source.
 
 Exit direction: every state and recommendation is explainable from existing domain data and routes to the owning workspace.
 
-### UI-4 — Workspace Consistency Pass
+Implemented UI-3 uses a concise project identity header plus three compact signal groups: **Intent** for Foundation, Decisions, and Compendium-backed Open Questions; **Reality** for session-known Repository and Unity state; and **Alignment** for actionable Alignment counts and Feature Contract lifecycle state. Important problems receive semantic emphasis while calm/empty state remains restrained. No aggregate health score, automatic scan, AI call, project mutation, or new activity/task store exists.
 
-Apply the shared visual system to Game Wiki, Decisions, Repository, Unity, Alignment, AI Studio / Specialists, Model Evaluation, and Feature Contracts. Preserve working behavior and authority boundaries; do not rewrite a workflow solely for styling.
+### UI-4 — Game Wiki / Knowledge Explorer
 
-Exit direction: the major workspaces share hierarchy, actions, feedback, badges, icons, responsive behavior, and provenance treatment without behavioral regression.
+Implemented as a deterministic three-pane desktop knowledge browser: derived categories on the left, bounded compact results and combined local filters in the center, and full selected-source detail on the right. Narrow layouts stack the panes. Human-readable authority, provenance, lifecycle, timestamps, and owner routes replace raw IDs and storage detail. Deprecated and superseded material is hidden from the default Current view but remains explicitly discoverable.
+
+The Wiki projects established source domains and keeps Alignment, Feature Contract, Repository, and Unity material as compact derived/session summaries outside entry counts. It does not persist a Wiki copy, inspect Reality on mount, call a provider, perform semantic search, or edit owner data. The earlier general consistency direction for other workspaces is retained as future work rather than silently included in this milestone.
+
+Exit direction: the Game Wiki is a usable primary knowledge browser whose authority and owner routes remain clear at wide and compact sizes.
 
 ### UI-5 — Full Screenshot UX Audit
 
