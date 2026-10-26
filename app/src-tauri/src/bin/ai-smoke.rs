@@ -77,6 +77,7 @@ async fn main() -> ExitCode {
         temperature: Some(0.0),
         max_tokens: Some(SMOKE_MAX_TOKENS),
         reasoning_effort: Some("minimal".to_owned()),
+        response_format: None,
     };
 
     match evaluate_registered(request, None, None).await {

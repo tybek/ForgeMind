@@ -11,6 +11,15 @@ pub struct ModelPricing {
     pub output_usd_per_million_tokens: f64,
 }
 
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum StructuredOutputCapability {
+    #[default]
+    None,
+    JsonObject,
+    JsonSchema,
+}
+
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ModelCapabilities {
@@ -18,8 +27,7 @@ pub struct ModelCapabilities {
     pub max_completion_tokens: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub supports_reasoning_effort: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub supports_structured_output: Option<bool>,
+    pub structured_output: StructuredOutputCapability,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -64,7 +72,7 @@ fn configured_entries() -> Vec<ModelEntry> {
             capabilities: ModelCapabilities {
                 max_completion_tokens: None,
                 supports_reasoning_effort: Some(true),
-                supports_structured_output: None,
+                structured_output: StructuredOutputCapability::None,
             },
             enabled: true,
         },
@@ -78,7 +86,10 @@ fn configured_entries() -> Vec<ModelEntry> {
             availability: "configured".to_owned(),
             pricing: None,
             notes: Some("Availability depends on the configured Nebius Token Factory account.".to_owned()),
-            capabilities: ModelCapabilities::default(),
+            capabilities: ModelCapabilities {
+                structured_output: StructuredOutputCapability::JsonObject,
+                ..ModelCapabilities::default()
+            },
             enabled: true,
         },
     ]
@@ -158,17 +169,17 @@ mod tests {
         assert_eq!(model.display_name, "DeepSeek V4.1 Flash");
         assert_eq!(model.capabilities.max_completion_tokens, None);
         assert_eq!(model.capabilities.supports_reasoning_effort, Some(true));
-        assert_eq!(model.capabilities.supports_structured_output, None);
+        assert_eq!(model.capabilities.structured_output, StructuredOutputCapability::None);
     }
 
     #[test]
-    fn nemotron_is_enabled_without_invented_pricing_or_capabilities() {
+    fn nemotron_is_enabled_with_documented_json_object_capability() {
         let model = creator_default_model().unwrap();
         assert_eq!(model.model_id, CREATOR_DEFAULT_MODEL_ID);
         assert_eq!(model.display_name, "NVIDIA Nemotron 3 Super 120B");
         assert_eq!(model.provider, NEBIUS_PROVIDER_ID);
         assert_eq!(model.pricing, None);
-        assert_eq!(model.capabilities, ModelCapabilities::default());
+        assert_eq!(model.capabilities.structured_output, StructuredOutputCapability::JsonObject);
     }
 
     #[test]

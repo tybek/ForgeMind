@@ -2,7 +2,7 @@
 
 ## Status and scope
 
-WR-1 Writers' Room is implemented and headless validated as a separately scoped narrative workspace built on AIW-0. It does not start S0, S1 Lore Studio, the full Studio framework, or any other S0-S9 phase; every Studio phase below remains future planned work.
+WR-1 through WR-1.3 Writers' Room is implemented and headless validated as a separately scoped narrative workspace built on AIW-0. Its deterministic narrative context, guided phases, focused questions, and editable proposal review do not start S0, S1 Lore Studio, the full Studio framework, or any other S0-S9 phase; every Studio phase below remains future planned work.
 
 This document defines the future product direction for ForgeMind Studios: task-oriented specialist workspaces built on one shared framework. Every S0-S9 phase in this document is **FUTURE PLANNED WORK — NOT STARTED**. AIW-0 Shared AI Workspace Foundation is complete as lower-level session/context/source/proposal infrastructure; WR-1 is its first user-facing consumer but is not a Studio phase.
 
@@ -168,7 +168,7 @@ For a request such as “Develop the occupying faction; they should be brutal wi
 
 Users may save reviewed output as Canon or Project Knowledge, create a Decision, keep an Open Question, continue exploring, or discard it. Lore Studio must preserve canon consistency, provenance, proposed-versus-approved status, and links to Decisions and Open Questions. It must not force users through a large template or make exploratory prose canonical automatically.
 
-Lore Studio remains a future broader Studio candidate. The implemented WR-1 Writers' Room already covers conversational lore, character/dialogue, and continuity exploration through AIW-0, but it does not implement the S0 Studio contract, S1 task registry, formal Canon terminology, knowledge-update diff workflow, general routing, or cross-Studio evaluation. S1 must build only on demonstrated remaining needs rather than duplicate Writers' Room.
+Lore Studio remains a future broader Studio candidate. The implemented WR-1.3 Writers' Room already covers conversational lore, character/dialogue, continuity exploration, guided clarification/consolidation, and reviewed proposal editing through AIW-0, but it does not implement the S0 Studio contract, S1 task registry, formal Canon terminology, knowledge-update diff workflow, general routing, or cross-Studio evaluation. S1 must build only on demonstrated remaining needs rather than duplicate Writers' Room.
 
 ## S2 — Design Studio
 

@@ -10,6 +10,8 @@ The implemented Creator boundary sends only a typed projection of relevant field
 
 The implemented Creator request confirmation is workflow-specific credit and context disclosure. It is not the future shared **Security Preflight** or exact **Context Preview**: the token range is approximate, the context list is a human-readable summary, and no claim of universal secret scanning is made. It does, however, preserve the existing rule that no provider request occurs until the user explicitly selects **Run AI**.
 
+WR-1.3 retains the same limited current-security posture for Writers' Room. Native code assembles only bounded project-scoped narrative sources from the existing AI Workspace Context Plan, revalidates explicit Markdown containment, rejects credential-like or absolute-path content through the existing narrow checks, and exposes counts plus safe source metadata rather than raw prompts or system instructions. Git Reality, Unity GroundTruth, Feature Contracts, and unrelated technical context are excluded by default. Focused string questions, context counts, and reviewed proposal edits may persist; raw provider responses, hidden reasoning, credentials, absolute paths, and assembled prompt content do not. Existing sessions may retain older phase/nested-question metadata for compatibility, but current provider output does not require or create it. Safe failure diagnostics persist only structural stage/code, allowlisted canonical key presence, an unknown-key count, provider/model, response length, and usage identity; arbitrary unknown key names and response values are excluded. This is workflow-specific protection, not the future shared Secret Guard, exact Context Preview, or SEC-1 implementation.
+
 Security claims in this document distinguish current repository evidence from planned protection. ForgeMind must not describe itself as "zero risk," "fully secure," or "enterprise-grade" without objective evidence supporting that claim.
 
 Related boundaries are defined in [Product](PRODUCT.md), [Architecture](ARCHITECTURE.md), [Context Builder and Task Router Architecture](CONTEXT_AND_ROUTING.md), [ForgeMind Studios Roadmap](STUDIOS_ROADMAP.md), [Validation](VALIDATION.md), and the [Roadmap](ROADMAP.md).
@@ -290,7 +292,7 @@ Logs and histories should avoid:
 - unnecessary absolute machine paths;
 - secret-bearing source excerpts.
 
-Safe diagnostic metadata may include provider ID, model ID, task category, timestamp, latency, token usage, success, structured error category, bounded provider request ID, and explicitly reviewed redacted metadata.
+Safe diagnostic metadata may include provider ID, model ID, task category, timestamp, latency, token usage, success, structured error category/stage/code, bounded canonical key presence/counts, response character count, bounded provider request ID, and explicitly reviewed redacted metadata.
 
 The record types have different purposes:
 

@@ -51,7 +51,11 @@ describe("Writers' Room platform boundary", () => {
     expect(invoke).toHaveBeenNthCalledWith(2, "run_writers_room", { request: input });
     expect(invoke).toHaveBeenNthCalledWith(3, "load_writers_room_usage", { projectId: "project-1" });
     expect(result.document.sessions[0]).toMatchObject({ proposals: [], sourceTrace: [] });
-    expect(result.document.sessions[0].messages[1]).toMatchObject({ sourceTrace: [], questions: ["Who opposes them?", "What do they protect?", "What divides them?"] });
+    expect(result.document.sessions[0].messages[1]).toMatchObject({ sourceTrace: [], questions: [
+      { question: "Who opposes them?", options: [] },
+      { question: "What do they protect?", options: [] },
+      { question: "What divides them?", options: [] },
+    ] });
     expect(usage).toEqual([expect.objectContaining({ projectId: "project-1", taskCategory: "narrative_workspace", success: true })]);
     expect(usage[0].inputTokens).toBeUndefined();
   });

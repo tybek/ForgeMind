@@ -1,9 +1,63 @@
+use serde::{Deserialize, Serialize};
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum ExtractionError {
     NoObject,
     MultipleObjects,
     NonObjectRoot,
     UnbalancedObject,
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum StructuredOutputExtractionStage {
+    NoJsonObject,
+    JsonParseFailed,
+    DeserializationFailed,
+    SemanticValidationFailed,
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum StructuredOutputValidationCode {
+    NoJsonObject,
+    JsonParseFailed,
+    InvalidSchema,
+    MissingMode,
+    InvalidMode,
+    InvalidMessage,
+    InvalidQuestions,
+    InvalidSourceRef,
+    InvalidProposal,
+    UnknownField,
+    ResponseTooLarge,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct StructuredOutputUsageReference {
+    pub session_id: String,
+    pub timestamp: String,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct StructuredOutputDiagnostics {
+    pub extraction_stage: StructuredOutputExtractionStage,
+    pub validation_code: StructuredOutputValidationCode,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub top_level_keys: Vec<String>,
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub unknown_field_count: usize,
+    pub provider: String,
+    pub model: String,
+    pub response_character_count: usize,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub usage_reference: Option<StructuredOutputUsageReference>,
+}
+
+fn is_zero(value: &usize) -> bool {
+    *value == 0
 }
 
 pub(crate) fn extract_single_json_object(text: &str) -> Result<&str, ExtractionError> {

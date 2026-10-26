@@ -1,4 +1,5 @@
 use crate::ai::{AIError, ProviderDiagnostics};
+use crate::structured_output::{StructuredOutputDiagnostics, StructuredOutputUsageReference};
 use crate::compendium::{
     self, CreateAiWorkspaceKnowledgeRequest, KnowledgeArea, KnowledgeProvenance,
     KnowledgeStatus,
@@ -38,6 +39,66 @@ pub enum AiWorkspaceSessionStatus {
 pub enum AiWorkspaceMessageRole {
     User,
     Assistant,
+}
+
+#[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum AiWorkspaceResponseMode {
+    #[default]
+    Explore,
+    Clarify,
+    Consolidate,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AiWorkspaceFocusedQuestion {
+    pub question: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub why_it_matters: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub options: Vec<String>,
+}
+
+impl<'de> Deserialize<'de> for AiWorkspaceFocusedQuestion {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        #[serde(untagged)]
+        enum QuestionValue {
+            Legacy(String),
+            Structured(StructuredQuestion),
+        }
+        #[derive(Deserialize)]
+        #[serde(rename_all = "camelCase", deny_unknown_fields)]
+        struct StructuredQuestion {
+            question: String,
+            #[serde(default)]
+            why_it_matters: Option<String>,
+            #[serde(default)]
+            options: Vec<String>,
+        }
+        match QuestionValue::deserialize(deserializer)? {
+            QuestionValue::Legacy(question) => Ok(Self { question, why_it_matters: None, options: Vec::new() }),
+            QuestionValue::Structured(value) => Ok(Self {
+                question: value.question,
+                why_it_matters: value.why_it_matters,
+                options: value.options,
+            }),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Default, Deserialize, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct AiWorkspaceContextSummary {
+    pub established_knowledge: usize,
+    pub approved_decisions: usize,
+    pub open_questions: usize,
+    pub documented_sources: usize,
+    pub recent_messages: usize,
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Hash, PartialEq, Eq, Serialize)]
@@ -116,7 +177,11 @@ pub struct AiWorkspaceMessage {
     pub role: AiWorkspaceMessageRole,
     pub content: String,
     #[serde(default)]
-    pub questions: Vec<String>,
+    pub questions: Vec<AiWorkspaceFocusedQuestion>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub response_mode: Option<AiWorkspaceResponseMode>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub context_summary: Option<AiWorkspaceContextSummary>,
     pub created_at: String,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub source_trace: Vec<AiWorkspaceSourceTrace>,
@@ -145,6 +210,8 @@ pub struct AiWorkspaceProposal {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub reason: Option<String>,
     pub status: AiWorkspaceProposalStatus,
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub edited_by_human: bool,
     pub created_at: String,
     pub updated_at: String,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -259,6 +326,19 @@ pub struct ReviewAiWorkspaceProposalRequest {
 
 #[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct UpdateAiWorkspaceProposalRequest {
+    pub root_path: String,
+    pub project_id: String,
+    pub session_id: String,
+    pub proposal_id: String,
+    pub title: String,
+    pub summary: String,
+    #[serde(default)]
+    pub reason: Option<String>,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct SetAiWorkspaceMarkdownContextRequest {
     pub root_path: String,
     pub project_id: String,
@@ -308,7 +388,9 @@ pub struct CompleteAiWorkspaceRun {
     pub append_user_message: bool,
     pub user_message: String,
     pub assistant_message: String,
-    pub questions: Vec<String>,
+    pub questions: Vec<AiWorkspaceFocusedQuestion>,
+    pub response_mode: Option<AiWorkspaceResponseMode>,
+    pub context_summary: AiWorkspaceContextSummary,
     pub source_trace: Vec<AiWorkspaceSourceTrace>,
     pub usage_reference: AiWorkspaceUsageReference,
     pub proposals: Vec<AiWorkspaceGeneratedProposal>,
@@ -385,11 +467,18 @@ pub struct AiWorkspaceError {
     pub message: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub diagnostics: Option<ProviderDiagnostics>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub structured_output_diagnostics: Option<StructuredOutputDiagnostics>,
 }
 
 impl AiWorkspaceError {
     pub fn new(code: &str, message: &str) -> Self {
-        Self { code: code.to_owned(), message: message.to_owned(), diagnostics: None }
+        Self {
+            code: code.to_owned(),
+            message: message.to_owned(),
+            diagnostics: None,
+            structured_output_diagnostics: None,
+        }
     }
 
     pub fn invalid(message: &str) -> Self {
@@ -397,7 +486,34 @@ impl AiWorkspaceError {
     }
 
     pub fn from_ai(error: AIError) -> Self {
-        Self { code: error.code, message: error.message, diagnostics: error.diagnostics }
+        Self {
+            code: error.code,
+            message: error.message,
+            diagnostics: error.diagnostics,
+            structured_output_diagnostics: None,
+        }
+    }
+
+    pub fn with_structured_output_diagnostics(
+        mut self,
+        diagnostics: StructuredOutputDiagnostics,
+    ) -> Self {
+        self.structured_output_diagnostics = Some(diagnostics);
+        self
+    }
+
+    pub fn with_structured_output_usage_reference(
+        mut self,
+        session_id: &str,
+        timestamp: &str,
+    ) -> Self {
+        if let Some(diagnostics) = self.structured_output_diagnostics.as_mut() {
+            diagnostics.usage_reference = Some(StructuredOutputUsageReference {
+                session_id: session_id.to_owned(),
+                timestamp: timestamp.to_owned(),
+            });
+        }
+        self
     }
 }
 
@@ -506,6 +622,8 @@ pub fn append_message(request: AppendAiWorkspaceMessageRequest) -> Result<AiWork
         role: request.role,
         content: request.content.trim().to_owned(),
         questions: Vec::new(),
+        response_mode: None,
+        context_summary: None,
         created_at: now.clone(),
         source_trace: request.source_trace.clone(),
         usage_reference: request.usage_reference,
@@ -523,7 +641,7 @@ pub fn complete_run(request: CompleteAiWorkspaceRun) -> Result<AiWorkspaceDocume
     validate_trace(&request.source_trace)?;
     validate_usage_reference(&request.usage_reference)?;
     if request.questions.len() > 3
-        || request.questions.iter().any(|question| validate_safe_content(question, 1, 500, "Question").is_err())
+        || request.questions.iter().any(|question| validate_focused_question(question).is_err())
     {
         return Err(AiWorkspaceError::invalid("A Writers' Room response may contain at most 3 focused questions."));
     }
@@ -561,6 +679,8 @@ pub fn complete_run(request: CompleteAiWorkspaceRun) -> Result<AiWorkspaceDocume
             role: AiWorkspaceMessageRole::User,
             content: request.user_message.trim().to_owned(),
             questions: Vec::new(),
+            response_mode: None,
+            context_summary: None,
             created_at: now.clone(),
             source_trace: Vec::new(),
             usage_reference: None,
@@ -570,7 +690,13 @@ pub fn complete_run(request: CompleteAiWorkspaceRun) -> Result<AiWorkspaceDocume
         id: Uuid::new_v4().to_string(),
         role: AiWorkspaceMessageRole::Assistant,
         content: request.assistant_message.trim().to_owned(),
-        questions: request.questions.into_iter().map(|question| question.trim().to_owned()).collect(),
+        questions: request.questions.into_iter().map(|question| AiWorkspaceFocusedQuestion {
+            question: question.question.trim().to_owned(),
+            why_it_matters: question.why_it_matters.map(|value| value.trim().to_owned()),
+            options: question.options.into_iter().map(|value| value.trim().to_owned()).collect(),
+        }).collect(),
+        response_mode: request.response_mode,
+        context_summary: Some(request.context_summary),
         created_at: now.clone(),
         source_trace: request.source_trace.clone(),
         usage_reference: Some(request.usage_reference),
@@ -583,6 +709,7 @@ pub fn complete_run(request: CompleteAiWorkspaceRun) -> Result<AiWorkspaceDocume
             summary: proposal.summary.trim().to_owned(),
             reason: Some(proposal.reason.trim().to_owned()),
             status: AiWorkspaceProposalStatus::Pending,
+            edited_by_human: false,
             created_at: now.clone(),
             updated_at: now.clone(),
             source_trace: proposal.source_trace,
@@ -657,6 +784,7 @@ pub fn create_proposal(request: CreateAiWorkspaceProposalRequest) -> Result<AiWo
         summary: request.summary.trim().to_owned(),
         reason: request.reason.map(|value| value.trim().to_owned()),
         status: AiWorkspaceProposalStatus::Pending,
+        edited_by_human: false,
         created_at: now.clone(),
         updated_at: now.clone(),
         source_trace: request.source_trace.clone(),
@@ -825,6 +953,31 @@ pub fn review_proposal(request: ReviewAiWorkspaceProposalRequest) -> Result<AiWo
     }
     let now = timestamp();
     proposal.status = request.status;
+    proposal.updated_at = now.clone();
+    session.updated_at = now;
+    save(root, document)
+}
+
+pub fn update_proposal(request: UpdateAiWorkspaceProposalRequest) -> Result<AiWorkspaceDocument, AiWorkspaceError> {
+    let root = Path::new(&request.root_path);
+    verify_project(root, &request.project_id)?;
+    validate_safe_content(&request.title, 1, 160, "Proposal title")?;
+    validate_safe_content(&request.summary, 1, 4_000, "Proposal summary")?;
+    if let Some(reason) = request.reason.as_deref() {
+        validate_safe_content(reason, 1, 2_000, "Proposal reason")?;
+    }
+    let mut document = required_document(root, &request.project_id)?;
+    let session = active_session_mut(&mut document, &request.session_id)?;
+    let proposal = session.proposals.iter_mut().find(|proposal| proposal.id == request.proposal_id)
+        .ok_or_else(|| AiWorkspaceError::invalid("The selected AI Workspace proposal does not exist."))?;
+    if !matches!(proposal.status, AiWorkspaceProposalStatus::Pending | AiWorkspaceProposalStatus::Accepted) {
+        return Err(AiWorkspaceError::invalid("Only pending or accepted proposals can be edited before Apply."));
+    }
+    let now = timestamp();
+    proposal.title = request.title.trim().to_owned();
+    proposal.summary = request.summary.trim().to_owned();
+    proposal.reason = request.reason.map(|value| value.trim().to_owned());
+    proposal.edited_by_human = true;
     proposal.updated_at = now.clone();
     session.updated_at = now;
     save(root, document)
@@ -1092,10 +1245,34 @@ fn valid_messages(messages: &[AiWorkspaceMessage]) -> bool {
             && valid_safe_stored_content(&message.content, 1, MAX_MESSAGE_CHARS)
             && DateTime::parse_from_rfc3339(&message.created_at).is_ok()
             && message.questions.len() <= 3
-            && message.questions.iter().all(|question| valid_safe_stored_content(question, 1, 500))
+            && message.questions.iter().all(|question| validate_focused_question(question).is_ok())
+            && message.context_summary.as_ref().map_or(true, valid_context_summary)
             && validate_trace(&message.source_trace).is_ok()
             && message.usage_reference.as_ref().map_or(true, |reference| validate_usage_reference(reference).is_ok())
     })
+}
+
+fn valid_context_summary(summary: &AiWorkspaceContextSummary) -> bool {
+    summary.established_knowledge
+        + summary.approved_decisions
+        + summary.open_questions
+        + summary.documented_sources
+        <= MAX_CONTEXT_SOURCES
+        && summary.recent_messages <= 12
+}
+
+fn validate_focused_question(question: &AiWorkspaceFocusedQuestion) -> Result<(), AiWorkspaceError> {
+    validate_safe_content(&question.question, 1, 500, "Question")?;
+    if let Some(why_it_matters) = question.why_it_matters.as_deref() {
+        validate_safe_content(why_it_matters, 1, 500, "Question importance")?;
+    }
+    if question.options.len() > 4 {
+        return Err(AiWorkspaceError::invalid("A focused question may contain at most 4 options."));
+    }
+    for option in &question.options {
+        validate_safe_content(option, 1, 240, "Question option")?;
+    }
+    Ok(())
 }
 
 fn valid_proposals(proposals: &[AiWorkspaceProposal]) -> bool {
@@ -1214,6 +1391,10 @@ fn valid_safe_stored_content(value: &str, minimum: usize, maximum: usize) -> boo
     valid_stored_text(value, minimum, maximum)
         && !contains_secret_marker(value)
         && !contains_absolute_path(value)
+}
+
+fn is_false(value: &bool) -> bool {
+    !*value
 }
 
 fn contains_secret_marker(value: &str) -> bool {
@@ -1584,6 +1765,53 @@ mod tests {
         let edit = applied.sessions[0].proposals[0].proposed_edit.as_ref().unwrap();
         assert_eq!(edit.current_value, "A disciplined militia.");
         assert_eq!(edit.proposed_value, "A loose civic coalition.");
+    }
+
+    #[test]
+    fn reviewed_proposal_edits_persist_and_only_the_edited_text_reaches_project_truth_on_apply() {
+        let (directory, project_id) = workspace();
+        let created = create_session(create_request(directory.path(), &project_id)).unwrap();
+        let session_id = created.sessions[0].id.clone();
+        let proposed = create_proposal(CreateAiWorkspaceProposalRequest {
+            root_path: directory.path().display().to_string(), project_id: project_id.clone(), session_id: session_id.clone(),
+            proposal_type: AiWorkspaceProposalType::SaveKnowledge, title: "Central salvage office".to_owned(),
+            summary: "One central office grants every license.".to_owned(), reason: Some("Initial AI proposal.".to_owned()),
+            source_trace: Vec::new(), proposed_edit: None,
+        }).unwrap();
+        let proposal_id = proposed.sessions[0].proposals[0].id.clone();
+        assert!(compendium::load(directory.path()).unwrap().is_none());
+
+        let edited_pending = update_proposal(UpdateAiWorkspaceProposalRequest {
+            root_path: directory.path().display().to_string(), project_id: project_id.clone(), session_id: session_id.clone(), proposal_id: proposal_id.clone(),
+            title: "Decentralized salvage licensing".to_owned(), summary: "Local brokers validate licenses; no central authority exists.".to_owned(),
+            reason: Some("Human-reviewed direction.".to_owned()),
+        }).unwrap();
+        let proposal = &edited_pending.sessions[0].proposals[0];
+        assert_eq!(proposal.status, AiWorkspaceProposalStatus::Pending);
+        assert!(proposal.edited_by_human);
+        assert!(compendium::load(directory.path()).unwrap().is_none());
+        let reloaded = load(directory.path()).unwrap().unwrap();
+        assert_eq!(reloaded.sessions[0].proposals[0].summary, "Local brokers validate licenses; no central authority exists.");
+
+        review_proposal(ReviewAiWorkspaceProposalRequest {
+            root_path: directory.path().display().to_string(), project_id: project_id.clone(), session_id: session_id.clone(), proposal_id: proposal_id.clone(),
+            status: AiWorkspaceProposalStatus::Accepted,
+        }).unwrap();
+        let edited_accepted = update_proposal(UpdateAiWorkspaceProposalRequest {
+            root_path: directory.path().display().to_string(), project_id: project_id.clone(), session_id: session_id.clone(), proposal_id: proposal_id.clone(),
+            title: "Broker licensing".to_owned(), summary: "Local brokers validate salvage licenses; no central authority exists.".to_owned(),
+            reason: Some("Human-reviewed direction.".to_owned()),
+        }).unwrap();
+        assert_eq!(edited_accepted.sessions[0].proposals[0].status, AiWorkspaceProposalStatus::Accepted);
+        let applied = apply_proposal(ApplyAiWorkspaceProposalRequest {
+            root_path: directory.path().display().to_string(), project_id, session_id, proposal_id,
+        }).unwrap();
+        let compendium = compendium::load(directory.path()).unwrap().unwrap();
+        let entry = compendium.entries.iter().find(|entry| entry.id == applied.target_id).unwrap();
+        assert_eq!(entry.title, "Broker licensing");
+        assert_eq!(entry.statement, "Local brokers validate salvage licenses; no central authority exists.");
+        assert_eq!(entry.provenance, KnowledgeProvenance::AiInferred);
+        assert_eq!(entry.source, KnowledgeSource::WritersRoom);
     }
 
     #[test]

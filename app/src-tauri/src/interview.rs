@@ -223,6 +223,7 @@ pub fn build_ai_request(request: &InterviewTurnRequest) -> Result<AIRequest, Int
         temperature: Some(0.2),
         max_tokens: Some(INTERVIEW_MAX_COMPLETION_TOKENS),
         reasoning_effort: Some("minimal".to_owned()),
+        response_format: None,
     })
 }
 

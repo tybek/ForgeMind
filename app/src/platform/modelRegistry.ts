@@ -8,7 +8,7 @@ export interface ModelPricing {
 export interface ModelCapabilities {
   maxCompletionTokens?: number;
   supportsReasoningEffort?: boolean;
-  supportsStructuredOutput?: boolean;
+  structuredOutput?: "NONE" | "JSON_OBJECT" | "JSON_SCHEMA";
 }
 
 export interface ModelEntry {

@@ -63,7 +63,7 @@ function KnowledgeEditor({
   pillar?: boolean;
 }) {
   return (
-    <form className={`knowledge-form ${mode === "edit" ? "inline-knowledge-editor" : "knowledge-card"}`} onSubmit={onSubmit}>
+    <form className={`knowledge-form knowledge-card ${mode === "edit" ? "active-knowledge-editor" : ""}`} onSubmit={onSubmit}>
       <h3>{pillar ? `${mode === "edit" ? "Edit" : "Add"} Design Pillar` : mode === "edit" ? "Edit Knowledge" : "Add Knowledge"}</h3>
       <div className="knowledge-form-grid">
         {!pillar ? <label>Section
@@ -295,11 +295,7 @@ export function CompendiumPage({
         </div>
         {pillarEntries.length === 0 ? <p className="scope-note">No Design Pillars have been documented yet.</p> : (
           <div className="pillar-list">
-            {pillarEntries.map((entry) => editingId === entry.id ? (
-              <article className="knowledge-entry compact-knowledge-entry" aria-label={`Design pillar: ${pillarName(entry.title)}`} key={entry.id}>
-                <KnowledgeEditor mode="edit" input={input} setInput={setInput} busy={busy} onSubmit={(event) => void submit(event)} onCancel={cancelEditor} pillar />
-              </article>
-            ) : (
+            {pillarEntries.map((entry) => (
               <article className={`pillar-row ${entry.status === "DEPRECATED" ? "knowledge-deprecated" : ""}`} aria-label={`Design pillar: ${pillarName(entry.title)}`} key={entry.id}>
                 <div><strong>{pillarName(entry.title)}</strong><p>{entry.statement}</p></div>
                 <div className="knowledge-actions">
@@ -312,6 +308,18 @@ export function CompendiumPage({
           </div>
         )}
       </section>
+
+      {editingId !== null ? (
+        <KnowledgeEditor
+          mode="edit"
+          input={input}
+          setInput={setInput}
+          busy={busy}
+          onSubmit={(event) => void submit(event)}
+          onCancel={cancelEditor}
+          pillar={editorKind === "pillar"}
+        />
+      ) : null}
 
       <section className="knowledge-filters" aria-label="Compendium filters">
         <label>Section
@@ -337,49 +345,34 @@ export function CompendiumPage({
         <section className="knowledge-list" aria-label="Compendium knowledge entries">
           {entries.map((entry) => {
             const expanded = expandedIds.includes(entry.id);
-            const editing = editingId === entry.id;
             return (
               <article
                 className={`knowledge-entry compact-knowledge-entry ${entry.status === "DEPRECATED" ? "knowledge-deprecated" : ""}`}
                 aria-label={`Knowledge entry: ${entry.title}`}
                 key={entry.id}
               >
-                {editing ? (
-                  <KnowledgeEditor
-                    mode="edit"
-                    input={input}
-                    setInput={setInput}
-                    busy={busy}
-                    onSubmit={(event) => void submit(event)}
-                    onCancel={cancelEditor}
-                    pillar={editorKind === "pillar"}
-                  />
-                ) : (
-                  <>
-                    <div className="compact-entry-heading">
-                      <h3>{entry.title}</h3>
-                      <div className="knowledge-badges">
-                        <span>{knowledgeAreaLabel(entry.area)}</span>
-                        <strong className={`knowledge-status status-${entry.status.toLowerCase()}`}>{entry.status}</strong>
-                        <span>{entry.provenance}</span><span>{entry.source}</span>
-                      </div>
-                    </div>
-                    <p className={expanded ? "knowledge-statement-full" : "knowledge-statement-preview"}>{entry.statement}</p>
-                    <div className="compact-entry-footer">
-                      <small>Updated <time dateTime={entry.updatedAt}>{new Date(entry.updatedAt).toLocaleString()}</time></small>
-                      <div className="knowledge-actions">
-                        <button className="outline-button compact-action" type="button" aria-expanded={expanded} onClick={() => toggleExpanded(entry.id)}>
-                          {expanded ? "Collapse" : "Expand"}
-                        </button>
-                        <button className="outline-button compact-action" type="button" disabled={busy} onClick={() => openEdit(entry)}>Edit</button>
-                        <button className="outline-button compact-action" type="button" aria-label="Promote to Decision" onClick={() => onPromote(entry)}>Promote</button>
-                        {entry.status !== "DEPRECATED" ? (
-                          <button className="outline-button compact-action" type="button" disabled={busy} onClick={() => void deprecate(entry)}>Deprecate</button>
-                        ) : null}
-                      </div>
-                    </div>
-                  </>
-                )}
+                <div className="compact-entry-heading">
+                  <h3>{entry.title}</h3>
+                  <div className="knowledge-badges">
+                    <span>{knowledgeAreaLabel(entry.area)}</span>
+                    <strong className={`knowledge-status status-${entry.status.toLowerCase()}`}>{entry.status}</strong>
+                    <span>{entry.provenance}</span><span>{entry.source}</span>
+                  </div>
+                </div>
+                <p className={expanded ? "knowledge-statement-full" : "knowledge-statement-preview"}>{entry.statement}</p>
+                <div className="compact-entry-footer">
+                  <small>Updated <time dateTime={entry.updatedAt}>{new Date(entry.updatedAt).toLocaleString()}</time></small>
+                  <div className="knowledge-actions">
+                    <button className="outline-button compact-action" type="button" aria-expanded={expanded} onClick={() => toggleExpanded(entry.id)}>
+                      {expanded ? "Collapse" : "Expand"}
+                    </button>
+                    <button className="outline-button compact-action" type="button" disabled={busy} onClick={() => openEdit(entry)}>Edit</button>
+                    <button className="outline-button compact-action" type="button" aria-label="Promote to Decision" onClick={() => onPromote(entry)}>Promote</button>
+                    {entry.status !== "DEPRECATED" ? (
+                      <button className="outline-button compact-action" type="button" disabled={busy} onClick={() => void deprecate(entry)}>Deprecate</button>
+                    ) : null}
+                  </div>
+                </div>
               </article>
             );
           })}

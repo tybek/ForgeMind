@@ -11,6 +11,7 @@ import {
   listAiWorkspaceProfiles,
   loadAiWorkspaceSessions,
   reviewAiWorkspaceProposal,
+  updateAiWorkspaceProposal,
   setAiWorkspaceMarkdownContext,
   applyAiWorkspaceProposal,
   normalizeAiWorkspaceDocument,
@@ -43,6 +44,7 @@ describe("AI Workspace platform boundary", () => {
       { sourceType: "DOCUMENT", relativePath: "FACTIONS.md", priority: "EXPLICIT" },
     ]);
     await createAiWorkspaceProposal("D:\\Game", "project-1", "session-1", "CREATE_DECISION", "Decision", "Proposal only.");
+    await updateAiWorkspaceProposal("D:\\Game", "project-1", "session-1", "proposal-1", "Edited decision", "Reviewed proposal.", "Human refinement.");
     await reviewAiWorkspaceProposal("D:\\Game", "project-1", "session-1", "proposal-1", "ACCEPTED");
     await archiveAndResetAiWorkspaceHistory("D:\\Game");
     await setAiWorkspaceMarkdownContext("D:\\Game", "project-1", "session-1", ["FACTIONS.md"]);
@@ -62,11 +64,14 @@ describe("AI Workspace platform boundary", () => {
     expect(invoke).toHaveBeenNthCalledWith(8, "build_ai_workspace_context", {
       request: { rootPath: "D:\\Game", projectId: "project-1", sources: [{ sourceType: "DOCUMENT", relativePath: "FACTIONS.md", priority: "EXPLICIT" }] },
     });
-    expect(invoke).toHaveBeenNthCalledWith(11, "archive_and_reset_ai_workspace_history", { path: "D:\\Game" });
-    expect(invoke).toHaveBeenNthCalledWith(12, "set_ai_workspace_markdown_context", {
+    expect(invoke).toHaveBeenNthCalledWith(10, "update_ai_workspace_proposal", {
+      request: { rootPath: "D:\\Game", projectId: "project-1", sessionId: "session-1", proposalId: "proposal-1", title: "Edited decision", summary: "Reviewed proposal.", reason: "Human refinement." },
+    });
+    expect(invoke).toHaveBeenNthCalledWith(12, "archive_and_reset_ai_workspace_history", { path: "D:\\Game" });
+    expect(invoke).toHaveBeenNthCalledWith(13, "set_ai_workspace_markdown_context", {
       request: { rootPath: "D:\\Game", projectId: "project-1", sessionId: "session-1", relativePaths: ["FACTIONS.md"] },
     });
-    expect(invoke).toHaveBeenNthCalledWith(13, "apply_ai_workspace_proposal", {
+    expect(invoke).toHaveBeenNthCalledWith(14, "apply_ai_workspace_proposal", {
       request: { rootPath: "D:\\Game", projectId: "project-1", sessionId: "session-1", proposalId: "proposal-1" },
     });
   });
@@ -117,6 +122,32 @@ describe("AI Workspace platform boundary", () => {
     expect(normalized.sessions[0].proposals).toHaveLength(1);
     expect(normalized.sessions[0].proposals[0].sourceTrace).toEqual([]);
     expect(normalized.recoveryWarnings).toEqual(["1 malformed session was skipped.", "Malformed session content was skipped."]);
+  });
+
+  it("hydrates legacy questions and preserves structured guided-response and reviewed-edit metadata", () => {
+    const normalized = normalizeAiWorkspaceDocument({
+      formatVersion: 1,
+      projectId: "project-1",
+      updatedAt: "2026-09-28T12:00:00.000Z",
+      sessions: [{
+        id: "session-1", projectId: "project-1", surface: "writers_room", purpose: "Develop narrative ideas.", specialistProfileId: "lore_architect",
+        title: "Faction", createdAt: "2026-09-28T12:00:00.000Z", updatedAt: "2026-09-28T12:00:00.000Z", status: "ACTIVE",
+        messages: [
+          { id: "legacy", role: "ASSISTANT", content: "Legacy.", questions: ["What matters?"], createdAt: "2026-09-28T12:00:01.000Z" },
+          {
+            id: "guided", role: "ASSISTANT", content: "Clarify.", responseMode: "CLARIFY",
+            questions: [{ question: "Who grants rights?", whyItMatters: "Defines legitimacy.", options: ["Councils", "Guilds"] }],
+            contextSummary: { establishedKnowledge: 2, approvedDecisions: 1, openQuestions: 1, documentedSources: 0, recentMessages: 3 },
+            createdAt: "2026-09-28T12:00:02.000Z",
+          },
+        ],
+        proposals: [{ id: "proposal-1", proposalType: "SAVE_KNOWLEDGE", title: "Rights", summary: "Brokers validate rights.", status: "ACCEPTED", editedByHuman: true, createdAt: "2026-09-28T12:00:03.000Z", updatedAt: "2026-09-28T12:00:04.000Z" }],
+      }],
+    });
+
+    expect(normalized.sessions[0].messages[0].questions).toEqual([{ question: "What matters?", options: [] }]);
+    expect(normalized.sessions[0].messages[1]).toMatchObject({ responseMode: "CLARIFY", contextSummary: { establishedKnowledge: 2 }, questions: [{ options: ["Councils", "Guilds"] }] });
+    expect(normalized.sessions[0].proposals[0].editedByHuman).toBe(true);
   });
 
   it("keeps normalized history project-scoped, uniquely keyed, and within native collection bounds", () => {

@@ -29,7 +29,7 @@ use ai_workspace::{
     CreateAiWorkspaceProposalRequest, CreateAiWorkspaceSessionRequest,
     ReviewAiWorkspaceProposalRequest, AiWorkspaceSessionActionRequest,
     SetAiWorkspaceMarkdownContextRequest, ApplyAiWorkspaceProposalRequest,
-    AiWorkspaceApplyResult,
+    AiWorkspaceApplyResult, UpdateAiWorkspaceProposalRequest,
 };
 use alignment::{
     AlignmentCheck, AlignmentDocument, AlignmentError, AlignmentSourceCatalog,
@@ -219,6 +219,13 @@ fn review_ai_workspace_proposal(
 }
 
 #[tauri::command]
+fn update_ai_workspace_proposal(
+    request: UpdateAiWorkspaceProposalRequest,
+) -> Result<AiWorkspaceDocument, AiWorkspaceError> {
+    ai_workspace::update_proposal(request)
+}
+
+#[tauri::command]
 fn build_ai_workspace_context(
     request: BuildAiWorkspaceContextRequest,
 ) -> Result<AiWorkspaceContextPlan, AiWorkspaceError> {
@@ -263,14 +270,25 @@ async fn run_writers_room(
         .as_ref()
         .map_err(|error| AiWorkspaceError::from_ai(error.clone()))
         .and_then(|response| writers_room::normalize_response(response, &prepared));
+    let usage_session_id = session_id();
     let mut record = usage::record_for_result(
-        session_id(),
+        usage_session_id,
         Some(&prepared.project_id),
         &prepared.model,
         Some(writers_room::task_category()),
         &provider_result,
     );
+    let normalized = normalized.map_err(|error| {
+        error.with_structured_output_usage_reference(usage_session_id, &record.timestamp)
+    });
     record.structured_output_success = provider_result.is_ok().then_some(normalized.is_ok());
+    if provider_result.is_ok() {
+        record.error_category = normalized.as_ref().err().map(|error| error.code.clone());
+        record.structured_output_diagnostics = normalized
+            .as_ref()
+            .err()
+            .and_then(|error| error.structured_output_diagnostics.clone());
+    }
     usage::application_usage_path()
         .and_then(|path| usage::append_record(&path, &record))
         .map_err(|error| AiWorkspaceError::new(error.code, &error.message))?;
@@ -708,6 +726,7 @@ pub fn run() {
             delete_ai_workspace_session,
             create_ai_workspace_proposal,
             review_ai_workspace_proposal,
+            update_ai_workspace_proposal,
             build_ai_workspace_context,
             archive_and_reset_ai_workspace_history,
             set_ai_workspace_markdown_context,

@@ -131,23 +131,30 @@ describe("Game Compendium", () => {
     const { user } = await renderPage();
     const row = screen.getByRole("article", { name: "Design pillar: Readable danger" });
     await user.click(within(row).getByRole("button", { name: "Edit" }));
-    const explanation = within(row).getByLabelText("Explanation");
+    const editor = screen.getByRole("heading", { name: "Edit Design Pillar" }).closest("form")!;
+    const explanation = within(editor).getByLabelText("Explanation");
     await user.clear(explanation);
     await user.type(explanation, "Updated explanation.");
-    await user.click(within(row).getByRole("button", { name: "Save Knowledge" }));
+    await user.click(within(editor).getByRole("button", { name: "Save Knowledge" }));
     expect(updateKnowledgeEntry).toHaveBeenCalledWith(workspace.path, workspace.projectId, pillar.id, expect.objectContaining({
       title: pillar.title,
       statement: "Updated explanation.",
     }));
   });
 
-  it("opens the existing inline editor when source navigation targets a Knowledge entry", async () => {
+  it("opens the selected editor above filters and the list when source navigation targets a Knowledge entry", async () => {
     vi.mocked(loadCompendium).mockResolvedValue(document());
     render(<CompendiumPage workspace={workspace} onPromote={vi.fn()} editEntryId={entry.id} />);
     const editor = await screen.findByRole("heading", { name: "Edit Knowledge" });
     const form = editor.closest("form")!;
     expect(within(form).getByLabelText("Title")).toHaveValue(entry.title);
     expect(within(form).getByLabelText("Statement")).toHaveValue(entry.statement);
+    const pillars = screen.getByRole("heading", { name: "Design Pillars" }).closest("section")!;
+    const filters = screen.getByRole("region", { name: "Compendium filters" });
+    const list = screen.getByRole("region", { name: "Compendium knowledge entries" });
+    expect(pillars.compareDocumentPosition(form) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(form.compareDocumentPosition(filters) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(form.compareDocumentPosition(list) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it("collapses long statements to the preview presentation by default", async () => {
@@ -227,12 +234,13 @@ describe("Game Compendium", () => {
     const { user } = await renderPage();
     const originalRow = screen.getByRole("article", { name: `Knowledge entry: ${entry.title}` });
     await user.click(within(originalRow).getByRole("button", { name: "Edit" }));
-    const form = screen.getByRole("heading", { name: "Edit Knowledge" }).closest("form");
-    expect(form?.closest("article")).toBe(originalRow);
-    const title = within(form as HTMLElement).getByLabelText("Title");
+    const form = screen.getByRole("heading", { name: "Edit Knowledge" }).closest("form")!;
+    expect(form.closest("article")).toBeNull();
+    expect(form.compareDocumentPosition(originalRow) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const title = within(form).getByLabelText("Title");
     await user.clear(title);
     await user.type(title, updated.title);
-    await user.selectOptions(within(form as HTMLElement).getByLabelText("Status"), "LOCKED");
+    await user.selectOptions(within(form).getByLabelText("Status"), "LOCKED");
     await user.click(screen.getByRole("button", { name: "Save Knowledge" }));
 
     expect(updateKnowledgeEntry).toHaveBeenCalledWith(
@@ -246,14 +254,14 @@ describe("Game Compendium", () => {
     expect(within(card as HTMLElement).getByText("LOCKED")).toHaveClass("knowledge-status", "status-locked");
   });
 
-  it("cancels inline editing and restores the compact row", async () => {
+  it("cancels editing and restores the normal compact-list state", async () => {
     vi.mocked(loadCompendium).mockResolvedValue(document());
     const { user } = await renderPage();
     const row = screen.getByRole("article", { name: `Knowledge entry: ${entry.title}` });
     await user.click(within(row).getByRole("button", { name: "Edit" }));
-    expect(within(row).getByRole("heading", { name: "Edit Knowledge" })).toBeInTheDocument();
-    await user.click(within(row).getByRole("button", { name: "Cancel" }));
-    expect(within(row).queryByRole("heading", { name: "Edit Knowledge" })).not.toBeInTheDocument();
+    const editor = screen.getByRole("heading", { name: "Edit Knowledge" }).closest("form")!;
+    await user.click(within(editor).getByRole("button", { name: "Cancel" }));
+    expect(screen.queryByRole("heading", { name: "Edit Knowledge" })).not.toBeInTheDocument();
     expect(within(row).getByRole("button", { name: "Expand" })).toBeInTheDocument();
     expect(updateKnowledgeEntry).not.toHaveBeenCalled();
   });

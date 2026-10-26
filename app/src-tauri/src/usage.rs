@@ -1,5 +1,6 @@
 use crate::ai::{AIError, AIResponse};
 use crate::model_registry::{ModelEntry, ModelPricing};
+use crate::structured_output::StructuredOutputDiagnostics;
 use chrono::{SecondsFormat, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -54,6 +55,8 @@ pub struct UsageRecord {
     pub success: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub structured_output_success: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub structured_output_diagnostics: Option<StructuredOutputDiagnostics>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub error_category: Option<String>,
 }
@@ -170,6 +173,7 @@ pub fn record_for_result(
             ),
             success: true,
             structured_output_success: None,
+            structured_output_diagnostics: None,
             error_category: None,
         },
         Err(error) => UsageRecord {
@@ -186,6 +190,7 @@ pub fn record_for_result(
             estimated_cost_usd: None,
             success: false,
             structured_output_success: None,
+            structured_output_diagnostics: None,
             error_category: Some(error.code.clone()),
         },
     }

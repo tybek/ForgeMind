@@ -64,7 +64,7 @@ A reviewable record of one explicit specialist request. Format version `1` store
 
 ### AIWorkspaceSession / Message
 
-A project-scoped non-authoritative work session with stable identity, surface, purpose, specialist-profile ID, title, timestamps, active/archive lifecycle, bounded user/assistant messages, up to five project-relative Markdown references, aggregate source trace, usage-record references, and pending proposals. Archive retains history and can be reopened. Explicit confirmed deletion removes only the selected session history. WR-1 assistant messages may also store up to three focused questions. Messages store visible content only; system prompts, raw provider payloads, and hidden reasoning are excluded. An application-session ID plus usage timestamp references the canonical application-global usage record rather than duplicating provider/model/token/latency data in project history.
+A project-scoped non-authoritative work session with stable identity, surface, purpose, specialist-profile ID, title, timestamps, active/archive lifecycle, bounded user/assistant messages, up to five project-relative Markdown references, aggregate source trace, usage-record references, and pending proposals. Archive retains history and can be reopened. Explicit confirmed deletion removes only the selected session history. Current WR-1.3S assistant messages store up to three focused string questions plus compact counts for established knowledge, approved Decisions, Open Questions, documented sources, and recent messages. Existing format-version `1` sessions that contain WR-1.3 phase or nested-question metadata remain readable, but new provider responses neither require nor persist that metadata. Messages store visible content only; system prompts, raw provider payloads, and hidden reasoning are excluded. An application-session ID plus usage timestamp references the canonical application-global usage record rather than duplicating provider/model/token/latency data in project history. When structured output is rejected, no assistant message is written; the application-global usage record may retain only safe structural diagnostics and the same usage identity.
 
 ### ContextPlan / SourceTrace
 
@@ -72,7 +72,7 @@ A transient deterministic assembly of explicitly requested or supporting sources
 
 ### AIWorkspaceProposal
 
-A non-authoritative action envelope with stable identity, type, summary, source trace, timestamps, and `PENDING`, `ACCEPTED`, `APPLIED`, `REJECTED`, or `DISCARDED` review state. A proposed knowledge edit additionally preserves target, current value, proposed value, concise reason, and known affected references. `ACCEPTED` means the user accepted the proposal for action; it does not approve or mutate a target store. `APPLIED` records that a separate owning-domain action completed.
+A non-authoritative action envelope with stable identity, type, title, summary, optional reason, source trace, timestamps, an additive human-edited marker, and `PENDING`, `ACCEPTED`, `APPLIED`, `REJECTED`, or `DISCARDED` review state. A proposed knowledge edit additionally preserves target, current value, proposed value, concise reason, and known affected references. WR-1.3 permits explicit title/summary/reason edits only while `PENDING` or `ACCEPTED`; Cancel remains local and an edit does not touch Project Brain. `ACCEPTED` means the user accepted the proposal for action; it does not approve or mutate a target store. `APPLIED` records that a separate owning-domain action completed using the current reviewed text.
 
 ## Relationships
 
@@ -199,6 +199,9 @@ Approval answers whether a person has accepted an artifact; it does not replace 
 - Usage references identify an existing canonical application-global usage record by application session and timestamp. Project history does not duplicate token, latency, provider, model, pricing, or raw request records.
 - Selected Markdown references are unique, project-relative, `.md`/`.markdown` only, capped at five per session, and revalidated for containment and availability whenever context is prepared.
 - A Writers' Room run includes at most twelve recent messages and a bounded deterministic Context Plan. Source references outside that plan invalidate the structured response before session persistence.
+- The registered Nemotron Writers' Room request uses provider-enforced `JSON_OBJECT`. Local semantic/source validation remains authoritative. Structured failure diagnostics contain only stage/code, allowlisted canonical root keys, unknown-field count, provider/model, response character count, and usage reference; they never contain raw response values or arbitrary unknown key names.
+- Narrative context prioritizes current World/Narrative knowledge, relevant Game Vision/Design Pillars and Player Experience, directly relevant gameplay systems, approved narrative Decisions, unresolved Open Questions, explicit `DOCUMENTED` Markdown, and recent same-session topic words. Unrelated technical, Reality, and delivery sources are excluded by default. Applied owning-domain knowledge is reloaded for every later run rather than treated only as chat memory.
+- Guided exploration should ask focused questions and normally return no proposals until the user supplies concrete direction. This is a prompt-level behavior contract rather than a provider-authored phase field; every proposal still requires explicit human review and Apply. Equivalent supplied Compendium knowledge is not repeated as a new proposal.
 
 ## 0I.1 Unity GroundTruth invariants
 

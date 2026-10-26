@@ -12,12 +12,15 @@ import {
   reopenAiWorkspaceSession,
   reviewAiWorkspaceProposal,
   setAiWorkspaceMarkdownContext,
+  updateAiWorkspaceProposal,
   type AiWorkspaceDocument,
   type AiWorkspaceProfile,
   type AiWorkspaceProposal,
   type AiWorkspaceSession,
   type AiWorkspaceSourceTrace,
   type AiWorkspaceUsageReference,
+  type AiWorkspaceFocusedQuestion,
+  type AiWorkspaceContextSummary,
 } from "./platform/aiWorkspace";
 import {
   loadWritersRoomPreflight,
@@ -117,11 +120,13 @@ function SourceCards({ sources, onOpenSource }: { sources: AiWorkspaceSourceTrac
             type="button"
             key={`${source.sourceType}:${source.sourceId}`}
             className="writers-room-source-card"
+            aria-label={source.navigationTarget && onOpenSource ? `Open source: ${source.label}` : undefined}
             disabled={!source.navigationTarget || !onOpenSource}
             onClick={() => onOpenSource?.(source)}
           >
             <span>{source.label}</span>
             <small>{authorityLabel(source.authority)}</small>
+            {source.navigationTarget && onOpenSource ? <span className="writers-room-source-action" aria-hidden="true">Open source <span>→</span></span> : null}
           </button>
         ))}
       </div>
@@ -129,38 +134,96 @@ function SourceCards({ sources, onOpenSource }: { sources: AiWorkspaceSourceTrac
   );
 }
 
+function ContextSummary({ summary }: { summary: AiWorkspaceContextSummary }) {
+  return (
+    <section className="writers-room-message-context" aria-label="Narrative context summary">
+      <strong>Narrative context</strong>
+      <span>{summary.establishedKnowledge} established</span>
+      <span>{summary.approvedDecisions} approved decisions</span>
+      <span>{summary.openQuestions} open questions</span>
+      <span>{summary.documentedSources} documented sources</span>
+      <span>{summary.recentMessages} recent messages</span>
+    </section>
+  );
+}
+
+function FocusedQuestions({ questions }: { questions: AiWorkspaceFocusedQuestion[] }) {
+  if (questions.length === 0) return null;
+  return (
+    <section className="writers-room-guided-questions">
+      <strong>Focused questions</strong>
+      <ul>{questions.map((question) => <li key={question.question}>{question.question}</li>)}</ul>
+    </section>
+  );
+}
+
+interface ProposalDraft {
+  title: string;
+  summary: string;
+  reason?: string;
+}
+
 function ProposalCard({
   proposal,
   busy,
   onReview,
+  onSaveEdit,
   onDiscard,
   onApply,
+  onOpenSource,
 }: {
   proposal: AiWorkspaceProposal;
   busy: boolean;
-  onReview: () => void;
+  onReview: (draft: ProposalDraft) => void;
+  onSaveEdit: (draft: ProposalDraft) => void;
   onDiscard: () => void;
   onApply: () => void;
+  onOpenSource?: (source: AiWorkspaceSourceTrace) => void;
 }) {
+  const [reviewing, setReviewing] = useState(false);
+  const [draft, setDraft] = useState<ProposalDraft>({ title: proposal.title, summary: proposal.summary, reason: proposal.reason });
+  useEffect(() => {
+    setDraft({ title: proposal.title, summary: proposal.summary, reason: proposal.reason });
+    setReviewing(false);
+  }, [proposal.title, proposal.summary, proposal.reason, proposal.status]);
+  const changed = draft.title.trim() !== proposal.title || draft.summary.trim() !== proposal.summary || (draft.reason?.trim() || undefined) !== proposal.reason;
   return (
     <article className="writers-room-proposal">
       <header>
         <span>{proposalLabel(proposal)}</span>
         <strong>{proposal.status}</strong>
       </header>
-      <h4>{proposal.title}</h4>
-      <p>{proposal.summary}</p>
-      {proposal.reason ? <p className="writers-room-proposal-reason"><strong>Why:</strong> {proposal.reason}</p> : null}
-      <SourceCards sources={proposal.sourceTrace} />
-      {proposal.status === "PENDING" ? (
+      {reviewing ? (
+        <div className="writers-room-proposal-editor">
+          <label>Proposal title<input value={draft.title} maxLength={160} onChange={(event) => setDraft((current) => ({ ...current, title: event.target.value }))} /></label>
+          <label>Proposed content<textarea value={draft.summary} maxLength={4000} onChange={(event) => setDraft((current) => ({ ...current, summary: event.target.value }))} /></label>
+          <label>Reason<textarea value={draft.reason ?? ""} maxLength={2000} onChange={(event) => setDraft((current) => ({ ...current, reason: event.target.value || undefined }))} /></label>
+          <div className="writers-room-proposal-actions">
+            {proposal.status === "PENDING"
+              ? <button className="primary-button" type="button" disabled={busy || !draft.title.trim() || !draft.summary.trim()} onClick={() => onReview(draft)}>Accept proposal</button>
+              : <button className="primary-button" type="button" disabled={busy || !changed || !draft.title.trim() || !draft.summary.trim()} onClick={() => onSaveEdit(draft)}>Save changes</button>}
+            <button type="button" disabled={busy} onClick={() => { setDraft({ title: proposal.title, summary: proposal.summary, reason: proposal.reason }); setReviewing(false); }}>Cancel</button>
+          </div>
+        </div>
+      ) : (
+        <>
+          <h4>{proposal.title}</h4>
+          <p>{proposal.summary}</p>
+          {proposal.reason ? <p className="writers-room-proposal-reason"><strong>Why:</strong> {proposal.reason}</p> : null}
+          {proposal.editedByHuman ? <small className="writers-room-reviewed-note">AI-assisted · human edited</small> : null}
+        </>
+      )}
+      <SourceCards sources={proposal.sourceTrace} onOpenSource={onOpenSource} />
+      {proposal.status === "PENDING" && !reviewing ? (
         <div className="writers-room-proposal-actions">
-          <button type="button" disabled={busy} onClick={onReview}>Review</button>
+          <button type="button" disabled={busy} onClick={() => setReviewing(true)}>Review &amp; edit</button>
           <button type="button" disabled={busy} onClick={onDiscard}>Discard proposal</button>
         </div>
       ) : null}
-      {proposal.status === "ACCEPTED" ? (
+      {proposal.status === "ACCEPTED" && !reviewing ? (
         <div className="writers-room-proposal-actions">
           <button className="primary-button" type="button" disabled={busy} onClick={onApply}>Apply</button>
+          <button type="button" disabled={busy} onClick={() => setReviewing(true)}>Edit before Apply</button>
           <span>Uses the owning Project Brain workflow.</span>
         </div>
       ) : null}
@@ -496,12 +559,32 @@ export function WritersRoomPage({
     finally { requestLock.current = false; setRunning(false); }
   }
 
-  async function reviewProposal(proposal: AiWorkspaceProposal, status: "ACCEPTED" | "DISCARDED") {
+  async function reviewProposal(proposal: AiWorkspaceProposal, status: "ACCEPTED" | "DISCARDED", draft?: ProposalDraft) {
     if (!selectedSession) return;
     setBusyProposalId(proposal.id);
     setError(null);
     try {
+      if (status === "ACCEPTED" && draft
+        && (draft.title.trim() !== proposal.title || draft.summary.trim() !== proposal.summary || (draft.reason?.trim() || undefined) !== proposal.reason)) {
+        await updateAiWorkspaceProposal(
+          workspace.path, workspace.projectId, selectedSession.id, proposal.id,
+          draft.title.trim(), draft.summary.trim(), draft.reason?.trim() || undefined,
+        );
+      }
       setDocument(await reviewAiWorkspaceProposal(workspace.path, workspace.projectId, selectedSession.id, proposal.id, status));
+    } catch (reason) { setError(safeError(reason)); }
+    finally { setBusyProposalId(null); }
+  }
+
+  async function saveProposalEdit(proposal: AiWorkspaceProposal, draft: ProposalDraft) {
+    if (!selectedSession) return;
+    setBusyProposalId(proposal.id);
+    setError(null);
+    try {
+      setDocument(await updateAiWorkspaceProposal(
+        workspace.path, workspace.projectId, selectedSession.id, proposal.id,
+        draft.title.trim(), draft.summary.trim(), draft.reason?.trim() || undefined,
+      ));
     } catch (reason) { setError(safeError(reason)); }
     finally { setBusyProposalId(null); }
   }
@@ -549,9 +632,9 @@ export function WritersRoomPage({
                 </button>
                 <div className="writers-room-session-actions">
                   {session.status === "ACTIVE"
-                    ? <button type="button" aria-label={`Archive ${session.title}`} onClick={() => void archiveSession(session)}>Archive</button>
-                    : <button type="button" aria-label={`Reopen ${session.title}`} onClick={() => void reopenSession(session)}>Reopen</button>}
-                  <button type="button" aria-label={`Delete ${session.title}`} onClick={() => { setDeleteError(null); setDeleteCandidate(session); }}>Delete</button>
+                    ? <button className="writers-room-session-action" type="button" aria-label={`Archive ${session.title}`} onClick={() => void archiveSession(session)}>Archive</button>
+                    : <button className="writers-room-session-action" type="button" aria-label={`Reopen ${session.title}`} onClick={() => void reopenSession(session)}>Reopen</button>}
+                  <button className="writers-room-session-action writers-room-session-action--danger" type="button" aria-label={`Delete ${session.title}`} onClick={() => { setDeleteError(null); setDeleteCandidate(session); }}>Delete</button>
                 </div>
               </article>
             );
@@ -611,7 +694,8 @@ export function WritersRoomPage({
                   <article className={`writers-room-message writers-room-message--${message.role.toLowerCase()}`} key={message.id}>
                     <header><strong>{message.role === "USER" ? "You" : activeProfile?.displayName ?? "Writers' Room"}</strong><time>{new Date(message.createdAt).toLocaleTimeString()}</time></header>
                     <p>{message.content}</p>
-                    {message.questions.length > 0 ? <section><strong>Focused questions</strong><ul>{message.questions.map((question) => <li key={question}>{question}</li>)}</ul></section> : null}
+                    <FocusedQuestions questions={message.questions} />
+                    {message.contextSummary ? <ContextSummary summary={message.contextSummary} /> : null}
                     <SourceCards sources={message.sourceTrace} onOpenSource={onOpenSource} />
                     {record ? <small className="writers-room-run-metadata">{providerLabel(record.provider)} · {record.modelId} · {record.latencyMs ?? "?"} ms · {record.inputTokens ?? "?"}/{record.outputTokens ?? "?"}/{record.totalTokens ?? "?"} tokens</small> : null}
                   </article>
@@ -625,9 +709,11 @@ export function WritersRoomPage({
                       key={proposal.id}
                       proposal={proposal}
                       busy={busyProposalId === proposal.id}
-                      onReview={() => void reviewProposal(proposal, "ACCEPTED")}
+                      onReview={(draft) => void reviewProposal(proposal, "ACCEPTED", draft)}
+                      onSaveEdit={(draft) => void saveProposalEdit(proposal, draft)}
                       onDiscard={() => void reviewProposal(proposal, "DISCARDED")}
                       onApply={() => void applyProposal(proposal)}
+                      onOpenSource={onOpenSource}
                     />
                   ))}
                 </section>

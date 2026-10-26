@@ -464,6 +464,7 @@ pub fn build_ai_request(request: &SpecialistAnalysisRequest) -> Result<PreparedS
             temperature: Some(0.2),
             max_tokens: Some(budget.effective_completion_budget),
             reasoning_effort: Some("minimal".to_owned()),
+            response_format: None,
         },
         profile_id: specialist.id,
         task_type: request.task_type,
@@ -835,7 +836,7 @@ mod tests {
             capabilities: ModelCapabilities {
                 max_completion_tokens,
                 supports_reasoning_effort: Some(true),
-                supports_structured_output: None,
+                structured_output: model_registry::StructuredOutputCapability::None,
             },
             enabled: true,
         }

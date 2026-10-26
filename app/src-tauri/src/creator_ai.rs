@@ -268,6 +268,7 @@ fn build_request(context: CreatorAiContext, model_id: &str, system_prompt: &str,
             temperature: Some(0.2),
             max_tokens: Some(completion_budget),
             reasoning_effort: Some("minimal".to_owned()),
+            response_format: None,
         },
         model,
     })

@@ -19,6 +19,15 @@ pub struct AIRequest {
     pub temperature: Option<f32>,
     pub max_tokens: Option<u32>,
     pub reasoning_effort: Option<String>,
+    #[serde(default, skip_deserializing, skip_serializing_if = "Option::is_none")]
+    pub response_format: Option<AIResponseFormat>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum AIResponseFormat {
+    JsonObject,
+    JsonSchema { json_schema: Value },
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -299,6 +308,8 @@ struct ProviderRequest<'a> {
     max_tokens: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     reasoning_effort: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    response_format: Option<&'a AIResponseFormat>,
 }
 
 impl<'a> From<&'a AIRequest> for ProviderRequest<'a> {
@@ -328,6 +339,7 @@ impl<'a> From<&'a AIRequest> for ProviderRequest<'a> {
             temperature: request.temperature,
             max_tokens: request.max_tokens,
             reasoning_effort: request.reasoning_effort.as_deref(),
+            response_format: request.response_format.as_ref(),
         }
     }
 }
@@ -600,6 +612,7 @@ mod tests {
             temperature: Some(0.2),
             max_tokens: Some(32),
             reasoning_effort: Some("minimal".to_owned()),
+            response_format: None,
         }
     }
 
@@ -622,6 +635,27 @@ mod tests {
         assert_eq!(payload["reasoning_effort"], "minimal");
         assert!(payload.get("max_tokens").is_none());
         assert!(payload.get("api_key").is_none());
+        assert!(payload.get("response_format").is_none());
+    }
+
+    #[test]
+    fn provider_request_serializes_supported_response_formats_only_when_requested() {
+        let mut input = request();
+        input.response_format = Some(AIResponseFormat::JsonObject);
+        let object_payload = serde_json::to_value(ProviderRequest::from(&input)).unwrap();
+        assert_eq!(object_payload["response_format"], serde_json::json!({ "type": "json_object" }));
+
+        input.response_format = Some(AIResponseFormat::JsonSchema {
+            json_schema: serde_json::json!({
+                "type": "object",
+                "properties": { "message": { "type": "string" } },
+                "required": ["message"],
+                "additionalProperties": false
+            }),
+        });
+        let schema_payload = serde_json::to_value(ProviderRequest::from(&input)).unwrap();
+        assert_eq!(schema_payload["response_format"]["type"], "json_schema");
+        assert_eq!(schema_payload["response_format"]["json_schema"]["required"], serde_json::json!(["message"]));
     }
 
     #[test]

@@ -18,6 +18,24 @@ import { inspectRepositoryReality } from "./platform/repositoryReality";
 import { loadAlignmentResults } from "./platform/alignment";
 import { loadFeatureContracts } from "./platform/featureContracts";
 import { loadRecentProjects, recordRecentProject } from "./platform/recentProjects";
+import type { AiWorkspaceSourceTrace } from "./platform/aiWorkspace";
+
+vi.mock("./WritersRoomPage", () => ({
+  WritersRoomPage: ({ onOpenSource }: { onOpenSource?: (source: AiWorkspaceSourceTrace) => void }) => (
+    <button
+      type="button"
+      onClick={() => onOpenSource?.({
+        sourceType: "COMPENDIUM",
+        sourceId: "knowledge-1",
+        label: "Perception model",
+        authority: "ESTABLISHED_KNOWLEDGE",
+        navigationTarget: "game_design",
+      })}
+    >
+      Open source: Perception model
+    </button>
+  ),
+}));
 
 vi.mock("./platform/workspaceDirectory", () => ({
   getDevelopmentWorkspacePath: vi.fn(),
@@ -732,6 +750,20 @@ describe("ForgeMind local workspace", () => {
     await user.click(screen.getByRole("option", { name: /Perception model/ }));
     await user.click(screen.getByRole("button", { name: "Open in Game Design" }));
     expect(await screen.findByRole("heading", { name: "Game Compendium" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Edit Knowledge" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Title")).toHaveValue("Perception model");
+  });
+
+  it("routes a Writers' Room Compendium source to its selected Game Design editor", async () => {
+    vi.mocked(loadCompendium).mockResolvedValue({
+      formatVersion: 1, projectId: workspace.projectId, updatedAt: "2026-09-20T10:00:00Z",
+      entries: [{ id: "knowledge-1", area: "systems", title: "Perception model", statement: "Enemies use perceived facts.", status: "DIRECTION", provenance: "MANUAL", source: "manual_entry", createdAt: "2026-09-20T10:00:00Z", updatedAt: "2026-09-20T10:00:00Z" }],
+    });
+    const user = userEvent.setup();
+    render(<WorkspaceShell workspace={workspace} onHome={() => undefined} onOpen={async () => undefined} />);
+    await user.click(screen.getByRole("button", { name: "Writers' Room" }));
+    await user.click(screen.getByRole("button", { name: "Open source: Perception model" }));
+    expect(await screen.findByRole("heading", { name: "Game Design", level: 1 })).toBeInTheDocument();
     expect(await screen.findByRole("heading", { name: "Edit Knowledge" })).toBeInTheDocument();
     expect(screen.getByLabelText("Title")).toHaveValue("Perception model");
   });

@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 
 export type AiWorkspaceSessionStatus = "ACTIVE" | "ARCHIVED";
 export type AiWorkspaceMessageRole = "USER" | "ASSISTANT";
+export type AiWorkspaceResponseMode = "EXPLORE" | "CLARIFY" | "CONSOLIDATE";
 export type AiWorkspaceSourceType =
   | "COMPENDIUM"
   | "DECISION"
@@ -44,10 +45,26 @@ export interface AiWorkspaceMessage {
   id: string;
   role: AiWorkspaceMessageRole;
   content: string;
-  questions: string[];
+  questions: AiWorkspaceFocusedQuestion[];
+  responseMode?: AiWorkspaceResponseMode;
+  contextSummary?: AiWorkspaceContextSummary;
   createdAt: string;
   sourceTrace: AiWorkspaceSourceTrace[];
   usageReference?: AiWorkspaceUsageReference;
+}
+
+export interface AiWorkspaceFocusedQuestion {
+  question: string;
+  whyItMatters?: string;
+  options: string[];
+}
+
+export interface AiWorkspaceContextSummary {
+  establishedKnowledge: number;
+  approvedDecisions: number;
+  openQuestions: number;
+  documentedSources: number;
+  recentMessages: number;
 }
 
 export interface AiWorkspaceProposedEdit {
@@ -65,6 +82,7 @@ export interface AiWorkspaceProposal {
   summary: string;
   reason?: string;
   status: AiWorkspaceProposalStatus;
+  editedByHuman?: boolean;
   createdAt: string;
   updatedAt: string;
   sourceTrace: AiWorkspaceSourceTrace[];
@@ -133,6 +151,7 @@ export interface AiWorkspaceRecovery {
 
 const SESSION_STATUSES = new Set<AiWorkspaceSessionStatus>(["ACTIVE", "ARCHIVED"]);
 const MESSAGE_ROLES = new Set<AiWorkspaceMessageRole>(["USER", "ASSISTANT"]);
+const RESPONSE_MODES = new Set<AiWorkspaceResponseMode>(["EXPLORE", "CLARIFY", "CONSOLIDATE"]);
 const SOURCE_TYPES = new Set<AiWorkspaceSourceType>([
   "COMPENDIUM", "DECISION", "OPEN_QUESTION", "DOCUMENT", "REALITY", "AI_WORKSPACE_MESSAGE",
 ]);
@@ -166,6 +185,32 @@ function strings(value: unknown, maximum = Number.POSITIVE_INFINITY): string[] {
   return Array.isArray(value)
     ? value.filter((item): item is string => typeof item === "string").slice(0, maximum)
     : [];
+}
+
+function normalizeQuestion(value: unknown): AiWorkspaceFocusedQuestion | null {
+  if (typeof value === "string") return { question: value, options: [] };
+  const question = record(value);
+  if (!question || typeof question.question !== "string") return null;
+  return {
+    question: question.question,
+    ...(typeof question.whyItMatters === "string" ? { whyItMatters: question.whyItMatters } : {}),
+    options: strings(question.options, 4),
+  };
+}
+
+function normalizeContextSummary(value: unknown): AiWorkspaceContextSummary | undefined {
+  const summary = record(value);
+  const fields = ["establishedKnowledge", "approvedDecisions", "openQuestions", "documentedSources", "recentMessages"] as const;
+  if (!summary || fields.some((field) => typeof summary[field] !== "number" || !Number.isInteger(summary[field]) || (summary[field] as number) < 0)) return undefined;
+  if ((summary.establishedKnowledge as number) + (summary.approvedDecisions as number) + (summary.openQuestions as number) + (summary.documentedSources as number) > MAX_CONTEXT_SOURCES
+    || (summary.recentMessages as number) > 12) return undefined;
+  return {
+    establishedKnowledge: summary.establishedKnowledge as number,
+    approvedDecisions: summary.approvedDecisions as number,
+    openQuestions: summary.openQuestions as number,
+    documentedSources: summary.documentedSources as number,
+    recentMessages: summary.recentMessages as number,
+  };
 }
 
 function validTimestamp(value: unknown): value is string {
@@ -211,11 +256,17 @@ function normalizeMessage(value: unknown): AiWorkspaceMessage | null {
     || typeof message.content !== "string"
     || !validTimestamp(message.createdAt)) return null;
   const usageReference = normalizeUsageReference(message.usageReference);
+  const contextSummary = normalizeContextSummary(message.contextSummary);
+  const responseMode = typeof message.responseMode === "string" && RESPONSE_MODES.has(message.responseMode as AiWorkspaceResponseMode)
+    ? message.responseMode as AiWorkspaceResponseMode
+    : undefined;
   return {
     id: message.id,
     role: message.role as AiWorkspaceMessageRole,
     content: message.content,
-    questions: strings(message.questions, MAX_QUESTIONS),
+    questions: Array.isArray(message.questions) ? message.questions.slice(0, MAX_QUESTIONS).map(normalizeQuestion).filter((question): question is AiWorkspaceFocusedQuestion => question !== null) : [],
+    ...(responseMode ? { responseMode } : {}),
+    ...(contextSummary ? { contextSummary } : {}),
     createdAt: message.createdAt,
     sourceTrace: Array.isArray(message.sourceTrace) ? message.sourceTrace.slice(0, MAX_CONTEXT_SOURCES).map(normalizeSource).filter((source): source is AiWorkspaceSourceTrace => source !== null) : [],
     ...(usageReference ? { usageReference } : {}),
@@ -257,6 +308,7 @@ function normalizeProposal(value: unknown): AiWorkspaceProposal | null {
     summary: proposal.summary,
     ...(typeof proposal.reason === "string" ? { reason: proposal.reason } : {}),
     status: proposal.status as AiWorkspaceProposalStatus,
+    editedByHuman: proposal.editedByHuman === true,
     createdAt: proposal.createdAt,
     updatedAt: proposal.updatedAt,
     sourceTrace: Array.isArray(proposal.sourceTrace) ? proposal.sourceTrace.slice(0, MAX_CONTEXT_SOURCES).map(normalizeSource).filter((source): source is AiWorkspaceSourceTrace => source !== null) : [],
@@ -428,6 +480,20 @@ export function reviewAiWorkspaceProposal(
 ): Promise<AiWorkspaceDocument> {
   return invokeDocument("review_ai_workspace_proposal", {
     request: { rootPath, projectId, sessionId, proposalId, status },
+  });
+}
+
+export function updateAiWorkspaceProposal(
+  rootPath: string,
+  projectId: string,
+  sessionId: string,
+  proposalId: string,
+  title: string,
+  summary: string,
+  reason?: string,
+): Promise<AiWorkspaceDocument> {
+  return invokeDocument("update_ai_workspace_proposal", {
+    request: { rootPath, projectId, sessionId, proposalId, title, summary, reason },
   });
 }
 
