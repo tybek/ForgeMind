@@ -9,14 +9,16 @@ export type AiWorkspaceSourceType =
   | "OPEN_QUESTION"
   | "DOCUMENT"
   | "REALITY"
-  | "AI_WORKSPACE_MESSAGE";
+  | "AI_WORKSPACE_MESSAGE"
+  | "EXTERNAL_RESEARCH";
 export type AiWorkspaceAuthority =
   | "AUTHORITATIVE_INTENT"
   | "ESTABLISHED_KNOWLEDGE"
   | "UNRESOLVED_KNOWLEDGE"
   | "DOCUMENTED"
   | "REALITY_EVIDENCE"
-  | "AI_GENERATED";
+  | "AI_GENERATED"
+  | "EXTERNAL_RESEARCH";
 export type AiWorkspaceSelectionPriority = "EXPLICIT" | "SUPPORTING";
 export type AiWorkspaceProposalType =
   | "SAVE_KNOWLEDGE"
@@ -64,7 +66,32 @@ export interface AiWorkspaceContextSummary {
   approvedDecisions: number;
   openQuestions: number;
   documentedSources: number;
+  externalResearch: number;
   recentMessages: number;
+}
+
+export interface ExternalResearchSource {
+  id: string;
+  query: string;
+  title: string;
+  url: string;
+  domain: string;
+  snippet: string;
+  retrievedAt: string;
+  provider: "TAVILY";
+  authority: "EXTERNAL_RESEARCH";
+  selected: boolean;
+}
+
+export interface ExternalResearchRun {
+  provider: "TAVILY";
+  operation: "SEARCH";
+  timestamp: string;
+  queryLength: number;
+  resultCount: number;
+  latencyMs: number;
+  status: "SUCCESS" | "FAILURE";
+  errorCategory?: string;
 }
 
 export interface AiWorkspaceProposedEdit {
@@ -101,6 +128,8 @@ export interface AiWorkspaceSession {
   status: AiWorkspaceSessionStatus;
   messages: AiWorkspaceMessage[];
   selectedMarkdownPaths: string[];
+  externalResearchSources: ExternalResearchSource[];
+  externalResearchRuns: ExternalResearchRun[];
   sourceTrace: AiWorkspaceSourceTrace[];
   proposals: AiWorkspaceProposal[];
 }
@@ -153,10 +182,10 @@ const SESSION_STATUSES = new Set<AiWorkspaceSessionStatus>(["ACTIVE", "ARCHIVED"
 const MESSAGE_ROLES = new Set<AiWorkspaceMessageRole>(["USER", "ASSISTANT"]);
 const RESPONSE_MODES = new Set<AiWorkspaceResponseMode>(["EXPLORE", "CLARIFY", "CONSOLIDATE"]);
 const SOURCE_TYPES = new Set<AiWorkspaceSourceType>([
-  "COMPENDIUM", "DECISION", "OPEN_QUESTION", "DOCUMENT", "REALITY", "AI_WORKSPACE_MESSAGE",
+  "COMPENDIUM", "DECISION", "OPEN_QUESTION", "DOCUMENT", "REALITY", "AI_WORKSPACE_MESSAGE", "EXTERNAL_RESEARCH",
 ]);
 const AUTHORITIES = new Set<AiWorkspaceAuthority>([
-  "AUTHORITATIVE_INTENT", "ESTABLISHED_KNOWLEDGE", "UNRESOLVED_KNOWLEDGE", "DOCUMENTED", "REALITY_EVIDENCE", "AI_GENERATED",
+  "AUTHORITATIVE_INTENT", "ESTABLISHED_KNOWLEDGE", "UNRESOLVED_KNOWLEDGE", "DOCUMENTED", "REALITY_EVIDENCE", "AI_GENERATED", "EXTERNAL_RESEARCH",
 ]);
 const PROPOSAL_TYPES = new Set<AiWorkspaceProposalType>([
   "SAVE_KNOWLEDGE", "CREATE_DECISION", "CREATE_OPEN_QUESTION", "UPDATE_KNOWLEDGE", "NAVIGATE_TO_SOURCE", "CONTINUE_EXPLORING",
@@ -175,6 +204,7 @@ const SOURCE_AUTHORITIES: Record<AiWorkspaceSourceType, AiWorkspaceAuthority> = 
   DOCUMENT: "DOCUMENTED",
   REALITY: "REALITY_EVIDENCE",
   AI_WORKSPACE_MESSAGE: "AI_GENERATED",
+  EXTERNAL_RESEARCH: "EXTERNAL_RESEARCH",
 };
 
 function record(value: unknown): Record<string, unknown> | null {
@@ -202,15 +232,48 @@ function normalizeContextSummary(value: unknown): AiWorkspaceContextSummary | un
   const summary = record(value);
   const fields = ["establishedKnowledge", "approvedDecisions", "openQuestions", "documentedSources", "recentMessages"] as const;
   if (!summary || fields.some((field) => typeof summary[field] !== "number" || !Number.isInteger(summary[field]) || (summary[field] as number) < 0)) return undefined;
-  if ((summary.establishedKnowledge as number) + (summary.approvedDecisions as number) + (summary.openQuestions as number) + (summary.documentedSources as number) > MAX_CONTEXT_SOURCES
+  const externalResearch = typeof summary.externalResearch === "number" && Number.isInteger(summary.externalResearch) && summary.externalResearch >= 0
+    ? summary.externalResearch : 0;
+  if ((summary.establishedKnowledge as number) + (summary.approvedDecisions as number) + (summary.openQuestions as number) + (summary.documentedSources as number) + externalResearch > MAX_CONTEXT_SOURCES
     || (summary.recentMessages as number) > 12) return undefined;
   return {
     establishedKnowledge: summary.establishedKnowledge as number,
     approvedDecisions: summary.approvedDecisions as number,
     openQuestions: summary.openQuestions as number,
     documentedSources: summary.documentedSources as number,
+    externalResearch,
     recentMessages: summary.recentMessages as number,
   };
+}
+
+function normalizeExternalResearchSource(value: unknown): ExternalResearchSource | null {
+  const source = record(value);
+  if (!source
+    || typeof source.id !== "string"
+    || typeof source.query !== "string"
+    || typeof source.title !== "string"
+    || typeof source.url !== "string" || !/^https?:\/\//i.test(source.url)
+    || typeof source.domain !== "string"
+    || typeof source.snippet !== "string"
+    || !validTimestamp(source.retrievedAt)
+    || source.provider !== "TAVILY"
+    || source.authority !== "EXTERNAL_RESEARCH"
+    || typeof source.selected !== "boolean") return null;
+  return source as unknown as ExternalResearchSource;
+}
+
+function normalizeExternalResearchRun(value: unknown): ExternalResearchRun | null {
+  const run = record(value);
+  if (!run
+    || run.provider !== "TAVILY"
+    || run.operation !== "SEARCH"
+    || !validTimestamp(run.timestamp)
+    || typeof run.queryLength !== "number" || !Number.isInteger(run.queryLength) || run.queryLength < 1 || run.queryLength > 1000
+    || typeof run.resultCount !== "number" || !Number.isInteger(run.resultCount) || run.resultCount < 0 || run.resultCount > 5
+    || typeof run.latencyMs !== "number" || !Number.isFinite(run.latencyMs) || run.latencyMs < 0
+    || (run.status !== "SUCCESS" && run.status !== "FAILURE")
+    || (run.errorCategory !== undefined && typeof run.errorCategory !== "string")) return null;
+  return run as unknown as ExternalResearchRun;
 }
 
 function validTimestamp(value: unknown): value is string {
@@ -340,6 +403,12 @@ function normalizeSession(value: unknown, expectedProjectId: string): AiWorkspac
     status: session.status as AiWorkspaceSessionStatus,
     messages: Array.isArray(session.messages) ? session.messages.slice(0, MAX_MESSAGES).map(normalizeMessage).filter((message): message is AiWorkspaceMessage => message !== null) : [],
     selectedMarkdownPaths: strings(session.selectedMarkdownPaths, MAX_MARKDOWN_DOCUMENTS),
+    externalResearchSources: Array.isArray(session.externalResearchSources)
+      ? session.externalResearchSources.slice(0, 5).map(normalizeExternalResearchSource).filter((source): source is ExternalResearchSource => source !== null)
+      : [],
+    externalResearchRuns: Array.isArray(session.externalResearchRuns)
+      ? session.externalResearchRuns.slice(-20).map(normalizeExternalResearchRun).filter((run): run is ExternalResearchRun => run !== null)
+      : [],
     sourceTrace: Array.isArray(session.sourceTrace) ? session.sourceTrace.slice(0, MAX_CONTEXT_SOURCES).map(normalizeSource).filter((source): source is AiWorkspaceSourceTrace => source !== null) : [],
     proposals: Array.isArray(session.proposals) ? session.proposals.slice(0, MAX_PROPOSALS).map(normalizeProposal).filter((proposal): proposal is AiWorkspaceProposal => proposal !== null) : [],
   };

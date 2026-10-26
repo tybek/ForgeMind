@@ -96,7 +96,7 @@ describe("AI Workspace platform boundary", () => {
       }],
     });
 
-    expect(normalized.sessions[0]).toMatchObject({ messages: [], proposals: [], sourceTrace: [], selectedMarkdownPaths: [] });
+    expect(normalized.sessions[0]).toMatchObject({ messages: [], proposals: [], sourceTrace: [], selectedMarkdownPaths: [], externalResearchSources: [], externalResearchRuns: [] });
     expect(normalized.recoveryWarnings).toBeUndefined();
   });
 
@@ -178,6 +178,25 @@ describe("AI Workspace platform boundary", () => {
       "2 malformed sessions were skipped.",
       "Session history exceeded the display bound; excess sessions were skipped.",
       "Malformed session content was skipped.",
+    ]);
+  });
+
+  it("normalizes only bounded Tavily external research with external authority", () => {
+    const normalized = normalizeAiWorkspaceDocument({
+      formatVersion: 1,
+      projectId: "project-1",
+      updatedAt: "2026-10-26T12:00:00.000Z",
+      sessions: [{
+        id: "session-1", projectId: "project-1", surface: "writers_room", purpose: "Research.", specialistProfileId: "lore_architect",
+        title: "Research", createdAt: "2026-10-26T12:00:00.000Z", updatedAt: "2026-10-26T12:00:00.000Z", status: "ACTIVE", messages: [],
+        externalResearchSources: [
+          { id: "source-1", query: "factions", title: "Valid", url: "https://example.com", domain: "example.com", snippet: "Reference.", retrievedAt: "2026-10-26T12:00:00.000Z", provider: "TAVILY", authority: "EXTERNAL_RESEARCH", selected: true },
+          { id: "source-2", query: "factions", title: "Invalid authority", url: "https://example.com", domain: "example.com", snippet: "Reference.", retrievedAt: "2026-10-26T12:00:00.000Z", provider: "TAVILY", authority: "ESTABLISHED_KNOWLEDGE", selected: true },
+        ],
+      }],
+    });
+    expect(normalized.sessions[0].externalResearchSources).toEqual([
+      expect.objectContaining({ id: "source-1", provider: "TAVILY", authority: "EXTERNAL_RESEARCH" }),
     ]);
   });
 });

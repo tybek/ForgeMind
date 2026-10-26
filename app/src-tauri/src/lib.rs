@@ -11,6 +11,7 @@ pub mod model_registry;
 pub mod reality_connections;
 pub mod specialist_history;
 pub mod specialists;
+pub mod tavily;
 mod structured_output;
 pub mod usage;
 pub mod unity_groundtruth;
@@ -30,6 +31,7 @@ use ai_workspace::{
     ReviewAiWorkspaceProposalRequest, AiWorkspaceSessionActionRequest,
     SetAiWorkspaceMarkdownContextRequest, ApplyAiWorkspaceProposalRequest,
     AiWorkspaceApplyResult, UpdateAiWorkspaceProposalRequest,
+    SetExternalResearchSelectionRequest,
 };
 use alignment::{
     AlignmentCheck, AlignmentDocument, AlignmentError, AlignmentSourceCatalog,
@@ -74,6 +76,7 @@ use writers_room::{
     WritersRoomPreflight, WritersRoomPreflightRequest, WritersRoomRunRequest,
     WritersRoomRunResult,
 };
+use tavily::{TavilyConfiguration, TavilySearchCommandRequest, TavilySearchCommandResult};
 
 static SESSION_ID: OnceLock<String> = OnceLock::new();
 
@@ -244,6 +247,37 @@ fn set_ai_workspace_markdown_context(
     request: SetAiWorkspaceMarkdownContextRequest,
 ) -> Result<AiWorkspaceDocument, AiWorkspaceError> {
     ai_workspace::set_markdown_context(request)
+}
+
+#[tauri::command]
+fn get_tavily_configuration() -> TavilyConfiguration {
+    tavily::configuration()
+}
+
+#[tauri::command]
+async fn search_with_tavily(
+    request: TavilySearchCommandRequest,
+) -> Result<TavilySearchCommandResult, AiWorkspaceError> {
+    tavily::search(request).await
+}
+
+#[tauri::command]
+fn set_external_research_selection(
+    request: SetExternalResearchSelectionRequest,
+) -> Result<AiWorkspaceDocument, AiWorkspaceError> {
+    ai_workspace::set_external_research_selection(request)
+}
+
+#[tauri::command]
+fn clear_external_research(
+    request: AiWorkspaceSessionActionRequest,
+) -> Result<AiWorkspaceDocument, AiWorkspaceError> {
+    ai_workspace::clear_external_research(request)
+}
+
+#[tauri::command]
+fn open_external_research_source(url: String) -> Result<(), AiWorkspaceError> {
+    tavily::open_source(url)
 }
 
 #[tauri::command]
@@ -730,6 +764,11 @@ pub fn run() {
             build_ai_workspace_context,
             archive_and_reset_ai_workspace_history,
             set_ai_workspace_markdown_context,
+            get_tavily_configuration,
+            search_with_tavily,
+            set_external_research_selection,
+            clear_external_research,
+            open_external_research_source,
             apply_ai_workspace_proposal,
             get_writers_room_preflight,
             run_writers_room,

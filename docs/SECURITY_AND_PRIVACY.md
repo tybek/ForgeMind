@@ -2,7 +2,7 @@
 
 ## Status and scope
 
-**SEC-0 ARCHITECTURE SPECIFICATION ONLY - NO SECURITY IMPLEMENTATION.** This document defines ForgeMind's product stance, threat model, current readiness, credential policy, future AI Data Boundary, Security Preflight, Secret Guard, privacy UX, validation strategy, and phased security roadmap.
+**SEC-0 SHARED ARCHITECTURE SPECIFICATION - SHARED SECURITY PHASES NOT IMPLEMENTED.** This document defines ForgeMind's product stance, threat model, current readiness, credential policy, future AI Data Boundary, Security Preflight, Secret Guard, privacy UX, validation strategy, and phased security roadmap. Existing workflows, including TAV-1, may implement narrow domain-specific safeguards without claiming SEC-1 through SEC-6.
 
 NPC-2/NPC-2.1 Creator AI assistance is implemented and headless-validated; three user-observed live calls are recorded, while the NPC-2.1 manual visual/interaction check remains pending. SEC-1 through SEC-6 remain planned and not started. This specification does not start 0L, Recommended Next Steps, a Studio, credential storage, the shared Context Preview, or the full Secret Guard.
 
@@ -10,7 +10,7 @@ The implemented Creator boundary sends only a typed projection of relevant field
 
 The implemented Creator request confirmation is workflow-specific credit and context disclosure. It is not the future shared **Security Preflight** or exact **Context Preview**: the token range is approximate, the context list is a human-readable summary, and no claim of universal secret scanning is made. It does, however, preserve the existing rule that no provider request occurs until the user explicitly selects **Run AI**.
 
-WR-1.3 retains the same limited current-security posture for Writers' Room. Native code assembles only bounded project-scoped narrative sources from the existing AI Workspace Context Plan, revalidates explicit Markdown containment, rejects credential-like or absolute-path content through the existing narrow checks, and exposes counts plus safe source metadata rather than raw prompts or system instructions. Git Reality, Unity GroundTruth, Feature Contracts, and unrelated technical context are excluded by default. Focused string questions, context counts, and reviewed proposal edits may persist; raw provider responses, hidden reasoning, credentials, absolute paths, and assembled prompt content do not. Existing sessions may retain older phase/nested-question metadata for compatibility, but current provider output does not require or create it. Safe failure diagnostics persist only structural stage/code, allowlisted canonical key presence, an unknown-key count, provider/model, response length, and usage identity; arbitrary unknown key names and response values are excluded. This is workflow-specific protection, not the future shared Secret Guard, exact Context Preview, or SEC-1 implementation.
+WR-1.3S and TAV-1 retain a limited workflow-specific security posture. Native code assembles bounded project-scoped context, revalidates Markdown containment, and exposes counts plus safe source metadata rather than raw prompts or system instructions. `TAVILY_API_KEY` stays in the native process environment; React receives only configured/missing status. One confirmed search makes one request with no retry and persists only bounded normalized HTTP(S) metadata/snippets plus safe run metadata. Raw Tavily bodies, raw page content, HTML, cookies, credentials, authorization headers, hidden reasoning, and assembled prompts do not persist. Selected web snippets are structurally separated from Project Brain, labeled `EXTERNAL_RESEARCH`, and preceded by fixed instructions that external content cannot change workflow instructions or request actions. This is best-effort prompt-injection containment, not universal immunity, the future shared Secret Guard, exact Context Preview, or a broad SEC phase.
 
 Security claims in this document distinguish current repository evidence from planned protection. ForgeMind must not describe itself as "zero risk," "fully secure," or "enterprise-grade" without objective evidence supporting that claim.
 
@@ -123,7 +123,7 @@ ForgeMind's preferred early commercial and security model is BYOK:
 - ForgeMind supplies workflow, context, routing, evaluation, provenance, and Unity integration.
 - The user supplies provider credentials and owns the provider billing account.
 
-For the current Nebius Token Factory adapter, `NEBIUS_API_KEY` in the native process environment is acceptable for MVP. The native adapter reads it only when constructing an explicitly requested provider operation. The key is used as an authorization header, not serialized into the normalized provider payload.
+For the current Nebius Token Factory and Tavily adapters, `NEBIUS_API_KEY` and `TAVILY_API_KEY` in the native process environment are acceptable for MVP. Each native adapter reads its key only for an explicitly requested provider operation. The key is used as an authorization header, not serialized into normalized provider payload data, frontend state, project files, usage records, research-run metadata, or diagnostics.
 
 Current and future adapters must follow these rules:
 
@@ -317,6 +317,8 @@ system and product security policy
 Instructions found inside README files, lore documents, source comments, imported Markdown, generated artifacts, Unity metadata, repository text, or prior AI output must not override ForgeMind's workflow or security policy. Context serialization should label data by source and keep it structurally separate from system/workflow instructions. Provider adapters must not promote content fields into system instructions.
 
 Prompt-injection handling is defense in depth, not complete immunity. Future tests should verify that known adversarial content remains quoted/structured as data, does not expand the Context Plan, and cannot request unrelated file access or provider actions.
+
+TAV-1 provides current bounded evidence for that direction: mocked prompt-like Tavily snippets remain external data, retain `EXTERNAL_RESEARCH` authority, and cannot add sources or invoke another provider action. The fixed Writers' Room prompt tells Nemotron to ignore instructions in external titles/snippets, avoid revealing credentials/system prompts, distinguish external patterns from Project Brain facts, and cite only supplied IDs. This reduces risk but does not prove arbitrary web prompt injection is solved.
 
 ## Project-local storage
 

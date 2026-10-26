@@ -21,7 +21,16 @@ import {
   type AiWorkspaceUsageReference,
   type AiWorkspaceFocusedQuestion,
   type AiWorkspaceContextSummary,
+  type ExternalResearchSource,
 } from "./platform/aiWorkspace";
+import {
+  clearExternalResearch,
+  loadTavilyConfiguration,
+  openExternalResearchSource,
+  searchWithTavily,
+  setExternalResearchSelection,
+  type TavilyConfiguration,
+} from "./platform/externalResearch";
 import {
   loadWritersRoomPreflight,
   loadWritersRoomUsage,
@@ -108,14 +117,40 @@ function formatLatency(preflight: WritersRoomPreflight): string {
   return `Recent: ~${(history.minimumMs / 1000).toFixed(1)}–${(history.maximumMs / 1000).toFixed(1)} s`;
 }
 
-function SourceCards({ sources, onOpenSource }: { sources: AiWorkspaceSourceTrace[]; onOpenSource?: (source: AiWorkspaceSourceTrace) => void }) {
+function safeDomain(value: string): string {
+  try { return new URL(value).hostname; } catch { return "External source"; }
+}
+
+function SourceCards({
+  sources,
+  onOpenSource,
+  onOpenExternalSource,
+}: {
+  sources: AiWorkspaceSourceTrace[];
+  onOpenSource?: (source: AiWorkspaceSourceTrace) => void;
+  onOpenExternalSource?: (url: string) => void;
+}) {
   const safeSources = Array.isArray(sources) ? sources : [];
   if (safeSources.length === 0) return null;
   return (
     <section className="writers-room-sources" aria-label="Sources used">
       <strong>Sources used</strong>
       <div>
-        {safeSources.map((source) => (
+        {safeSources.map((source) => source.sourceType === "EXTERNAL_RESEARCH" && source.navigationTarget ? (
+          <button
+            type="button"
+            key={`${source.sourceType}:${source.sourceId}`}
+            className="writers-room-source-card writers-room-source-card--external"
+            aria-label={`Open source: ${source.label}`}
+            disabled={!onOpenExternalSource}
+            onClick={() => onOpenExternalSource?.(source.navigationTarget!)}
+          >
+            <span>{source.label}</span>
+            <small>EXTERNAL RESEARCH · TAVILY</small>
+            <span className="writers-room-source-domain">{safeDomain(source.navigationTarget)}</span>
+            <span className="writers-room-source-action" aria-hidden="true">Open source <span>→</span></span>
+          </button>
+        ) : (
           <button
             type="button"
             key={`${source.sourceType}:${source.sourceId}`}
@@ -142,8 +177,92 @@ function ContextSummary({ summary }: { summary: AiWorkspaceContextSummary }) {
       <span>{summary.approvedDecisions} approved decisions</span>
       <span>{summary.openQuestions} open questions</span>
       <span>{summary.documentedSources} documented sources</span>
+      <span>{summary.externalResearch} external research</span>
       <span>{summary.recentMessages} recent messages</span>
     </section>
+  );
+}
+
+function ExternalResearchDrawer({
+  sources,
+  busy,
+  onToggle,
+  onClear,
+  onClose,
+  onOpenSource,
+  error,
+}: {
+  sources: ExternalResearchSource[];
+  busy: boolean;
+  onToggle: (sourceId: string, selected: boolean) => void;
+  onClear: () => void;
+  onClose: () => void;
+  onOpenSource: (url: string) => void;
+  error: WritersRoomError | null;
+}) {
+  if (sources.length === 0) return null;
+  const selectedCount = sources.filter((source) => source.selected).length;
+  const query = sources[0]?.query ?? "";
+  return (
+    <aside className="writers-room-context-drawer writers-room-research-drawer" aria-label="External Research">
+      <header>
+        <div><span className="section-label">External Research · Tavily</span><h3>Research sources</h3></div>
+        <button type="button" onClick={onClose}>Close</button>
+      </header>
+      <section className="writers-room-research-query">
+        <strong>Query</strong>
+        <p>{query}</p>
+      </section>
+      <p><strong>{sources.length} results · {selectedCount} selected</strong></p>
+      <p>Selected sources will be supplied to the next AI request as external research. They are not Project Brain knowledge.</p>
+      {error ? <p role="alert" className="writers-room-error"><strong>{error.code ?? "EXTERNAL_SOURCE_OPEN_FAILED"}</strong> {error.message}</p> : null}
+      <div className="writers-room-research-results">
+        {sources.map((source) => (
+          <article key={source.id} className="writers-room-research-source">
+            <label>
+              <input type="checkbox" checked={source.selected} disabled={busy} onChange={(event) => onToggle(source.id, event.target.checked)} />
+              <span><strong>{source.title}</strong><small>{source.domain}</small></span>
+            </label>
+            <p>{source.snippet}</p>
+            <footer><span>EXTERNAL RESEARCH</span><button type="button" onClick={() => onOpenSource(source.url)}>Open source ↗</button></footer>
+          </article>
+        ))}
+      </div>
+      <button type="button" disabled={busy} onClick={onClear}>Clear research</button>
+    </aside>
+  );
+}
+
+function ResearchDialog({
+  configuration,
+  query,
+  searching,
+  error,
+  onQueryChange,
+  onCancel,
+  onSearch,
+}: {
+  configuration: TavilyConfiguration | null;
+  query: string;
+  searching: boolean;
+  error: WritersRoomError | null;
+  onQueryChange: (query: string) => void;
+  onCancel: () => void;
+  onSearch: () => void;
+}) {
+  const configured = configuration?.configured === true;
+  return (
+    <div className="writers-room-dialog-backdrop">
+      <section className="writers-room-research-dialog" role="dialog" aria-modal="true" aria-labelledby="writers-room-research-title">
+        <header><div><span className="section-label">External Research · Tavily</span><h2 id="writers-room-research-title">Research web</h2></div><button type="button" disabled={searching} onClick={onCancel}>Cancel</button></header>
+        <p>Tavily will search the live web. Results remain external research and do not become Project Brain knowledge unless later reviewed through ForgeMind's normal Apply flow.</p>
+        <label>Research query<textarea autoFocus value={query} maxLength={1000} disabled={searching || !configured} onChange={(event) => onQueryChange(event.target.value)} /></label>
+        <dl className="writers-room-research-settings"><div><dt>Search depth</dt><dd>Basic</dd></div><div><dt>Maximum sources</dt><dd>5</dd></div></dl>
+        {configuration && !configured ? <p className="writers-room-warning" role="status"><strong>Tavily is not configured.</strong> {configuration.setupGuidance}</p> : null}
+        {error ? <p role="alert" className="writers-room-error"><strong>{error.code ?? "TAVILY_SEARCH_FAILED"}</strong> {error.message}</p> : null}
+        <footer><span>One confirmation sends exactly one Tavily request. No automatic retry.</span><button className="primary-button" type="button" disabled={!configured || !query.trim() || searching} onClick={onSearch}>{searching ? "Searching…" : "Search with Tavily"}</button></footer>
+      </section>
+    </div>
   );
 }
 
@@ -171,6 +290,7 @@ function ProposalCard({
   onDiscard,
   onApply,
   onOpenSource,
+  onOpenExternalSource,
 }: {
   proposal: AiWorkspaceProposal;
   busy: boolean;
@@ -179,6 +299,7 @@ function ProposalCard({
   onDiscard: () => void;
   onApply: () => void;
   onOpenSource?: (source: AiWorkspaceSourceTrace) => void;
+  onOpenExternalSource: (url: string) => void;
 }) {
   const [reviewing, setReviewing] = useState(false);
   const [draft, setDraft] = useState<ProposalDraft>({ title: proposal.title, summary: proposal.summary, reason: proposal.reason });
@@ -213,7 +334,7 @@ function ProposalCard({
           {proposal.editedByHuman ? <small className="writers-room-reviewed-note">AI-assisted · human edited</small> : null}
         </>
       )}
-      <SourceCards sources={proposal.sourceTrace} onOpenSource={onOpenSource} />
+      <SourceCards sources={proposal.sourceTrace} onOpenSource={onOpenSource} onOpenExternalSource={onOpenExternalSource} />
       {proposal.status === "PENDING" && !reviewing ? (
         <div className="writers-room-proposal-actions">
           <button type="button" disabled={busy} onClick={() => setReviewing(true)}>Review &amp; edit</button>
@@ -263,7 +384,8 @@ function PreflightDialog({
           <>
             <dl className="writers-room-preflight-grid">
               <div><dt>Task / profile</dt><dd>{preflight.profileName}</dd></div>
-              <div><dt>Provider</dt><dd>{providerLabel(preflight.provider)}</dd></div>
+              {preflight.externalResearchProvider ? <div><dt>External research provider</dt><dd>{preflight.externalResearchProvider}</dd></div> : null}
+              <div><dt>Nemotron provider</dt><dd>{providerLabel(preflight.nemotronProvider ?? preflight.provider)}</dd></div>
               <div><dt>Estimated input</dt><dd>~{preflight.estimatedInputTokens.minimum}–{preflight.estimatedInputTokens.maximum} tokens</dd></div>
               <div><dt>Usage band</dt><dd><span className={`creator-usage-band creator-usage-band--${preflight.usageBand}`}>{preflight.usageBand.toUpperCase()}</span></dd></div>
               <div><dt>Local latency</dt><dd>{formatLatency(preflight)}</dd></div>
@@ -306,6 +428,7 @@ export function WritersRoomPage({
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [composer, setComposer] = useState("");
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [researchDrawerOpen, setResearchDrawerOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<WritersRoomError | null>(null);
@@ -324,7 +447,14 @@ export function WritersRoomPage({
   const [error, setError] = useState<WritersRoomError | null>(null);
   const [persistenceError, setPersistenceError] = useState<WritersRoomError | null>(null);
   const [runRecoveryAvailable, setRunRecoveryAvailable] = useState(false);
+  const [tavilyConfiguration, setTavilyConfiguration] = useState<TavilyConfiguration | null>(null);
+  const [researchOpen, setResearchOpen] = useState(false);
+  const [researchQuery, setResearchQuery] = useState("");
+  const [researching, setResearching] = useState(false);
+  const [researchBusy, setResearchBusy] = useState(false);
+  const [researchError, setResearchError] = useState<WritersRoomError | null>(null);
   const requestLock = useRef(false);
+  const researchLock = useRef(false);
   const conversationRef = useRef<HTMLDivElement>(null);
   const followNewestMessage = useRef(true);
 
@@ -361,6 +491,7 @@ export function WritersRoomPage({
     setSelectedSessionId(null);
     void listAiWorkspaceProfiles().then(setProfiles).catch((reason) => setError(safeError(reason)));
     void loadWritersRoomUsage(workspace.projectId).then(setUsage).catch(() => setUsage([]));
+    void loadTavilyConfiguration().then(setTavilyConfiguration).catch(() => setTavilyConfiguration({ configured: false, provider: "Tavily", setupGuidance: "Set TAVILY_API_KEY in the environment before launching ForgeMind." }));
     void loadSessions();
   }, [loadSessions, workspace.path, workspace.projectId]);
 
@@ -371,6 +502,11 @@ export function WritersRoomPage({
       return newestActiveSessionId(document);
     });
   }, [document]);
+
+  useEffect(() => {
+    setDrawerOpen(false);
+    setResearchDrawerOpen(false);
+  }, [selectedSessionId]);
 
   useEffect(() => {
     if (!createOpen) return;
@@ -395,6 +531,18 @@ export function WritersRoomPage({
     window.addEventListener("keydown", closeOnEscape);
     return () => window.removeEventListener("keydown", closeOnEscape);
   }, [deleteCandidate, deleting]);
+
+  useEffect(() => {
+    if (!researchOpen) return;
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape" && !researching) {
+        setResearchOpen(false);
+        setResearchError(null);
+      }
+    }
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [researchOpen, researching]);
 
   useEffect(() => {
     const conversation = conversationRef.current;
@@ -469,6 +617,7 @@ export function WritersRoomPage({
       if (combined.length > 5) throw new Error("A Writers' Room session can include at most 5 Markdown documents.");
       setDocument(await setAiWorkspaceMarkdownContext(workspace.path, workspace.projectId, selectedSession.id, combined));
       setDrawerOpen(true);
+      setResearchDrawerOpen(false);
     } catch (reason) { setError(safeError(reason)); }
   }
 
@@ -483,6 +632,77 @@ export function WritersRoomPage({
         selectedSession.selectedMarkdownPaths.filter((path) => path !== relativePath),
       ));
     } catch (reason) { setError(safeError(reason)); }
+  }
+
+  function openResearch() {
+    if (!selectedSession || selectedSession.status !== "ACTIVE" || researching) return;
+    setResearchQuery(composer.trim());
+    setResearchError(null);
+    setDrawerOpen(false);
+    setResearchDrawerOpen(false);
+    setResearchOpen(true);
+  }
+
+  async function confirmResearch() {
+    if (!selectedSession || !researchQuery.trim() || researching || researchLock.current || !tavilyConfiguration?.configured) return;
+    researchLock.current = true;
+    setResearching(true);
+    setResearchError(null);
+    try {
+      const result = await searchWithTavily({
+        rootPath: workspace.path,
+        projectId: workspace.projectId,
+        sessionId: selectedSession.id,
+        query: researchQuery.trim(),
+      });
+      setDocument(result.document);
+      setResearchOpen(false);
+      setDrawerOpen(false);
+      setResearchDrawerOpen(true);
+    } catch (reason) {
+      setResearchError(safeError(reason));
+    } finally {
+      researchLock.current = false;
+      setResearching(false);
+    }
+  }
+
+  async function toggleResearchSource(sourceId: string, selected: boolean) {
+    if (!selectedSession || researchBusy) return;
+    setResearchBusy(true);
+    setError(null);
+    const selectedIds = selectedSession.externalResearchSources
+      .filter((source) => source.id === sourceId ? selected : source.selected)
+      .map((source) => source.id);
+    try {
+      setDocument(await setExternalResearchSelection(
+        workspace.path,
+        workspace.projectId,
+        selectedSession.id,
+        selectedIds,
+      ));
+    } catch (reason) { setError(safeError(reason)); }
+    finally { setResearchBusy(false); }
+  }
+
+  async function clearResearch() {
+    if (!selectedSession || researchBusy) return;
+    setResearchBusy(true);
+    setError(null);
+    try {
+      setDocument(await clearExternalResearch(workspace.path, workspace.projectId, selectedSession.id));
+      setResearchDrawerOpen(false);
+    } catch (reason) { setError(safeError(reason)); }
+    finally { setResearchBusy(false); }
+  }
+
+  async function openResearchSource(url: string) {
+    setError(null);
+    try {
+      await openExternalResearchSource(url);
+    } catch (reason) {
+      setError(safeError(reason));
+    }
   }
 
   async function openPreflight(mode: WritersRoomRunMode) {
@@ -612,6 +832,7 @@ export function WritersRoomPage({
   const profileStarters = activeProfile ? starters[activeProfile.id] ?? [] : [];
   const hasAssistant = selectedSession?.messages.some((message) => message.role === "ASSISTANT") ?? false;
   const profileAvailable = Boolean(activeProfile?.availableForRuns && WRITERS_ROOM_PROFILE_IDS.includes(activeProfile.id));
+  const selectedResearchCount = selectedSession?.externalResearchSources.filter((source) => source.selected).length ?? 0;
 
   return (
     <section className="writers-room" aria-label="Writers' Room workspace">
@@ -665,10 +886,21 @@ export function WritersRoomPage({
             <header className="writers-room-toolbar">
               <div><span className="section-label">{activeProfile?.displayName ?? "Profile unavailable"}</span><h3>{selectedSession.title}</h3></div>
               <div>
-                <button type="button" onClick={() => setDrawerOpen((open) => !open)} aria-expanded={drawerOpen}>Context / Sources</button>
+                <button type="button" onClick={() => { setResearchDrawerOpen(false); setDrawerOpen((open) => !open); }} aria-expanded={drawerOpen}>Context / Sources</button>
                 <button type="button" disabled={selectedSession.status !== "ACTIVE"} onClick={() => void chooseMarkdown()}>Add Markdown Context</button>
+                <button className="writers-room-research-action" type="button" disabled={selectedSession.status !== "ACTIVE" || running || !profileAvailable} onClick={openResearch}>Research web <span aria-hidden="true">↗</span></button>
               </div>
             </header>
+
+            {selectedSession.externalResearchSources.length > 0 && !researchDrawerOpen ? (
+              <button
+                className="writers-room-research-indicator"
+                type="button"
+                onClick={() => { setDrawerOpen(false); setResearchDrawerOpen(true); }}
+              >
+                External research · {selectedResearchCount} selected
+              </button>
+            ) : null}
 
             <div
               className="writers-room-conversation"
@@ -696,7 +928,7 @@ export function WritersRoomPage({
                     <p>{message.content}</p>
                     <FocusedQuestions questions={message.questions} />
                     {message.contextSummary ? <ContextSummary summary={message.contextSummary} /> : null}
-                    <SourceCards sources={message.sourceTrace} onOpenSource={onOpenSource} />
+                    <SourceCards sources={message.sourceTrace} onOpenSource={onOpenSource} onOpenExternalSource={(url) => void openResearchSource(url)} />
                     {record ? <small className="writers-room-run-metadata">{providerLabel(record.provider)} · {record.modelId} · {record.latencyMs ?? "?"} ms · {record.inputTokens ?? "?"}/{record.outputTokens ?? "?"}/{record.totalTokens ?? "?"} tokens</small> : null}
                   </article>
                 );
@@ -714,6 +946,7 @@ export function WritersRoomPage({
                       onDiscard={() => void reviewProposal(proposal, "DISCARDED")}
                       onApply={() => void applyProposal(proposal)}
                       onOpenSource={onOpenSource}
+                      onOpenExternalSource={(url) => void openResearchSource(url)}
                     />
                   ))}
                 </section>
@@ -760,9 +993,21 @@ export function WritersRoomPage({
             <strong>Selected Markdown</strong>
             {selectedSession.selectedMarkdownPaths.length ? <ul>{selectedSession.selectedMarkdownPaths.map((path) => <li key={path}><span>{path}</span><button type="button" disabled={selectedSession.status !== "ACTIVE"} onClick={() => void removeMarkdown(path)}>Remove</button></li>)}</ul> : <p>No Markdown selected. Files must stay inside this project and are DOCUMENTED context, not Canon.</p>}
           </section>
-          <SourceCards sources={selectedSession.sourceTrace} onOpenSource={onOpenSource} />
+          <SourceCards sources={selectedSession.sourceTrace} onOpenSource={onOpenSource} onOpenExternalSource={(url) => void openResearchSource(url)} />
           <p className="scope-note">Context plans are bounded and deterministic. Git Reality, Unity GroundTruth, and Feature Contracts are excluded by default.</p>
         </aside>
+      ) : null}
+
+      {researchDrawerOpen && selectedSession?.externalResearchSources.length ? (
+        <ExternalResearchDrawer
+          sources={selectedSession.externalResearchSources}
+          busy={researchBusy}
+          onToggle={(sourceId, selected) => void toggleResearchSource(sourceId, selected)}
+          onClear={() => void clearResearch()}
+          onClose={() => setResearchDrawerOpen(false)}
+          onOpenSource={(url) => void openResearchSource(url)}
+          error={error}
+        />
       ) : null}
 
       {createOpen ? (
@@ -804,6 +1049,18 @@ export function WritersRoomPage({
           onModelChange={(modelId) => void changeModel(modelId)}
           onCancel={() => { setPreflightMode(null); setPreflightMessage(undefined); setError(null); }}
           onRun={() => void confirmRun()}
+        />
+      ) : null}
+
+      {researchOpen ? (
+        <ResearchDialog
+          configuration={tavilyConfiguration}
+          query={researchQuery}
+          searching={researching}
+          error={researchError}
+          onQueryChange={setResearchQuery}
+          onCancel={() => { setResearchOpen(false); setResearchError(null); }}
+          onSearch={() => void confirmResearch()}
         />
       ) : null}
     </section>

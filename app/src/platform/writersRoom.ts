@@ -32,6 +32,8 @@ export interface WritersRoomPreflight {
   profileId: string;
   profileName: string;
   provider: string;
+  nemotronProvider: string;
+  externalResearchProvider?: "Tavily";
   modelId: string;
   defaultModelId: string;
   models: ModelEntry[];
