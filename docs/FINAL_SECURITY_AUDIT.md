@@ -1,28 +1,27 @@
 # Final Security, Secret, and Public Repository Audit
 
 **Audit date:** 2026-10-27  
-**Milestone:** SEC-1.1 local public-history remediation  
-**Release gate:** `PUBLIC_RELEASE_READY_LOCAL`
+**Milestone:** SEC-1.2 remote history replacement and final public-release audit
+**Release gate:** `PUBLIC_RELEASE_READY`
 
-This report covers the rewritten local ForgeMind repository and a fresh local clone made from it. It is a bounded audit, not a guarantee that no undiscovered secret or private material exists. No secret value or private dogfood content is reproduced here.
+This report covers the rewritten ForgeMind history published to `origin/main` and a fresh authenticated clone made from that remote. It is a bounded audit, not a guarantee that no undiscovered secret or private material exists. No secret value or private dogfood content is reproduced here.
 
 ## History rewrite
 
 - `git filter-repo` was not installed, so the rewrite used Git's repository-native `filter-branch` index filter.
 - A verified `git bundle` containing the complete pre-rewrite ref set and the sanitized worktree snapshot was created outside the repository in the system temporary-storage area. The bundle remains private recovery material and was not committed.
-- The public-bound local branch was rewritten. There were no tags and no additional local branches. Local remote-tracking refs were removed during final cleanup because the remote still retains the pre-rewrite lineage.
+- The public-bound local branch was rewritten. There were no tags and no additional local branches.
 - Purged categories were root workspace runtime state, private dogfood documentation, private operational material, named private fixtures, copied private content, and private path-bearing historical files.
 - Legitimate source history and the commit graph were retained where those categories were not involved. The sanitized current versions of affected public files were reintroduced in one release-candidate commit.
 - Rewrite-created backup refs, prior internal checkpoint refs, the temporary stash ref, and reflogs that retained old commits were removed. Unreachable objects were pruned only after the external bundle and sanitized commit were verified.
-- No remote ref was updated and no force-push was performed.
+- `origin/main` was replaced using an explicit expected-old-SHA `--force-with-lease`. Plain `--force` was not used. The remote accepted the rewrite and resolved to `8b4ecc25044ee98365421fa6019cafd5405c4dee` before this audit-only follow-up commit.
 
 ## Findings
 
 ### B-01 - Historical private dogfood disclosure
 
 - **Category:** Private-content disclosure / public repository history
-- **Status:** **REMEDIATED LOCALLY.** Masked scans of the rewritten repository and fresh clone found zero known private-project identifier hits in the current tree or reachable history. Historical private-document object paths are no longer reachable.
-- **Remaining boundary:** The remote still has the pre-rewrite history and must be replaced separately under explicit authorization before public release.
+- **Status:** **REMEDIATED ON THE PUBLIC REMOTE.** Masked scans of the fresh remote clone found zero known private-project identifier hits in the current tree or reachable history. Historical private-document object paths are no longer reachable from `origin/main`.
 
 ### H-01 - Private dogfood content in the public-bound tree
 
@@ -64,12 +63,12 @@ This report covers the rewritten local ForgeMind repository and a fresh local cl
 - **Category:** Provider/project-data architecture
 - **Status:** Nebius and Tavily keys remain native-only and absent from React request types, project schemas, Context Plans, prompts, usage records, and normal errors. Raw provider bodies, hidden reasoning, authorization headers, and absolute project paths are not persisted in safe diagnostics or usage history.
 
-## Fresh-clone verification
+## Fresh remote-clone verification
 
-A fresh `--no-local` clone was created in the system temporary-storage area from the rewritten local repository before any remote update.
+A new clone was created in the system temporary-storage area directly from GitHub after the explicit-lease replacement. It did not reuse the working tree or either local release-candidate clone.
 
 - Git status: clean before validation.
-- Tracked-file inventory: 226 files; application source, tests, public-safe documentation, MIT license, manifests, lockfiles, and public-safe fixtures present.
+- Tracked-file inventory: 227 files; application source, tests, public-safe documentation, MIT license, manifests, lockfiles, and public-safe fixtures present.
 - Private-content scan: zero known private identifier hits in the current tree and reachable history.
 - Root workspace object-path scan: zero hits.
 - Removed private-document object-path scan: zero hits.
@@ -83,17 +82,18 @@ A fresh `--no-local` clone was created in the system temporary-storage area from
 - Production frontend build: passed; the existing chunk-size warning remains non-blocking.
 - Full native suite: 232 library tests and 2 CLI tests passed.
 - Tauri no-bundle release build: passed; the existing Windows import-library linker warning remains non-blocking.
+- Markdown local-link validation: 123 links checked across 27 tracked Markdown files; zero broken targets.
 
 No GUI automation, live provider request, credential rotation, or product feature work was performed.
 
-## Remaining remote action
+## Remote publication result
 
-Remote history replacement is still pending. Only `main` requires a rewritten push; there are no tags to update. The recorded pre-rewrite remote-tracking commit permits an explicit `--force-with-lease=main:<recorded-old-sha>` strategy. The push must stop if the remote changed, and collaborators must discard or carefully rebase old clones and branches because every rewritten commit has a new identity.
+Only `origin/main` was rewritten. The live preflight matched the recorded old tip, the explicit lease succeeded, and the remote immediately resolved to the approved rewritten commit. There were no tag operations. This final public-safe audit update is committed and pushed normally after the history replacement; the current remote head is therefore the commit containing this report.
 
-After separate authorization, update the remote and re-audit a clone taken from that remote before publication. Review any already-shared clones, forks, archives, or caches separately. Credential rotation is not indicated because no credential was confirmed.
+Existing collaborators must re-clone or deliberately reset/rebase work created from the replaced history. Already-shared forks, archives, and caches remain outside this repository operation and should be reviewed separately. Credential rotation is not indicated because no credential was confirmed. The private local safety bundle remains available outside the repository.
 
 ## Submission gate
 
-`PUBLIC_RELEASE_READY_LOCAL`
+`PUBLIC_RELEASE_READY`
 
-The rewritten local repository and fresh local clone passed the required release-candidate checks. Public release remains operationally pending until the rewritten remote history is explicitly authorized, pushed, and verified from a new remote clone.
+The rewritten remote history and fresh remote clone passed the required public-release checks. No additional SEC-1.2 action remains.
