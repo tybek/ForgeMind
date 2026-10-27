@@ -9,7 +9,7 @@ import { RepositoryPage } from "./RepositoryPage";
 import { UnityGroundTruthPage } from "./UnityGroundTruthPage";
 import { AlignmentPage } from "./AlignmentPage";
 import { FeatureContractsPage } from "./FeatureContractsPage";
-import { WritersRoomPage } from "./WritersRoomPage";
+import { WritersRoomPage, type WritersRoomNavigationOrigin } from "./WritersRoomPage";
 import { ProjectOverviewPage } from "./ProjectOverviewPage";
 import type { AiWorkspaceSourceTrace } from "./platform/aiWorkspace";
 import {
@@ -506,27 +506,37 @@ export function WorkspaceShell({
   const [alignmentInitialSubview, setAlignmentInitialSubview] = useState<"CREATE" | "HISTORY">("CREATE");
   const [featureContractsFromWiki, setFeatureContractsFromWiki] = useState(false);
   const [wikiReturnArea, setWikiReturnArea] = useState<KnowledgeArea>("overview");
+  const [writersRoomOrigin, setWritersRoomOrigin] = useState<WritersRoomNavigationOrigin | null>(null);
+  const [writersRoomSessionTarget, setWritersRoomSessionTarget] = useState<string | null>(null);
 
   function openArea(area: WorkspaceView) {
     setPromotedKnowledge(null);
     setKnowledgeEditTarget(null);
     setAlignmentInitialSubview("CREATE");
     setFeatureContractsFromWiki(false);
+    setWritersRoomOrigin(null);
+    setWritersRoomSessionTarget(null);
     if (area === "Game Wiki") setWikiReturnArea("overview");
     setActiveArea(area);
   }
 
   function promoteToDecision(entry: KnowledgeEntry) {
+    setWritersRoomOrigin(null);
+    setWritersRoomSessionTarget(null);
     setPromotedKnowledge(entry);
     setActiveArea("Decisions");
   }
 
   function editKnowledgeAtSource(entryId: string) {
+    setWritersRoomOrigin(null);
+    setWritersRoomSessionTarget(null);
     setKnowledgeEditTarget(entryId);
     setActiveArea("Game Design");
   }
 
   function viewAlignmentHistory() {
+    setWritersRoomOrigin(null);
+    setWritersRoomSessionTarget(null);
     setAlignmentInitialSubview("HISTORY");
     setActiveArea("Alignment");
   }
@@ -545,15 +555,34 @@ export function WorkspaceShell({
     openArea(source === "GIT" ? "Repository / Git Reality" : "Unity");
   }
 
-  function openWritersRoomSource(source: AiWorkspaceSourceTrace) {
+  function openWritersRoomSource(source: AiWorkspaceSourceTrace, origin: WritersRoomNavigationOrigin) {
+    setWritersRoomOrigin(origin);
     if (source.sourceType === "COMPENDIUM" || source.sourceType === "OPEN_QUESTION") {
-      editKnowledgeAtSource(source.sourceId);
+      setPromotedKnowledge(null);
+      setKnowledgeEditTarget(source.sourceId);
+      setActiveArea("Game Design");
     } else if (source.sourceType === "DECISION") {
-      openArea("Decisions");
+      setPromotedKnowledge(null);
+      setKnowledgeEditTarget(null);
+      setActiveArea("Decisions");
     }
   }
 
+  function returnToWritersRoom() {
+    setWritersRoomSessionTarget(writersRoomOrigin?.sessionId ?? null);
+    setWritersRoomOrigin(null);
+    setPromotedKnowledge(null);
+    setKnowledgeEditTarget(null);
+    setActiveArea("Writers' Room");
+  }
+
+  const writersRoomReturnLabel = writersRoomOrigin
+    ? `Back to ${writersRoomOrigin.profileLabel ?? "Writers' Room"} · ${writersRoomOrigin.sessionTitle}`
+    : undefined;
+
   function viewFeatureContracts(area: KnowledgeArea) {
+    setWritersRoomOrigin(null);
+    setWritersRoomSessionTarget(null);
     setPromotedKnowledge(null);
     setKnowledgeEditTarget(null);
     setAlignmentInitialSubview("CREATE");
@@ -563,6 +592,8 @@ export function WorkspaceShell({
   }
 
   function returnToWiki() {
+    setWritersRoomOrigin(null);
+    setWritersRoomSessionTarget(null);
     setFeatureContractsFromWiki(false);
     setActiveArea("Game Wiki");
   }
@@ -627,7 +658,7 @@ export function WorkspaceShell({
           ) : activeArea === "AI Evaluation" ? (
             <EvaluationPage projectId={workspace.projectId} />
           ) : activeArea === "Writers' Room" ? (
-            <WritersRoomPage workspace={workspace} onOpenSource={openWritersRoomSource} />
+            <WritersRoomPage workspace={workspace} onOpenSource={openWritersRoomSource} initialSessionId={writersRoomSessionTarget} />
           ) : activeArea === "Overview" ? (
             <ProjectOverviewPage
               workspace={workspace}
@@ -655,9 +686,20 @@ export function WorkspaceShell({
               onViewFeatureContracts={viewFeatureContracts}
             />
           ) : activeArea === "Game Design" ? (
-            <CompendiumPage workspace={workspace} onPromote={promoteToDecision} editEntryId={knowledgeEditTarget} />
+            <CompendiumPage
+              workspace={workspace}
+              onPromote={promoteToDecision}
+              editEntryId={knowledgeEditTarget}
+              writersRoomReturnLabel={writersRoomReturnLabel}
+              onReturnToWritersRoom={writersRoomOrigin ? returnToWritersRoom : undefined}
+            />
           ) : activeArea === "Decisions" ? (
-            <DecisionsPage workspace={workspace} promotedKnowledge={promotedKnowledge} />
+            <DecisionsPage
+              workspace={workspace}
+              promotedKnowledge={promotedKnowledge}
+              writersRoomReturnLabel={writersRoomReturnLabel}
+              onReturnToWritersRoom={writersRoomOrigin ? returnToWritersRoom : undefined}
+            />
           ) : activeArea === "Alignment" ? (
             <AlignmentPage workspace={workspace} initialSubview={alignmentInitialSubview} />
           ) : activeArea === "Feature Contracts" ? (

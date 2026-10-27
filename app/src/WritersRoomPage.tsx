@@ -53,6 +53,12 @@ interface WritersRoomError {
   message?: string;
 }
 
+export interface WritersRoomNavigationOrigin {
+  sessionId: string;
+  sessionTitle: string;
+  profileLabel?: string;
+}
+
 function safeError(error: unknown): WritersRoomError {
   if (error && typeof error === "object") {
     const candidate = error as Record<string, unknown>;
@@ -417,9 +423,11 @@ function PreflightDialog({
 export function WritersRoomPage({
   workspace,
   onOpenSource,
+  initialSessionId = null,
 }: {
   workspace: Workspace;
-  onOpenSource?: (source: AiWorkspaceSourceTrace) => void;
+  onOpenSource?: (source: AiWorkspaceSourceTrace, origin: WritersRoomNavigationOrigin) => void;
+  initialSessionId?: string | null;
 }) {
   const [document, setDocument] = useState<AiWorkspaceDocument | null>(null);
   const [loadingSessions, setLoadingSessions] = useState(true);
@@ -463,6 +471,13 @@ export function WritersRoomPage({
   const profilesById = useMemo(() => new Map(profiles.map((profile) => [profile.id, profile])), [profiles]);
   const selectedSession = selectedSessionId ? sessionsById.get(selectedSessionId) ?? null : null;
   const activeProfile = selectedSession ? profilesById.get(selectedSession.specialistProfileId) ?? null : null;
+  const openSourceWithOrigin = onOpenSource && selectedSession
+    ? (source: AiWorkspaceSourceTrace) => onOpenSource(source, {
+      sessionId: selectedSession.id,
+      sessionTitle: selectedSession.title,
+      profileLabel: activeProfile?.displayName,
+    })
+    : undefined;
   const runnableProfiles = useMemo(() => profiles.filter((profile) => WRITERS_ROOM_PROFILE_IDS.includes(profile.id)), [profiles]);
   const usageByReference = useMemo(() => new Map(usage.map((record) => [recordKey(record), record])), [usage]);
   const writersRoomSessions = useMemo(() => sessions
@@ -499,9 +514,10 @@ export function WritersRoomPage({
     setSelectedSessionId((current) => {
       const writersRoomSessions = document?.sessions.filter((session) => session.surface === "writers_room") ?? [];
       if (current && writersRoomSessions.some((session) => session.id === current)) return current;
+      if (initialSessionId && writersRoomSessions.some((session) => session.id === initialSessionId)) return initialSessionId;
       return newestActiveSessionId(document);
     });
-  }, [document]);
+  }, [document, initialSessionId]);
 
   useEffect(() => {
     setDrawerOpen(false);
@@ -928,7 +944,7 @@ export function WritersRoomPage({
                     <p>{message.content}</p>
                     <FocusedQuestions questions={message.questions} />
                     {message.contextSummary ? <ContextSummary summary={message.contextSummary} /> : null}
-                    <SourceCards sources={message.sourceTrace} onOpenSource={onOpenSource} onOpenExternalSource={(url) => void openResearchSource(url)} />
+                    <SourceCards sources={message.sourceTrace} onOpenSource={openSourceWithOrigin} onOpenExternalSource={(url) => void openResearchSource(url)} />
                     {record ? <small className="writers-room-run-metadata">{providerLabel(record.provider)} · {record.modelId} · {record.latencyMs ?? "?"} ms · {record.inputTokens ?? "?"}/{record.outputTokens ?? "?"}/{record.totalTokens ?? "?"} tokens</small> : null}
                   </article>
                 );
@@ -945,7 +961,7 @@ export function WritersRoomPage({
                       onSaveEdit={(draft) => void saveProposalEdit(proposal, draft)}
                       onDiscard={() => void reviewProposal(proposal, "DISCARDED")}
                       onApply={() => void applyProposal(proposal)}
-                      onOpenSource={onOpenSource}
+                      onOpenSource={openSourceWithOrigin}
                       onOpenExternalSource={(url) => void openResearchSource(url)}
                     />
                   ))}
@@ -993,7 +1009,7 @@ export function WritersRoomPage({
             <strong>Selected Markdown</strong>
             {selectedSession.selectedMarkdownPaths.length ? <ul>{selectedSession.selectedMarkdownPaths.map((path) => <li key={path}><span>{path}</span><button type="button" disabled={selectedSession.status !== "ACTIVE"} onClick={() => void removeMarkdown(path)}>Remove</button></li>)}</ul> : <p>No Markdown selected. Files must stay inside this project and are DOCUMENTED context, not Canon.</p>}
           </section>
-          <SourceCards sources={selectedSession.sourceTrace} onOpenSource={onOpenSource} onOpenExternalSource={(url) => void openResearchSource(url)} />
+          <SourceCards sources={selectedSession.sourceTrace} onOpenSource={openSourceWithOrigin} onOpenExternalSource={(url) => void openResearchSource(url)} />
           <p className="scope-note">Context plans are bounded and deterministic. Git Reality, Unity GroundTruth, and Feature Contracts are excluded by default.</p>
         </aside>
       ) : null}

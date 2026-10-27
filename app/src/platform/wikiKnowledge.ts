@@ -15,6 +15,7 @@ export type WikiAuthorityFilter =
   | "ALL"
   | "USER_STATED"
   | "MANUAL"
+  | "DOCUMENTED"
   | "AI_INFERRED"
   | "UNRESOLVED"
   | "DECISION_RECORD"
@@ -67,6 +68,7 @@ function provenanceLabel(provenance: KnowledgeProvenance): string {
     case "USER_STATED": return "User stated";
     case "AI_INFERRED": return "AI-assisted, human accepted";
     case "UNRESOLVED": return "Unresolved";
+    case "DOCUMENTED": return "Documented · AI-assisted extraction · human applied";
     default: return "Human authored";
   }
 }
@@ -79,6 +81,7 @@ function sourceLabel(source: KnowledgeSource): string {
     case "specialist_analysis": return "Accepted specialist finding";
     case "new_project_creator": return "New Project Creator";
     case "writers_room": return "Accepted Writers' Room proposal";
+    case "knowledge_import": return "Reviewed Markdown import";
   }
 }
 
@@ -114,7 +117,10 @@ function knowledgeItem(entry: KnowledgeEntry): WikiKnowledgeItem {
     title: entry.title,
     preview: entry.statement,
     content: entry.statement,
-    detailSections: [],
+    detailSections: entry.documentedSources?.length ? [{
+      label: "Documented sources",
+      items: entry.documentedSources.map((source) => `${source.sourceId}${source.section ? ` · ${source.section}` : ""}`),
+    }] : [],
     authorityKey,
     authorityLabel: openQuestion ? "Unresolved project question" : "Game Compendium",
     provenanceLabel: provenance,
@@ -124,7 +130,7 @@ function knowledgeItem(entry: KnowledgeEntry): WikiKnowledgeItem {
     ownerLabel: "Game Design",
     createdAt: entry.createdAt,
     updatedAt: entry.updatedAt,
-    searchText: [entry.title, entry.statement, categoryLabel, kindLabel, lifecycleLabel, provenance, source, "Game Compendium"].join(" ").toLocaleLowerCase(),
+    searchText: [entry.title, entry.statement, categoryLabel, kindLabel, lifecycleLabel, provenance, source, "Game Compendium", ...(entry.documentedSources ?? []).flatMap((trace) => [trace.sourceId, trace.section ?? ""])].join(" ").toLocaleLowerCase(),
   };
 }
 
@@ -144,17 +150,20 @@ function decisionItem(decision: Decision): WikiKnowledgeItem {
     title: decision.title,
     preview: decision.statement,
     content: decision.statement,
-    detailSections: [{ label: "Rationale", paragraphs: [decision.rationale] }],
+    detailSections: [
+      { label: "Rationale", paragraphs: [decision.rationale] },
+      ...(decision.documentedSources?.length ? [{ label: "Documented sources", items: decision.documentedSources.map((source) => `${source.sourceId}${source.section ? ` · ${source.section}` : ""}`) }] : []),
+    ],
     authorityKey: "DECISION_RECORD",
     authorityLabel,
-    provenanceLabel: "Decision record",
-    sourceLabel: decision.author.trim().length > 0 ? `Decisions · ${decision.author}` : "Decisions",
+    provenanceLabel: decision.documentedSources?.length ? "Documented · AI-assisted extraction · human applied" : "Decision record",
+    sourceLabel: decision.documentedSources?.length ? "Reviewed Markdown import" : decision.author.trim().length > 0 ? `Decisions · ${decision.author}` : "Decisions",
     lifecycleKey,
     lifecycleLabel,
     ownerLabel: "Decisions",
     createdAt: decision.createdAt,
     updatedAt: decision.approvedAt ?? undefined,
-    searchText: [decision.title, decision.statement, decision.rationale, categoryLabel, "Decision", lifecycleLabel, authorityLabel, decision.author].join(" ").toLocaleLowerCase(),
+    searchText: [decision.title, decision.statement, decision.rationale, categoryLabel, "Decision", lifecycleLabel, authorityLabel, decision.author, ...(decision.documentedSources ?? []).flatMap((trace) => [trace.sourceId, trace.section ?? ""])].join(" ").toLocaleLowerCase(),
   };
 }
 

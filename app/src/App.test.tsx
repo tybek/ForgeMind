@@ -2,7 +2,7 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import App, { WorkspaceShell, type Workspace } from "./App";
-import { loadCompendium } from "./platform/projectKnowledge";
+import { loadCompendium, updateKnowledgeEntry } from "./platform/projectKnowledge";
 import { loadDecisions } from "./platform/decisions";
 import { runInterviewTurn } from "./platform/projectInterview";
 import { runSpecialistAnalysis } from "./platform/specialists";
@@ -21,19 +21,49 @@ import { loadRecentProjects, recordRecentProject } from "./platform/recentProjec
 import type { AiWorkspaceSourceTrace } from "./platform/aiWorkspace";
 
 vi.mock("./WritersRoomPage", () => ({
-  WritersRoomPage: ({ onOpenSource }: { onOpenSource?: (source: AiWorkspaceSourceTrace) => void }) => (
-    <button
-      type="button"
-      onClick={() => onOpenSource?.({
-        sourceType: "COMPENDIUM",
-        sourceId: "knowledge-1",
-        label: "Perception model",
-        authority: "ESTABLISHED_KNOWLEDGE",
-        navigationTarget: "game_design",
-      })}
-    >
-      Open source: Perception model
-    </button>
+  WritersRoomPage: ({ onOpenSource, initialSessionId }: {
+    onOpenSource?: (source: AiWorkspaceSourceTrace, origin: { sessionId: string; sessionTitle: string; profileLabel?: string }) => void;
+    initialSessionId?: string | null;
+  }) => (
+    <div>
+      <button
+        type="button"
+        onClick={() => onOpenSource?.({
+          sourceType: "COMPENDIUM",
+          sourceId: "knowledge-1",
+          label: "Perception model",
+          authority: "ESTABLISHED_KNOWLEDGE",
+          navigationTarget: "game_design",
+        }, { sessionId: "session-lore", sessionTitle: "Hollow Reach Context Test", profileLabel: "Lore Architect" })}
+      >
+        Open source: Perception model
+      </button>
+      <button
+        type="button"
+        onClick={() => onOpenSource?.({
+          sourceType: "OPEN_QUESTION",
+          sourceId: "knowledge-1",
+          label: "What wakes below?",
+          authority: "UNRESOLVED_KNOWLEDGE",
+          navigationTarget: "game_design",
+        }, { sessionId: "session-lore", sessionTitle: "Hollow Reach Context Test" })}
+      >
+        Open source: What wakes below?
+      </button>
+      <button
+        type="button"
+        onClick={() => onOpenSource?.({
+          sourceType: "DECISION",
+          sourceId: "decision-1",
+          label: "Shared alerts",
+          authority: "AUTHORITATIVE_INTENT",
+          navigationTarget: "decisions",
+        }, { sessionId: "session-lore", sessionTitle: "Hollow Reach Context Test", profileLabel: "Lore Architect" })}
+      >
+        Open source: Shared alerts
+      </button>
+      {initialSessionId ? <span>Selected session: {initialSessionId}</span> : null}
+    </div>
   ),
 }));
 
@@ -766,6 +796,45 @@ describe("ForgeMind local workspace", () => {
     expect(await screen.findByRole("heading", { name: "Game Design", level: 1 })).toBeInTheDocument();
     expect(await screen.findByRole("heading", { name: "Edit Knowledge" })).toBeInTheDocument();
     expect(screen.getByLabelText("Title")).toHaveValue("Perception model");
+    const returnAction = screen.getByRole("button", { name: "← Back to Lore Architect · Hollow Reach Context Test" });
+    expect(returnAction).toBeInTheDocument();
+    expect(updateKnowledgeEntry).not.toHaveBeenCalled();
+
+    await user.click(returnAction);
+    expect(await screen.findByRole("heading", { name: "Writers' Room", level: 1 })).toBeInTheDocument();
+    expect(screen.getByText("Selected session: session-lore")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Game Design" }));
+    expect(await screen.findByRole("heading", { name: "Game Compendium" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Back to Lore Architect/ })).not.toBeInTheDocument();
+  });
+
+  it("shows the contextual Writers' Room return on Decisions and clears it on normal navigation", async () => {
+    const user = userEvent.setup();
+    render(<WorkspaceShell workspace={workspace} onHome={() => undefined} onOpen={async () => undefined} />);
+    await user.click(screen.getByRole("button", { name: "Writers' Room" }));
+    await user.click(screen.getByRole("button", { name: "Open source: Shared alerts" }));
+    expect(await screen.findByRole("heading", { name: "Decisions", level: 2 })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "← Back to Lore Architect · Hollow Reach Context Test" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Overview" }));
+    await user.click(screen.getByRole("button", { name: "Decisions" }));
+    expect(await screen.findByRole("heading", { name: "Decisions", level: 2 })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Back to Lore Architect/ })).not.toBeInTheDocument();
+  });
+
+  it("routes a Writers' Room Open Question through the existing Game Design owner path", async () => {
+    vi.mocked(loadCompendium).mockResolvedValue({
+      formatVersion: 1, projectId: workspace.projectId, updatedAt: "2026-09-20T10:00:00Z",
+      entries: [{ id: "knowledge-1", area: "open_questions", title: "What wakes below?", statement: "The cause remains unresolved.", status: "TBD", provenance: "MANUAL", source: "manual_entry", createdAt: "2026-09-20T10:00:00Z", updatedAt: "2026-09-20T10:00:00Z" }],
+    });
+    const user = userEvent.setup();
+    render(<WorkspaceShell workspace={workspace} onHome={() => undefined} onOpen={async () => undefined} />);
+    await user.click(screen.getByRole("button", { name: "Writers' Room" }));
+    await user.click(screen.getByRole("button", { name: "Open source: What wakes below?" }));
+    expect(await screen.findByRole("heading", { name: "Edit Knowledge" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Title")).toHaveValue("What wakes below?");
+    expect(screen.getByRole("button", { name: "← Back to Writers' Room · Hollow Reach Context Test" })).toBeInTheDocument();
   });
 
   it("routes a selected proposed Wiki Decision to the existing Decisions workspace", async () => {

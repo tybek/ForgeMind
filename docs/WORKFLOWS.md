@@ -113,6 +113,19 @@ The authority flow is **conversation -> AI proposal -> human review -> explicit 
 
 TAV-1 does not add cloud sync, collaboration, background agents, semantic/vector retrieval, Tavily Crawl/Extract/answer generation, autonomous or multi-query research, Knowledge Import/Rebaseline, Git/Unity/Feature Contract context by default, Wiki Chronicler, Narrative Designer, or a general Router.
 
+### 1C.3 Import existing Markdown knowledge — IMP-1 implemented, headless validated
+
+1. Open **Game Wiki** and choose **Import Knowledge**.
+2. Explicitly select 1-10 `.md` files contained by the active project.
+3. Review native preflight: task, Nebius Token Factory, selected registry model, source count/size, no-truncation status, estimated input range/band, recent latency, and verified cost when available.
+4. Confirm one extraction request. Cancel makes zero provider requests; confirmation makes exactly one and never retries automatically.
+5. Review up to 30 `KNOWLEDGE`, `DECISION`, and `OPEN_QUESTION` candidates with `DOCUMENTED` source trace, confidence, and deterministic duplicate/title-collision status.
+6. Edit, skip, select, or clear candidates. No Compendium or Decision mutation has occurred.
+7. Choose **Apply Selected**. Knowledge and Open Questions go through Compendium; Decisions go through Decisions and begin `PROPOSED`.
+8. Review actual applied/skipped/error counts. Game Wiki refreshes from the existing stores, and a later Lore Architect session can retrieve imported narrative knowledge through Project Brain.
+
+This workflow is Markdown-only, review-first, and human-Apply. It does not crawl the repository, ingest external/PDF/DOCX/chat sources, write Wiki data directly, approve Decisions, create automatic Canon, use semantic/vector search, modify Tavily, or perform the broader Rebaseline workflow.
+
 ### 1D. Open an existing project — Future
 
 1. ForgeMind detects Git and Unity through their narrow read-only boundaries.

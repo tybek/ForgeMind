@@ -1689,6 +1689,33 @@ mod tests {
     }
 
     #[test]
+    fn lore_context_retrieves_applied_documented_import_from_project_brain() {
+        let (directory, project_id) = workspace();
+        std::fs::write(directory.path().join("COLONY.md"), "# Beacon Wardens\nBeacon Wardens maintain the winter signal.").unwrap();
+        let (_, imported_id) = compendium::create_documented_entry(compendium::CreateDocumentedKnowledgeRequest {
+            root_path: directory.path().display().to_string(),
+            project_id: project_id.clone(),
+            area: KnowledgeArea::WorldNarrative,
+            title: "Beacon Wardens".to_owned(),
+            statement: "Beacon Wardens maintain the winter signal.".to_owned(),
+            status: KnowledgeStatus::Direction,
+            documented_sources: vec![compendium::DocumentedSourceTrace {
+                source_id: "COLONY.md".to_owned(),
+                section: Some("Beacon Wardens".to_owned()),
+                excerpt: Some("Beacon Wardens maintain the winter signal.".to_owned()),
+            }],
+        }).unwrap();
+        let session_id = session(&directory, &project_id, "lore_architect");
+        let prepared = prepare_run(WritersRoomRunRequest {
+            root_path: directory.path().display().to_string(), project_id, session_id,
+            model_id: model_registry::CREATOR_DEFAULT_MODEL_ID.to_owned(), mode: WritersRoomRunMode::Send,
+            message: Some("Who maintains the winter beacon?".to_owned()),
+        }).unwrap();
+        assert!(prepared.context_plan.source_trace.iter().any(|source| source.source_id == imported_id));
+        assert!(prepared.ai_request.user_prompt.contains("Beacon Wardens maintain the winter signal."));
+    }
+
+    #[test]
     fn guided_lore_behavior_is_prompt_driven_while_the_restored_contract_accepts_concrete_proposals() {
         let (directory, project_id) = workspace();
         let session_id = session(&directory, &project_id, "lore_architect");

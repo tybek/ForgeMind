@@ -56,4 +56,27 @@ describe("Wiki knowledge projection", () => {
     expect(items[0]?.title).toBe("System note 000");
     expect(items[499]?.title).toBe("System note 499");
   });
+
+  it("shows imported records as documented with project-relative source trace", () => {
+    const imported: KnowledgeEntry = {
+      ...baseEntry,
+      id: "imported-1",
+      title: "Beacon Wardens",
+      provenance: "DOCUMENTED",
+      source: "knowledge_import",
+      documentedSources: [{ sourceId: "docs/colony.md", section: "Beacon Wardens" }],
+    };
+    const importedDecision: Decision = {
+      ...proposedDecision,
+      id: "imported-decision",
+      author: "Knowledge Import",
+      documentedSources: [{ sourceId: "docs/colony.md", section: "Recorded decision" }],
+    };
+    const items = buildWikiItems([imported], [importedDecision], []);
+    const knowledge = filterWikiItems(items, { category: "systems", query: "colony", type: "KNOWLEDGE", authority: "DOCUMENTED", lifecycle: "CURRENT" })[0];
+    expect(knowledge?.provenanceLabel).toContain("Documented");
+    expect(knowledge?.sourceLabel).toBe("Reviewed Markdown import");
+    expect(knowledge?.detailSections[0]?.items).toEqual(["docs/colony.md · Beacon Wardens"]);
+    expect(items.find((item) => item.sourceId === importedDecision.id)?.detailSections[1]?.items).toEqual(["docs/colony.md · Recorded decision"]);
+  });
 });

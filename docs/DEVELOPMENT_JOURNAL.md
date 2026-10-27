@@ -732,6 +732,35 @@ The user-driven NPC-1 manual PASS was recorded on 2026-09-27. It confirmed Creat
 
 **TAV-1.1 is implemented and headless validated. A fresh-session user-driven visual/restart check remains pending for the revised drawer and native browser opening. No AI query rewriting, additional external service, Import/Rebaseline, Chronicler, Router, Crawl, Extract, or autonomous research was added.**
 
+### IMP-1 Existing Project Knowledge Import
+
+- Added a bounded Game Wiki import workflow for 1-10 project-contained `.md` files with native containment/symlink/size/secret-marker checks, registry-backed preflight, one explicit Nebius Token Factory request, strict three-type structured output, supplied-only source references, and no retry.
+- Kept the Candidate Review Queue transient and non-authoritative. Users can edit, select, skip, select HIGH-confidence new items, and explicitly Apply a batch. Deterministic normalization labels exact duplicates, possible duplicates, and title collisions without semantic similarity.
+- Extended the existing owning records additively: Compendium imports use `DOCUMENTED` plus `knowledge_import` and bounded project-relative source trace; imported Decisions carry the same trace and start `PROPOSED`; Open Questions remain unresolved. Wiki continues to project those owners and Writers' Room retrieves applied lore through Project Brain.
+- Added the public-safe Aster Vale Colony fixture and offline native/frontend coverage for source safety, extraction failures, speculation protection, no-retry behavior, review/apply, idempotency, Wiki integration, and narrative context retrieval. No private dogfood-project material, live provider request, or GUI automation entered implementation or tests.
+- Validation passed 7 focused native Import tests, the focused Writers' Room imported-context regression, 16 focused frontend Import/Wiki tests, all 329 frontend tests, all 240 native library plus 2 CLI tests, TypeScript, the production Vite build, and the Tauri no-bundle release build. `cargo fmt --check` remained unavailable because `cargo-fmt.exe` is not installed; the existing Vite chunk and Windows linker advisories were non-blocking.
+
+**IMP-1 is implemented and headless validated. One controlled extraction plus the short user-driven UI/persistence/Writers' Room acceptance remains pending; the existing public-release security/history gate is unchanged. Rebaseline, semantic/vector search, Tavily changes, Chronicler, Router, generic ingestion, PDF/DOCX/chat import, and automatic Canon remain out of scope.**
+
+### IMP-1.1 Extraction Result Visibility & State Reliability
+
+- Recorded the first controlled live IMP-1 failure without inventing provider details: the correct one-file Nebius/Nemotron preflight reached visible extraction work, then the UI returned to preflight without a Review Queue, explicit empty result, or visible error. The provider outcome and exact response shape remain **UNVERIFIED** because the previous frontend state erased that distinction and raw response text is intentionally not retained.
+- Replaced inferred preflight/loading/candidate rendering with explicit import phases. After confirmation, `RUNNING` can end only in `REVIEW_QUEUE`, `EMPTY_RESULT`, or `ERROR`; all three preserve the selected source/model context, and empty/error retry returns to a new preflight confirmation instead of issuing another request.
+- Reused content-free structured-output diagnostics and canonical usage metering. Provider success followed by schema/semantic rejection remains visibly distinct from a request that was never sent, valid zero-candidate output is recorded as structured-output success, and no prompt, Markdown, raw response, hidden reasoning, credential, or arbitrary unknown key is persisted.
+- Focused validation passed **18 frontend Knowledge Import/platform/Wiki tests**, **11 native Knowledge Import tests**, and the Writers' Room imported-context regression. Full validation passed **334 frontend tests**, **244 native library tests**, **2 native CLI tests**, TypeScript, the production frontend build, and the Tauri no-bundle release build. The existing Vite chunk and Windows linker advisories remained non-blocking. No live provider request or GUI automation occurred during the fix.
+
+**IMP-1.1 is implemented and headless validated. IMP-1 Manual PASS is not recorded; a fresh controlled extraction and the existing short UI/persistence/Writers' Room acceptance remain pending. No automatic retry, authority change, Tavily change, Writers' Room behavior change, Rebaseline, or adjacent feature work was added.**
+
+### IMP-1.2 Diagnostic-Led Live Import Schema Compatibility
+
+- Recorded the second controlled live import without reconstructing provider content. IMP-1.1 correctly surfaced `INVALID_KNOWLEDGE_IMPORT_OUTPUT`, reported the provider request as executed, preserved the selected Nemotron/source summary, created no candidates, changed no project data, and made no automatic retry.
+- Inspected only the canonical content-free usage record. The exact evidence was `DESERIALIZATION_FAILED` / `INVALID_SCHEMA`, canonical root-key presence `candidates`, and response character count `1468`; candidate count and the failing candidate field were unavailable. The historical structural mismatch therefore remains **UNVERIFIED**.
+- Added field-specific safe diagnostics for the candidates container and required candidate fields, distinct unknown-source and invalid-source-list codes, and canonical-root-only key recording. Actual values, arbitrary unknown key names, Markdown, raw provider output, hidden reasoning, credentials, and machine paths remain excluded.
+- Hardened the compact import prompt with the exact root shape, one canonical candidate, exact type/confidence/section vocabularies, supplied-only source arrays, explicit empty result, and no fence/wrapper/reasoning/extra-key rules. No compatibility normalization was added because the evidence did not identify one harmless variation. Nemotron `JSON_OBJECT`, one-confirmation/one-request behavior, no retry, speculation rejection, and strict source validation remain unchanged.
+- Focused validation passed **12 native Import tests**, **18 frontend Import/platform/Wiki tests**, and **2 provider response-format regressions**. Full validation passed **334 frontend tests**, **245 native library tests**, **2 native CLI tests**, TypeScript, the production frontend build, and the Tauri no-bundle release build. Existing Vite chunk and Windows linker advisories remained non-blocking; no live provider request or GUI automation occurred during the fix.
+
+**IMP-1.2 is implemented and headless validated, but the diagnostic-led live recheck and IMP-1 Manual PASS remain pending. No Tavily, Writers' Room, authority, candidate-type, Apply, duplicate, or adjacent feature behavior changed.**
+
 ## Update policy
 
 Update this journal:

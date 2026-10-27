@@ -44,6 +44,7 @@ pub enum KnowledgeProvenance {
     AiInferred,
     Manual,
     Unresolved,
+    Documented,
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, PartialEq, Eq, Serialize)]
@@ -55,6 +56,17 @@ pub enum KnowledgeSource {
     SpecialistAnalysis,
     NewProjectCreator,
     WritersRoom,
+    KnowledgeImport,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct DocumentedSourceTrace {
+    pub source_id: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub section: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub excerpt: Option<String>,
 }
 
 #[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq, Eq)]
@@ -126,8 +138,21 @@ pub struct KnowledgeEntry {
     pub status: KnowledgeStatus,
     pub provenance: KnowledgeProvenance,
     pub source: KnowledgeSource,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub documented_sources: Vec<DocumentedSourceTrace>,
     pub created_at: String,
     pub updated_at: String,
+}
+
+#[derive(Clone, Debug)]
+pub struct CreateDocumentedKnowledgeRequest {
+    pub root_path: String,
+    pub project_id: String,
+    pub area: KnowledgeArea,
+    pub title: String,
+    pub statement: String,
+    pub status: KnowledgeStatus,
+    pub documented_sources: Vec<DocumentedSourceTrace>,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
@@ -250,6 +275,7 @@ pub fn create_entry(request: CreateKnowledgeEntryRequest) -> Result<CompendiumDo
         status: request.status,
         provenance: KnowledgeProvenance::Manual,
         source: KnowledgeSource::ManualEntry,
+        documented_sources: Vec::new(),
         created_at: now.clone(),
         updated_at: now,
     });
@@ -286,6 +312,45 @@ pub fn create_ai_workspace_entry(
         status: request.status,
         provenance: request.provenance,
         source: KnowledgeSource::WritersRoom,
+        documented_sources: Vec::new(),
+        created_at: now.clone(),
+        updated_at: now,
+    });
+    save(root, document).map(|document| (document, id))
+}
+
+pub fn create_documented_entry(
+    request: CreateDocumentedKnowledgeRequest,
+) -> Result<(CompendiumDocument, String), CompendiumError> {
+    let root = Path::new(&request.root_path);
+    verify_project(root, &request.project_id)?;
+    validate_text(&request.title, 1, 120)?;
+    validate_text(&request.statement, 1, 2_000)?;
+    validate_documented_sources(&request.documented_sources)?;
+    let mut document = load_for_project(root, &request.project_id)?
+        .unwrap_or_else(|| empty_document(&request.project_id));
+    let normalized_title = normalized_key(&request.title);
+    let normalized_statement = normalized_key(&request.statement);
+    if document.entries.iter().any(|entry| {
+        normalized_key(&entry.title) == normalized_title
+            && normalized_key(&entry.statement) == normalized_statement
+    }) {
+        return Err(CompendiumError::new(
+            "DUPLICATE_KNOWLEDGE_ENTRY",
+            "Matching project knowledge already exists.",
+        ));
+    }
+    let now = timestamp();
+    let id = Uuid::new_v4().to_string();
+    document.entries.push(KnowledgeEntry {
+        id: id.clone(),
+        area: request.area,
+        title: request.title.trim().to_owned(),
+        statement: request.statement.trim().to_owned(),
+        status: request.status,
+        provenance: KnowledgeProvenance::Documented,
+        source: KnowledgeSource::KnowledgeImport,
+        documented_sources: request.documented_sources,
         created_at: now.clone(),
         updated_at: now,
     });
@@ -558,6 +623,7 @@ fn push_foundation_entry(
         status,
         provenance,
         source: KnowledgeSource::NewProjectCreator,
+        documented_sources: Vec::new(),
         created_at: now.to_owned(),
         updated_at: now.to_owned(),
     });
@@ -622,6 +688,7 @@ pub fn import_interview(request: ImportInterviewRequest) -> Result<InterviewImpo
             status: status_from_candidate(candidate.status),
             provenance: provenance_from_candidate(candidate.provenance),
             source: KnowledgeSource::ProjectInterview,
+            documented_sources: Vec::new(),
             created_at: now.clone(),
             updated_at: now,
         });
@@ -684,6 +751,7 @@ pub fn promote_specialist_finding(
         status: request.status,
         provenance: KnowledgeProvenance::AiInferred,
         source: KnowledgeSource::SpecialistAnalysis,
+        documented_sources: Vec::new(),
         created_at: now.clone(),
         updated_at: now,
     });
@@ -710,6 +778,27 @@ fn is_duplicate(document: &CompendiumDocument, title: &str, statement: &str) -> 
 
 fn normalized_key(value: &str) -> String {
     value.split_whitespace().collect::<Vec<_>>().join(" ").to_lowercase()
+}
+
+fn validate_documented_sources(sources: &[DocumentedSourceTrace]) -> Result<(), CompendiumError> {
+    if sources.is_empty() || sources.len() > 10 {
+        return Err(CompendiumError::new("INVALID_KNOWLEDGE_ENTRY", "Documented knowledge requires bounded source trace."));
+    }
+    let mut unique = HashSet::new();
+    for source in sources {
+        let path = Path::new(&source.source_id);
+        if source.source_id.chars().count() > 500
+            || path.is_absolute()
+            || path.components().any(|component| !matches!(component, std::path::Component::Normal(_)))
+            || !matches!(path.extension().and_then(|value| value.to_str()).map(str::to_ascii_lowercase).as_deref(), Some("md") | Some("markdown"))
+            || !unique.insert(source.source_id.as_str())
+            || source.section.as_ref().is_some_and(|value| validate_text(value, 1, 160).is_err())
+            || source.excerpt.as_ref().is_some_and(|value| validate_text(value, 1, 500).is_err())
+        {
+            return Err(CompendiumError::new("INVALID_KNOWLEDGE_ENTRY", "Documented knowledge source trace failed validation."));
+        }
+    }
+    Ok(())
 }
 
 fn save(root: &Path, mut document: CompendiumDocument) -> Result<CompendiumDocument, CompendiumError> {
@@ -783,6 +872,9 @@ fn validate_document(document: &CompendiumDocument, expected_project_id: &str) -
                 || !ids.insert(entry.id.as_str())
                 || validate_text(&entry.title, 1, 120).is_err()
                 || validate_text(&entry.statement, 1, 2_000).is_err()
+                || (!entry.documented_sources.is_empty() && validate_documented_sources(&entry.documented_sources).is_err())
+                || entry.provenance == KnowledgeProvenance::Documented && entry.documented_sources.is_empty()
+                || entry.source == KnowledgeSource::KnowledgeImport && entry.provenance != KnowledgeProvenance::Documented
                 || DateTime::parse_from_rfc3339(&entry.created_at).is_err()
                 || DateTime::parse_from_rfc3339(&entry.updated_at).is_err()
         })

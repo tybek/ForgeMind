@@ -81,7 +81,7 @@ function KnowledgeEditor({
         <input required maxLength={120} value={pillar ? pillarName(input.title) : input.title} onChange={(event) => setInput({ ...input, title: pillar ? `${DESIGN_PILLAR_PREFIX} ${event.target.value}` : event.target.value })} />
       </label>
       <label>{pillar ? "Explanation" : "Statement"}
-        <textarea required maxLength={2000} rows={4} value={input.statement} onChange={(event) => setInput({ ...input, statement: event.target.value })} />
+        <textarea className="knowledge-long-form" required maxLength={2000} rows={12} value={input.statement} onChange={(event) => setInput({ ...input, statement: event.target.value })} />
       </label>
       {mode === "create" ? <p className="scope-note">Manual entries retain MANUAL provenance and manual_entry source.</p> : null}
       <div className="knowledge-actions">
@@ -96,10 +96,14 @@ export function CompendiumPage({
   workspace,
   onPromote,
   editEntryId,
+  writersRoomReturnLabel,
+  onReturnToWritersRoom,
 }: {
   workspace: Workspace;
   onPromote: (entry: KnowledgeEntry) => void;
   editEntryId?: string | null;
+  writersRoomReturnLabel?: string;
+  onReturnToWritersRoom?: () => void;
 }) {
   const [document, setDocument] = useState<CompendiumDocument | null>(null);
   const [interviewAvailable, setInterviewAvailable] = useState(false);
@@ -276,6 +280,22 @@ export function CompendiumPage({
       {error ? <div className="knowledge-error" role="alert"><strong>{error.code}</strong><p>{error.message}</p></div> : null}
       {notice ? <p className="knowledge-notice" role="status">{notice}</p> : null}
 
+      {writersRoomReturnLabel && onReturnToWritersRoom ? (
+        <button className="contextual-return-action" type="button" onClick={onReturnToWritersRoom}>← {writersRoomReturnLabel}</button>
+      ) : null}
+
+      {editingId !== null ? (
+        <KnowledgeEditor
+          mode="edit"
+          input={input}
+          setInput={setInput}
+          busy={busy}
+          onSubmit={(event) => void submit(event)}
+          onCancel={cancelEditor}
+          pillar={editorKind === "pillar"}
+        />
+      ) : null}
+
       {formOpen && editingId === null ? (
         <KnowledgeEditor
           mode="create"
@@ -308,18 +328,6 @@ export function CompendiumPage({
           </div>
         )}
       </section>
-
-      {editingId !== null ? (
-        <KnowledgeEditor
-          mode="edit"
-          input={input}
-          setInput={setInput}
-          busy={busy}
-          onSubmit={(event) => void submit(event)}
-          onCancel={cancelEditor}
-          pillar={editorKind === "pillar"}
-        />
-      ) : null}
 
       <section className="knowledge-filters" aria-label="Compendium filters">
         <label>Section

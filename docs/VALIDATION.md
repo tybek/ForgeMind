@@ -284,6 +284,51 @@ Manual UI-4 closure remains required:
 
 Do not record UI-4 Manual PASS until this checklist succeeds. UI-4 did not implement `wiki.json`, semantic/vector search, Knowledge Import/Rebaseline, WR-1.3, Chronicler, provider calls, automatic question resolution, or Writers' Room changes.
 
+### IMP-1.1 Extraction Result Visibility & State Reliability — implemented, headless validated; fresh live/manual acceptance pending
+
+The first controlled IMP-1 extraction selected one project-contained Markdown file and rendered the expected Nebius Token Factory / NVIDIA Nemotron preflight, source summary, input estimate, and untrusted-data boundary. After explicit confirmation the UI showed extraction work briefly, then returned to the same preflight without a Candidate Review Queue, explicit empty result, or visible error. That evidence proves the frontend entered the run path; it does **not** prove whether the provider succeeded, failed, returned zero candidates, or produced invalid structured output because the old UI collapsed those outcomes into the same inferred state and raw provider content is intentionally not retained.
+
+The root cause was frontend state inference: the selected preflight intentionally remained populated while candidates remained empty on zero-result and failure paths, and clearing the shared loading flag after async completion made those values render preflight again. IMP-1.1 uses explicit `SOURCE_SELECTION`, `PREFLIGHT`, `RUNNING`, `REVIEW_QUEUE`, `EMPTY_RESULT`, `ERROR`, and `APPLY_RESULT` phases. `RUNNING` now transitions only to Review Queue for one or more normalized candidates, an explicit **No import candidates found.** state for a valid empty result, or an in-workflow error preserving the selected model and source summary. Retry first returns to preflight and requires a new explicit confirmation; repeated activation while running is blocked and no automatic retry exists.
+
+Native normalization retains the exact `{"candidates":[...]}` contract and seven required candidate fields. The safe Writers' Room diagnostics pattern classifies no-object, parse, deserialization, unknown-field/type/section, candidate-bound, source-reference, and speculative-knowledge failures without persisting response values, Markdown, hidden reasoning, credentials, or arbitrary unknown keys. One canonical usage record is appended for every executed provider attempt; structured-output failure records provider success plus structured-output failure, and valid `{"candidates":[]}` records provider and structured-output success. Errors expose only the safe request-executed distinction needed by the workflow.
+
+Focused offline coverage validates project-contained `.md` acceptance; traversal, external, non-`.md`, `.forgemind`, symlink escape, credential-like marker, file-count, per-file, and aggregate-size rejection; stable project-relative source IDs; no absolute path in provider input; strict three-type/30-candidate structured output; unknown source rejection; speculative durable-knowledge rejection; malformed/oversized safe failure; exactly one mocked provider call with no retry; deterministic duplicate/title-collision status; transient editable selection; default deselection of existing records; no mutation before Apply; owning Compendium/Decision writes; `DOCUMENTED` trace; `PROPOSED` Decisions; unresolved Open Questions; idempotent repeated Apply; Wiki refresh/projection; and Lore Architect retrieval through Project Brain. The synthetic Aster Vale Colony fixture contains only public-safe fictional content.
+
+Recorded IMP-1.1 evidence: **18 focused frontend Knowledge Import/platform/Wiki tests**, **11 focused native Knowledge Import tests**, and the focused Writers' Room imported-context regression passed. The terminal-state regressions cover a five-candidate `3 KNOWLEDGE / 1 DECISION / 1 OPEN_QUESTION` success, valid empty result, invalid structured output, provider failure, preserved selection/context, no mutation, no return to active preflight, and duplicate activation while running. The complete suites passed **334 frontend tests in 30 files**, **244 native library tests**, and **2 native CLI tests**. TypeScript, the production Vite build, and `npm run tauri build -- --no-bundle` passed. The existing Vite chunk-size advisory and informational Windows import-library linker warning remained non-blocking. No live provider request or GUI automation occurred during IMP-1.1 implementation or validation.
+
+Run the validation ladder from `app/`:
+
+1. focused `knowledge_import` native tests plus Writers' Room imported-context regression;
+2. focused Knowledge Import panel/platform, Wiki, Compendium, Decisions, and Wiki read-model frontend regressions;
+3. full frontend suite, full native suite, TypeScript, production frontend build, and Tauri no-bundle release build;
+4. changed-document local-link/file checks and `git diff --check`.
+
+No automated step may call Nebius. After all headless checks pass, the exact short user-driven acceptance is:
+
+1. In a disposable public-safe existing project, open **Game Wiki -> Import Knowledge** and select 1-3 contained `.md` files.
+2. Confirm preflight names **Nebius Token Factory** and **NVIDIA Nemotron**, shows the correct files/size/input band, and that Cancel makes no request.
+3. Authorize one controlled extraction. Confirm it terminates visibly in exactly one of Review Queue, **No import candidates found.**, or an error preserving model/source context; it must never silently return to preflight. If the result is empty or an error, confirm another run requires returning to preflight and making a new explicit confirmation, then stop or continue with a separate authorized request.
+4. For a Review Queue result, confirm factual Knowledge, one explicit Open Question, and where present one Decision candidate show documented project-relative trace.
+5. Edit or deselect one candidate, then **Apply Selected**. Confirm actual counts, immediate Wiki entries, `DOCUMENTED` provenance, a `PROPOSED` Decision, and an unresolved Open Question.
+6. Repeat Apply and confirm exact entries are skipped rather than duplicated. Restart and confirm owning-domain persistence.
+7. Start a new Lore Architect session, ask about one imported narrative fact, and confirm the preflight/context trace includes the applied Project Brain entry before optionally authorizing a separate Writers' Room request.
+
+Record the extraction request count, model, latency/tokens when available, candidate outcome, Apply counts, restart result, and Writers' Room context result without raw provider response, private content, machine paths, or credentials. Do not mark IMP-1 complete until this manual PASS is recorded. This pending product acceptance does not reopen the public-repository security/history gate.
+
+### IMP-1.2 Diagnostic-Led Live Import Schema Compatibility — headless validated; live recheck pending
+
+The second controlled live attempt used the public-safe `docs/world_seed.md` source. Nebius Token Factory executed the NVIDIA Nemotron 3 Super 120B request, and IMP-1.1 correctly terminated in the visible `INVALID_KNOWLEDGE_IMPORT_OUTPUT` error state with no candidates, project mutation, or automatic retry.
+
+The latest matching canonical usage record at `2026-10-27T21:01:04.981Z` reports provider success, structured-output failure, extraction stage `DESERIALIZATION_FAILED`, validation code `INVALID_SCHEMA`, canonical top-level key presence `candidates`, and response character count `1468`. Candidate count was not recorded. This proves the response reached the expected root contract but does not distinguish a non-array `candidates` value from an invalid or missing candidate `title`, `content`, `sourceRefs`, `confidence`, or `note`. Raw provider output and Markdown were neither inspected nor retained, so the exact historical structural mismatch remains **UNVERIFIED**.
+
+Because the diagnostic was insufficient, IMP-1.2 adds no casing, alias, null, omitted-note, single-source-string, or section normalization. The parser remains strict. Future safe diagnostics now distinguish `MISSING_CANDIDATES`, `INVALID_CANDIDATES_TYPE`, `INVALID_CANDIDATE`, `INVALID_CANDIDATE_TYPE`, `INVALID_TITLE`, `INVALID_CONTENT`, `INVALID_SECTION`, `INVALID_SOURCE_REFS`, `UNKNOWN_SOURCE_REF`, `INVALID_CONFIDENCE`, `INVALID_NOTE`, `UNKNOWN_FIELD`, `EXCESSIVE_CANDIDATES`, and `SPECULATIVE_KNOWLEDGE_REJECTED` without storing field values or arbitrary unknown key names. Diagnostics retain only canonical root-key presence, unknown-field count, provider/model, response character count, and usage reference.
+
+The compact import prompt now shows one canonical candidate and explicitly requires exactly one JSON object; root key `candidates`; exact type and confidence enums; all seven candidate keys; supplied-only `sourceRefs` arrays; `{"candidates":[]}` for no result; and no fence, wrapper prose, reasoning field, or extra keys. Nemotron remains on registry-owned `JSON_OBJECT`; semantic/source/authority validation remains local and unchanged.
+
+Focused validation passed **12 native Knowledge Import tests**, **18 frontend Import/platform/Wiki tests**, and **2 provider response-format regressions**. The complete suites passed **334 frontend tests in 30 files**, **245 native library tests**, and **2 native CLI tests**. TypeScript, the production Vite build, and `npm run tauri build -- --no-bundle` passed. The existing Vite chunk-size advisory and informational Windows import-library linker warning remained non-blocking. No live provider request or GUI automation occurred during IMP-1.2 implementation or validation.
+
+The next user-driven live import must record the new exact safe field-level code if it still fails. Only that evidence may authorize a narrow compatibility normalization. Do not mark IMP-1 Manual PASS until a Review Queue/empty-result/error terminal state and the remaining persistence/Writers' Room acceptance complete successfully.
+
 ## Future security validation
 
 [Security and Privacy Architecture](SECURITY_AND_PRIVACY.md) defines the SEC-0 threat model and detailed future test expectations. SEC-1 and later security tests must remain deterministic and offline, use synthetic placeholder secrets, and never call a live provider or print/write a real credential.

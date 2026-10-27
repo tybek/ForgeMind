@@ -38,6 +38,7 @@ ForgeMind currently satisfies the technical-use direction with:
 - Nebius Token Factory as the production inference provider behind a replaceable native Rust boundary;
 - successful user-authorized calls using `nvidia/nemotron-3-super-120b-a12b` and `deepseek-ai/DeepSeek-V4.1-Flash`;
 - a completed core loop from Intent through Reality, Alignment, Feature Contract, and Implementation Brief;
+- an implemented, headless-validated Markdown-only Existing Project Knowledge Import that requires candidate review and explicit owning-domain Apply, with its controlled live/manual acceptance still pending;
 - local usage records that can capture provider/model identity, latency, and provider-reported token counts without prompts, responses, credentials, or authorization headers; and
 - an MIT license and documented local setup.
 
@@ -55,7 +56,7 @@ Token Factory is the current production inference service for ForgeMind's AI Eva
 
 WR-1 materially expands submission-ready use of the registered NVIDIA model: Lore Architect, Character & Dialogue, and Continuity Editor share credit-aware preflight, bounded Project Brain/Markdown/session context, strict source-backed structured output, and explicit reviewed proposal application. One earlier user-driven Lore Architect run provides live evidence: provider execution and persistence succeeded, while the immediate frontend exposed a normalization bug and restart/reload rendered the saved response. WR-1.2 fixed that boundary offline, and the later user-confirmed WR-1.3S live manual PASS closes the stabilized response-contract recheck without supplying detailed run metrics.
 
-WR-1.3S is implemented, headless validated, and user-confirmed live for the core narrative flow: deterministic narrative context, visible context counts, prompt-guided exploration before consolidation, focused string questions, editable proposal review, explicit Apply, and next-turn Project Brain refresh. TAV-1 adds only the bounded Tavily retrieval path documented below; semantic/vector search, Knowledge Import/Rebaseline, Wiki Chronicler, and a general Router remain absent.
+WR-1.3S is implemented, headless validated, and user-confirmed live for the core narrative flow: deterministic narrative context, visible context counts, prompt-guided exploration before consolidation, focused string questions, editable proposal review, explicit Apply, and next-turn Project Brain refresh. TAV-1 adds only the bounded Tavily retrieval path documented below. IMP-1 separately adds reviewed Markdown-only knowledge import with manual acceptance pending. Semantic/vector search, Rebaseline, Wiki Chronicler, and a general Router remain absent.
 
 Three later user-driven Nemotron WR-1.3 checks completed at the Token Factory provider boundary but were safely rejected as `INVALID_WRITERS_ROOM_OUTPUT`; no proposal or project truth was applied. The first two used prompt-only formatting; the third still failed after provider-enforced `json_object`. Their preflights confirmed that Narrative Context and established Project Brain knowledge were selected correctly. Because raw provider text is intentionally not retained, the exact structural mismatches and uncaptured usage metrics remain **UNVERIFIED** and must not be reconstructed. WR-1.3S keeps JSON-object enforcement and safe diagnostics but restores the previously live-proven WR-1.2 response shape: message, plain string questions, supplied source references, and bounded proposals. Guided narrative behavior, editable proposal review, and next-turn context refresh remain; the user confirmed the stabilized live manual recheck passed before TAV-1, while its detailed run metrics remain unverified.
 
@@ -291,6 +292,18 @@ The bounded acceptance story must show the service split truthfully:
 The first user-driven workflow completed both service boundaries: Tavily Search succeeded, normalized sources reached Writers' Room as `EXTERNAL_RESEARCH`, preflight separated Tavily from Nebius Token Factory, and Nemotron synthesis ran with selected research. The tactical-game/faction query returned predominantly low-relevance software-design/OOP sources. TAV-1.1 audited the current path and found that the editable visible query becomes Tavily's `query` after outer-whitespace trimming only; no stale, fallback, truncation, wrong-field, prior-session, hidden-rewrite, or serialization defect was identified. The submission must present this as one honest relevance limitation, not claim Tavily quality was fixed.
 
 The revised demo uses a compact selectable right drawer with the persisted query, vertical bounded results, selected count, and a working safe default-browser action. Use a fresh Writers' Room session so prior correctly persisted `APPLIED` proposals do not visually confuse the research story. Record actual provider/status/result-count/latency evidence without copying private prompts, source bodies, credentials, or raw provider responses. Do not imply Tavily is the LLM or that web results automatically become project truth. The submitted claim remains Basic Search, maximum five results, no answer/raw content, no Crawl/Extract, no semantic retrieval, no autonomous research, and no automatic retry.
+
+### IMP-1 existing-project knowledge demo
+
+IMP-1 may support the existing-project story after its controlled manual PASS:
+
+1. Use only the public-safe synthetic colony fixture or another sanitized disposable project.
+2. Open **Game Wiki -> Import Knowledge**, select 1-3 contained `.md` files, and show the one-request Nebius Token Factory / NVIDIA Nemotron preflight.
+3. Show the transient Candidate Review Queue with factual Knowledge, an explicit Open Question, an optional clear Decision, confidence, duplicate status, and project-relative `DOCUMENTED` source trace.
+4. Edit/deselect one candidate and explicitly **Apply Selected**.
+5. Show immediate Wiki projection from Compendium/Decisions, a proposed rather than approved Decision, and a later Lore Architect context trace that resolves imported narrative knowledge through Project Brain.
+
+Submission copy must say Markdown-only, review-first, human Apply, and documented origin. It must not claim automatic Canon, verification, whole-repository crawling, generic ingestion, semantic/vector search, Rebaseline, Tavily import, Decision auto-approval, or autonomous action. Do not show private dogfood-project data, absolute machine paths, raw responses, or credentials.
 
 ## 3-Minute Demo Video
 

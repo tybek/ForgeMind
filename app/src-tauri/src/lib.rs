@@ -6,6 +6,7 @@ pub mod creator_ai;
 pub mod decisions;
 pub mod feature_contracts;
 pub mod interview;
+pub mod knowledge_import;
 pub mod git_reality;
 pub mod model_registry;
 pub mod reality_connections;
@@ -59,6 +60,10 @@ use interview::{
     InterviewDocument, InterviewError, InterviewTurnRequest, InterviewTurnResult,
     SaveInterviewRequest,
 };
+use knowledge_import::{
+    ApplyKnowledgeImportRequest, ApplyKnowledgeImportResult, KnowledgeImportError,
+    KnowledgeImportPreflight, KnowledgeImportRequest, KnowledgeImportRunResult,
+};
 use model_registry::{ModelEntry, ModelRegistryError};
 use reality_connections::{
     DisconnectRealityConnectionRequest, RealityConnectionError, RealityConnections,
@@ -110,6 +115,43 @@ async fn run_ai_evaluation(
     task_category: Option<TaskCategory>,
 ) -> Result<AIResponse, AIError> {
     evaluate_registered(request, project_id, task_category).await
+}
+
+#[tauri::command]
+fn get_knowledge_import_preflight(
+    request: KnowledgeImportRequest,
+) -> Result<KnowledgeImportPreflight, KnowledgeImportError> {
+    knowledge_import::preflight(request)
+}
+
+#[tauri::command]
+async fn run_knowledge_import(
+    request: KnowledgeImportRequest,
+) -> Result<KnowledgeImportRunResult, KnowledgeImportError> {
+    let prepared = knowledge_import::prepare(request)?;
+    let provider = ai::NebiusTokenFactoryProvider::from_env()
+        .map_err(KnowledgeImportError::from_ai)?;
+    let (provider_result, normalized) = knowledge_import::extract_once(&provider, &prepared).await;
+    let (record, normalized) = knowledge_import::meter_provider_attempt(
+        &prepared,
+        session_id(),
+        &provider_result,
+        normalized,
+    );
+    usage::application_usage_path()
+        .and_then(|path| usage::append_record(&path, &record))
+        .map_err(|error| KnowledgeImportError::new(error.code, &error.message).with_request_executed())?;
+    let candidates = normalized?;
+    let response = provider_result
+        .map_err(|error| KnowledgeImportError::from_ai(error).with_request_executed())?;
+    Ok(knowledge_import::complete_run(prepared, &response, candidates))
+}
+
+#[tauri::command]
+fn apply_knowledge_import(
+    request: ApplyKnowledgeImportRequest,
+) -> Result<ApplyKnowledgeImportResult, KnowledgeImportError> {
+    knowledge_import::apply(request)
 }
 
 #[tauri::command]
@@ -746,6 +788,9 @@ pub fn run() {
             inspect_repository_reality,
             inspect_unity_groundtruth,
             run_ai_evaluation,
+            get_knowledge_import_preflight,
+            run_knowledge_import,
+            apply_knowledge_import,
             suggest_new_project_core_loops,
             suggest_new_project_design_pillars,
             get_creator_ai_preflight,

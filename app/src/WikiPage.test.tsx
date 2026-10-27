@@ -21,7 +21,7 @@ vi.mock("./platform/unityGroundTruth", () => ({ inspectUnityGroundTruth: vi.fn()
 vi.mock("./platform/alignment", () => ({ loadAlignmentResults: vi.fn() }));
 vi.mock("./platform/featureContracts", () => ({ loadFeatureContracts: vi.fn() }));
 
-const workspace = { path: "D:\\Games\\Sample" };
+const workspace = { path: "D:\\Games\\Sample", projectId: "project" };
 const knowledge = {
   id: "knowledge-1", area: "systems" as const, title: "Perception model", statement: "Enemies act only on perceived facts.",
   status: "LOCKED" as const, provenance: "MANUAL" as const, source: "manual_entry" as const,
@@ -164,7 +164,8 @@ describe("Game Wiki knowledge explorer", () => {
     const onEditKnowledge = vi.fn();
     const user = await renderWiki({ onOpenProjectInterview, onOpenDecisions, onEditKnowledge });
     expect(screen.getByRole("heading", { name: "Build your project knowledge" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /generate|import|rebaseline/i })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Import Knowledge" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /generate|rebaseline/i })).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Open Project Interview" }));
     expect(onOpenProjectInterview).toHaveBeenCalledOnce();
   });

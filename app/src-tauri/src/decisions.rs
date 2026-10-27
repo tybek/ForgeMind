@@ -1,4 +1,4 @@
-use crate::compendium::{self, KnowledgeArea};
+use crate::compendium::{self, DocumentedSourceTrace, KnowledgeArea};
 use crate::workspace::{self, WorkspaceInspection};
 use chrono::{DateTime, SecondsFormat, Utc};
 use serde::{Deserialize, Serialize};
@@ -34,6 +34,19 @@ pub struct Decision {
     pub approved_at: Option<String>,
     pub supersedes_decision_id: Option<String>,
     pub related_knowledge_entry_ids: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub documented_sources: Vec<DocumentedSourceTrace>,
+}
+
+#[derive(Clone, Debug)]
+pub struct CreateDocumentedDecisionRequest {
+    pub root_path: String,
+    pub project_id: String,
+    pub title: String,
+    pub statement: String,
+    pub rationale: String,
+    pub area: KnowledgeArea,
+    pub documented_sources: Vec<DocumentedSourceTrace>,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
@@ -131,8 +144,44 @@ pub fn create(request: CreateDecisionRequest) -> Result<DecisionsDocument, Decis
         approved_at: None,
         supersedes_decision_id: request.supersedes_decision_id,
         related_knowledge_entry_ids: unique_ids(request.related_knowledge_entry_ids)?,
+        documented_sources: Vec::new(),
     });
     save(root, document)
+}
+
+pub fn create_documented(
+    request: CreateDocumentedDecisionRequest,
+) -> Result<(DecisionsDocument, String), DecisionError> {
+    let root = Path::new(&request.root_path);
+    verify_project(root, &request.project_id)?;
+    validate_decision_text(&request.title, &request.statement, &request.rationale, "Knowledge Import")?;
+    validate_documented_sources(&request.documented_sources)?;
+    let mut document = load_for_project(root, &request.project_id)?
+        .unwrap_or_else(|| empty_document(&request.project_id));
+    let normalized_title = normalized_key(&request.title);
+    let normalized_statement = normalized_key(&request.statement);
+    if document.decisions.iter().any(|decision| {
+        normalized_key(&decision.title) == normalized_title
+            && normalized_key(&decision.statement) == normalized_statement
+    }) {
+        return Err(DecisionError::new("DUPLICATE_DECISION", "Matching Decision already exists."));
+    }
+    let id = Uuid::new_v4().to_string();
+    document.decisions.push(Decision {
+        id: id.clone(),
+        title: request.title.trim().to_owned(),
+        statement: request.statement.trim().to_owned(),
+        rationale: request.rationale.trim().to_owned(),
+        status: DecisionStatus::Proposed,
+        area: request.area,
+        author: "Knowledge Import".to_owned(),
+        created_at: timestamp(),
+        approved_at: None,
+        supersedes_decision_id: None,
+        related_knowledge_entry_ids: Vec::new(),
+        documented_sources: request.documented_sources,
+    });
+    save(root, document).map(|document| (document, id))
 }
 
 pub fn update(request: UpdateDecisionRequest) -> Result<DecisionsDocument, DecisionError> {
@@ -237,6 +286,7 @@ fn validate_document(document: &DecisionsDocument, expected_project_id: &str) ->
                 || matches!(decision.status, DecisionStatus::Approved | DecisionStatus::Superseded) && decision.approved_at.is_none()
                 || decision.status == DecisionStatus::Proposed && decision.approved_at.is_some()
                 || decision.related_knowledge_entry_ids.iter().any(|id| Uuid::parse_str(id).is_err())
+                || (!decision.documented_sources.is_empty() && validate_documented_sources(&decision.documented_sources).is_err())
         })
     {
         return Err(DecisionError::invalid_file());
@@ -305,6 +355,31 @@ fn validate_decision_text(title: &str, statement: &str, rationale: &str, author:
 fn valid_text(value: &str, minimum: usize, maximum: usize) -> bool {
     let length = value.trim().chars().count();
     length >= minimum && length <= maximum
+}
+
+fn normalized_key(value: &str) -> String {
+    value.split_whitespace().collect::<Vec<_>>().join(" ").to_lowercase()
+}
+
+fn validate_documented_sources(sources: &[DocumentedSourceTrace]) -> Result<(), DecisionError> {
+    if sources.is_empty() || sources.len() > 10 {
+        return Err(DecisionError::new("INVALID_DECISION", "A documented Decision requires bounded source trace."));
+    }
+    let mut unique = HashSet::new();
+    for source in sources {
+        let path = Path::new(&source.source_id);
+        if source.source_id.chars().count() > 500
+            || path.is_absolute()
+            || path.components().any(|component| !matches!(component, std::path::Component::Normal(_)))
+            || !matches!(path.extension().and_then(|value| value.to_str()).map(str::to_ascii_lowercase).as_deref(), Some("md") | Some("markdown"))
+            || !unique.insert(source.source_id.as_str())
+            || source.section.as_ref().is_some_and(|value| !valid_text(value, 1, 160))
+            || source.excerpt.as_ref().is_some_and(|value| !valid_text(value, 1, 500))
+        {
+            return Err(DecisionError::new("INVALID_DECISION", "Documented Decision source trace failed validation."));
+        }
+    }
+    Ok(())
 }
 
 fn verify_project(root: &Path, expected_project_id: &str) -> Result<(), DecisionError> {

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { KnowledgeImportPanel } from "./KnowledgeImportPanel";
 import { loadAlignmentResults, type AlignmentResult } from "./platform/alignment";
 import { loadDecisions, type Decision } from "./platform/decisions";
 import { loadFeatureContracts, type FeatureContract } from "./platform/featureContracts";
@@ -20,6 +21,7 @@ import {
 
 interface WikiWorkspace {
   path: string;
+  projectId: string;
 }
 
 const CATEGORY_OPTIONS: ReadonlyArray<readonly [WikiCategory, string]> = [
@@ -115,6 +117,7 @@ export function WikiPage({
   const [featureContracts, setFeatureContracts] = useState<FeatureContract[]>([]);
   const [loading, setLoading] = useState(true);
   const [errors, setErrors] = useState<string[]>([]);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     let active = true;
@@ -148,7 +151,7 @@ export function WikiPage({
       setLoading(false);
     });
     return () => { active = false; };
-  }, [workspace.path]);
+  }, [workspace.path, refreshKey]);
 
   const items = useMemo(() => buildWikiItems(knowledge, decisions, runs), [knowledge, decisions, runs]);
   const visibleItems = useMemo(() => filterWikiItems(items, {
@@ -199,7 +202,7 @@ export function WikiPage({
   return (
     <div className="wiki-page">
       <header className="wiki-intro">
-        <div><span className="section-label">Read-only knowledge explorer</span><h2>Game Wiki</h2></div>
+        <div className="wiki-intro-heading"><div><span className="section-label">Read-only knowledge explorer</span><h2>Game Wiki</h2></div><KnowledgeImportPanel workspace={workspace} onApplied={() => setRefreshKey((value) => value + 1)} /></div>
         <p>Browse project knowledge across its owning domains. Game Design, Decisions, and other source workspaces remain authoritative.</p>
       </header>
 
@@ -229,7 +232,7 @@ export function WikiPage({
               <label className="wiki-search-field"><span>Search knowledge</span><input type="search" value={query} placeholder="Search titles, content, source..." onChange={(event) => setQuery(event.target.value)} /></label>
               <div className="wiki-filter-grid">
                 <label><span>Type</span><select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value as WikiTypeFilter)}><option value="ALL">All types</option><option value="KNOWLEDGE">Project knowledge</option><option value="OPEN_QUESTION">Open questions</option><option value="DECISION">Decisions</option><option value="AI_ANALYSIS">AI working analysis</option></select></label>
-                <label><span>Authority</span><select value={authorityFilter} onChange={(event) => setAuthorityFilter(event.target.value as WikiAuthorityFilter)}><option value="ALL">All authority</option><option value="USER_STATED">User stated</option><option value="MANUAL">Human authored</option><option value="AI_INFERRED">AI-assisted, accepted</option><option value="UNRESOLVED">Unresolved</option><option value="DECISION_RECORD">Decision records</option><option value="AI_ANALYSIS">Non-authoritative AI</option></select></label>
+                <label><span>Authority</span><select value={authorityFilter} onChange={(event) => setAuthorityFilter(event.target.value as WikiAuthorityFilter)}><option value="ALL">All authority</option><option value="USER_STATED">User stated</option><option value="MANUAL">Human authored</option><option value="DOCUMENTED">Documented import</option><option value="AI_INFERRED">AI-assisted, accepted</option><option value="UNRESOLVED">Unresolved</option><option value="DECISION_RECORD">Decision records</option><option value="AI_ANALYSIS">Non-authoritative AI</option></select></label>
                 <label><span>Lifecycle</span><select value={lifecycleFilter} onChange={(event) => setLifecycleFilter(event.target.value as WikiLifecycleFilter)}><option value="CURRENT">Current</option><option value="ACTIVE">Active only</option><option value="UNRESOLVED">Unresolved</option><option value="PROPOSED">Proposed</option><option value="APPROVED">Approved decisions</option><option value="HISTORICAL">Deprecated / superseded</option><option value="ALL">All lifecycle</option></select></label>
                 <button className="outline-button compact-action" type="button" disabled={filtersAreDefault} onClick={clearFilters}>Clear filters</button>
               </div>

@@ -44,9 +44,13 @@ function emptyInput(): DecisionInput {
 export function DecisionsPage({
   workspace,
   promotedKnowledge,
+  writersRoomReturnLabel,
+  onReturnToWritersRoom,
 }: {
   workspace: Workspace;
   promotedKnowledge: KnowledgeEntry | null;
+  writersRoomReturnLabel?: string;
+  onReturnToWritersRoom?: () => void;
 }) {
   const [document, setDocument] = useState<DecisionsDocument | null>(null);
   const [knowledge, setKnowledge] = useState<KnowledgeEntry[]>([]);
@@ -191,6 +195,10 @@ export function DecisionsPage({
         </div>
         <button className="primary-button" type="button" onClick={openCreate}>Create Decision</button>
       </section>
+
+      {writersRoomReturnLabel && onReturnToWritersRoom ? (
+        <button className="contextual-return-action" type="button" onClick={onReturnToWritersRoom}>← {writersRoomReturnLabel}</button>
+      ) : null}
 
       {error ? <div className="knowledge-error" role="alert"><strong>{error.code}</strong><p>{error.message}</p></div> : null}
 

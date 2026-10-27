@@ -16,7 +16,7 @@ A stable category used to organize knowledge, such as Overview, Game Design, Nar
 
 ### KnowledgeEntry
 
-An addressable statement about current project intent. The 0F schema contains stable `id`, bounded `area`, `title`, `statement`, `status`, `provenance`, `source`, `createdAt`, and `updatedAt` fields. Knowledge status is `DIRECTION`, `LOCKED`, `TBD`, or `DEPRECATED`; provenance is `USER_STATED`, `AI_INFERRED`, `MANUAL`, or `UNRESOLVED`; source is `project_interview`, `manual_entry`, `decision`, `specialist_analysis`, or the additive NPC-1 value `new_project_creator`. Entries are stored in `.forgemind/compendium.json`.
+An addressable statement about current project intent. The 0F schema contains stable `id`, bounded `area`, `title`, `statement`, `status`, `provenance`, `source`, `createdAt`, and `updatedAt` fields. Knowledge status is `DIRECTION`, `LOCKED`, `TBD`, or `DEPRECATED`; provenance is `USER_STATED`, `AI_INFERRED`, `MANUAL`, `UNRESOLVED`, or the additive IMP-1 value `DOCUMENTED`; source includes the existing owners plus additive `writers_room` and `knowledge_import` values. IMP-1 entries may carry bounded `documentedSources[]` containing project-relative Markdown `sourceId` plus optional heading and excerpt. Older format-version `1` records omit this default-empty field and remain readable. Entries are stored in `.forgemind/compendium.json`.
 
 ### InterviewCandidate
 
@@ -24,7 +24,7 @@ A small Project Interview proposal awaiting human review. It contains an identif
 
 ### Decision
 
-A durable conclusion made by people after discussion. The 0F schema records stable `id`, `title`, `statement`, required `rationale`, `status`, `area`, simple local `author`, `createdAt`, optional `approvedAt`, optional `supersedesDecisionId`, and `relatedKnowledgeEntryIds`. Status is `PROPOSED`, `APPROVED`, `SUPERSEDED`, or `DEPRECATED`. Decisions are stored separately in `.forgemind/decisions.json`; proposed Decisions are not authoritative until a person explicitly approves them.
+A durable conclusion made by people after discussion. The 0F schema records stable `id`, `title`, `statement`, required `rationale`, `status`, `area`, simple local `author`, `createdAt`, optional `approvedAt`, optional `supersedesDecisionId`, and `relatedKnowledgeEntryIds`. IMP-1 may add the same bounded `documentedSources[]` trace and the local author label `Knowledge Import`. Status is `PROPOSED`, `APPROVED`, `SUPERSEDED`, or `DEPRECATED`. Decisions are stored separately in `.forgemind/decisions.json`; imported and other proposed Decisions are not authoritative until a person explicitly approves them.
 
 ### System
 
@@ -208,6 +208,15 @@ Approval answers whether a person has accepted an artifact; it does not replace 
 - The registered Nemotron Writers' Room request uses provider-enforced `JSON_OBJECT`. Local semantic/source validation remains authoritative. Structured failure diagnostics contain only stage/code, allowlisted canonical root keys, unknown-field count, provider/model, response character count, and usage reference; they never contain raw response values or arbitrary unknown key names.
 - Narrative context prioritizes current World/Narrative knowledge, relevant Game Vision/Design Pillars and Player Experience, directly relevant gameplay systems, approved narrative Decisions, unresolved Open Questions, explicit `DOCUMENTED` Markdown, and recent same-session topic words. Unrelated technical, Reality, and delivery sources are excluded by default. Applied owning-domain knowledge is reloaded for every later run rather than treated only as chat memory.
 - Guided exploration should ask focused questions and normally return no proposals until the user supplies concrete direction. This is a prompt-level behavior contract rather than a provider-authored phase field; every proposal still requires explicit human review and Apply. Equivalent supplied Compendium knowledge is not repeated as a new proposal.
+
+## IMP-1 Knowledge Import invariants
+
+- The import batch and Candidate Review Queue are transient; no import file becomes project truth and no parallel import store is created.
+- Only 1-10 explicit project-contained `.md` files may enter one batch. Source IDs and durable traces are project-relative; absolute paths are neither sent nor persisted.
+- At most 30 strict `KNOWLEDGE`, `DECISION`, or `OPEN_QUESTION` candidates may be reviewed. Unknown source references, malformed/oversized output, and speculative durable knowledge fail closed.
+- Apply is explicit and delegates to owning APIs. Imported knowledge is `DOCUMENTED`; imported Decisions start `PROPOSED`; imported Open Questions remain `TBD` and unresolved.
+- Deterministic exact/title/content comparison labels duplicates and title collisions without semantic similarity. Repeated Apply skips exact records rather than duplicating them.
+- Game Wiki and Writers' Room consume applied records through the existing Project Brain aggregate. There is no `wiki.json`, embedding index, or semantic/vector store.
 
 ## 0I.1 Unity GroundTruth invariants
 

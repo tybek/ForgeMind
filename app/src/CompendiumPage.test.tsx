@@ -142,7 +142,7 @@ describe("Game Compendium", () => {
     }));
   });
 
-  it("opens the selected editor above filters and the list when source navigation targets a Knowledge entry", async () => {
+  it("opens one selected editor before Design Pillars, filters, and the list when source navigation targets a Knowledge entry", async () => {
     vi.mocked(loadCompendium).mockResolvedValue(document());
     render(<CompendiumPage workspace={workspace} onPromote={vi.fn()} editEntryId={entry.id} />);
     const editor = await screen.findByRole("heading", { name: "Edit Knowledge" });
@@ -152,9 +152,12 @@ describe("Game Compendium", () => {
     const pillars = screen.getByRole("heading", { name: "Design Pillars" }).closest("section")!;
     const filters = screen.getByRole("region", { name: "Compendium filters" });
     const list = screen.getByRole("region", { name: "Compendium knowledge entries" });
-    expect(pillars.compareDocumentPosition(form) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getAllByRole("heading", { name: "Edit Knowledge" })).toHaveLength(1);
+    expect(form.compareDocumentPosition(pillars) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(form.compareDocumentPosition(filters) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(form.compareDocumentPosition(list) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(within(form).getByLabelText("Statement")).toHaveAttribute("rows", "12");
+    expect(within(form).getByLabelText("Statement")).toHaveClass("knowledge-long-form");
   });
 
   it("collapses long statements to the preview presentation by default", async () => {
@@ -217,6 +220,7 @@ describe("Game Compendium", () => {
     const { user } = await renderPage();
     await user.click(screen.getByRole("button", { name: "Add Knowledge" }));
     const form = screen.getByRole("heading", { name: "Add Knowledge" }).closest("form");
+    expect(within(form as HTMLElement).getByLabelText("Statement")).toHaveAttribute("rows", "12");
     await user.selectOptions(within(form as HTMLElement).getByLabelText("Section"), "core_loop");
     await user.type(within(form as HTMLElement).getByLabelText("Title"), manual.title);
     await user.type(within(form as HTMLElement).getByLabelText("Statement"), manual.statement);

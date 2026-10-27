@@ -168,7 +168,30 @@ describe("Writers' Room", () => {
     expect(within(sourceCard).getByText("Open source", { exact: false })).toBeInTheDocument();
     sourceCard.focus();
     await user.keyboard("{Enter}");
-    expect(onOpenSource).toHaveBeenCalledWith(source);
+    expect(onOpenSource).toHaveBeenCalledWith(source, {
+      sessionId: current.id,
+      sessionTitle: current.title,
+      profileLabel: "Lore Architect",
+    });
+  });
+
+  it("reopens an exact requested session and falls back safely when that session is unavailable", async () => {
+    const newest = session({ id: "session-newest", title: "Newest Session", updatedAt: "2026-09-28T13:00:00.000Z" });
+    const requested = session({ id: "session-requested", title: "Requested Session", updatedAt: "2026-09-28T12:00:00.000Z" });
+    vi.mocked(loadAiWorkspaceSessions).mockResolvedValue({
+      formatVersion: 1,
+      projectId: workspace.projectId,
+      updatedAt: newest.updatedAt,
+      sessions: [newest, requested],
+    });
+    const { unmount } = render(<WritersRoomPage workspace={workspace} initialSessionId={requested.id} />);
+    expect(await screen.findByRole("heading", { name: requested.title })).toBeInTheDocument();
+    unmount();
+
+    render(<WritersRoomPage workspace={workspace} initialSessionId="deleted-session" />);
+    expect(await screen.findByRole("heading", { name: newest.title })).toBeInTheDocument();
+    expect(screen.queryByText("deleted-session")).not.toBeInTheDocument();
+    expect(applyAiWorkspaceProposal).not.toHaveBeenCalled();
   });
 
   it("requires preflight, Cancel sends nothing, and one confirmation makes one request", async () => {

@@ -18,8 +18,14 @@ export const KNOWLEDGE_STATUSES = ["DIRECTION", "LOCKED", "TBD", "DEPRECATED"] a
 
 export type KnowledgeArea = (typeof KNOWLEDGE_AREAS)[number][0];
 export type KnowledgeStatus = (typeof KNOWLEDGE_STATUSES)[number];
-export type KnowledgeProvenance = "USER_STATED" | "AI_INFERRED" | "MANUAL" | "UNRESOLVED";
-export type KnowledgeSource = "project_interview" | "manual_entry" | "decision" | "specialist_analysis" | "new_project_creator" | "writers_room";
+export type KnowledgeProvenance = "USER_STATED" | "AI_INFERRED" | "MANUAL" | "UNRESOLVED" | "DOCUMENTED";
+export type KnowledgeSource = "project_interview" | "manual_entry" | "decision" | "specialist_analysis" | "new_project_creator" | "writers_room" | "knowledge_import";
+
+export interface DocumentedSourceTrace {
+  sourceId: string;
+  section?: string;
+  excerpt?: string;
+}
 
 export interface KnowledgeEntry {
   id: string;
@@ -29,6 +35,7 @@ export interface KnowledgeEntry {
   status: KnowledgeStatus;
   provenance: KnowledgeProvenance;
   source: KnowledgeSource;
+  documentedSources?: DocumentedSourceTrace[];
   createdAt: string;
   updatedAt: string;
 }

@@ -618,6 +618,8 @@ Advanced controls may expose selected context, exclusions, source trace, the exa
 
 ## Relationship to current architecture
 
+IMP-1 Knowledge Import uses a narrow feature-owned source assembler and preflight for 1-10 explicitly selected Markdown files. It exists to protect containment, size, source trace, one-request behavior, and review/apply semantics inside that workflow. It does **not** implement CR-1 shared ContextPlan infrastructure, automatic task classification, Router behavior, model recommendation, semantic retrieval, or a general-purpose ingestion/context service. Applied records join the existing Project Brain only through Compendium or Decisions; the transient review queue is non-authoritative.
+
 Context Builder does not alter the ownership of Intent, Reality, Alignment, Feature Contracts, or Implementation Briefs. It provides shared planning, selection, budgeting, freshness, and traceability rules for future specialists, Studios, **Ask ForgeMind**, AI drafting, technical analysis, and asset workflows. Security Preflight is a subsequent shared boundary over the assembled outbound package; it does not become another source selector or truth store.
 
 Existing narrow workflows may later adopt the shared types incrementally. They should not be migrated merely to satisfy architectural symmetry. A separately authorized phase must prove that shared infrastructure improves behavior without weakening current boundaries.

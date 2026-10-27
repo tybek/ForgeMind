@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { KnowledgeArea } from "./projectKnowledge";
+import type { DocumentedSourceTrace } from "./projectKnowledge";
 
 export type DecisionStatus = "PROPOSED" | "APPROVED" | "SUPERSEDED" | "DEPRECATED";
 
@@ -15,6 +16,7 @@ export interface Decision {
   approvedAt?: string | null;
   supersedesDecisionId?: string | null;
   relatedKnowledgeEntryIds: string[];
+  documentedSources?: DocumentedSourceTrace[];
 }
 
 export interface DecisionsDocument {
