@@ -37,6 +37,8 @@ npm run tauri dev
 
 The native application must be launched from an environment containing `NEBIUS_API_KEY` for a live evaluation. The UI lists models enabled in the authoritative native registry; it does not accept arbitrary model identifiers. The app does not load `.env` files.
 
+Writers' Room Tavily Search separately requires `TAVILY_API_KEY` in the native process environment. React receives only configured/missing status. One explicit confirmation makes one bounded search with no automatic retry; normalized HTTP(S) sources remain untrusted `EXTERNAL_RESEARCH` and cannot mutate Project Brain outside the existing human review and Apply flow. Raw Tavily bodies, authorization headers, and credentials are not persisted.
+
 On Windows, this PowerShell pattern supplies the key to the current process without placing its value directly in shell history:
 
 ```powershell

@@ -317,6 +317,9 @@ fn normalize_response(body: &[u8], latency_ms: u64) -> Result<TavilySearchRespon
 fn normalize_candidate(value: &Value) -> Option<TavilyCandidate> {
     let title = bounded(value.get("title")?.as_str()?, 300)?;
     let snippet = bounded(value.get("content")?.as_str()?, MAX_SNIPPET_CHARS)?;
+    if contains_sensitive_marker(&title) || contains_sensitive_marker(&snippet) {
+        return None;
+    }
     let (url, domain) = sanitize_source_url(value.get("url")?.as_str()?).ok()?;
     Some(TavilyCandidate {
         title,
@@ -353,10 +356,16 @@ fn contains_sensitive_marker(value: &str) -> bool {
     let normalized = value.to_ascii_lowercase();
     [
         "tavily_api_key=",
+        "nebius_api_key=",
         "api_key=",
+        "apikey=",
         "authorization: bearer ",
         "cookie:",
         "client_secret=",
+        "access_token=",
+        "refresh_token=",
+        "password=",
+        "-----begin private key-----",
     ]
     .iter()
     .any(|marker| normalized.contains(marker))
@@ -366,6 +375,8 @@ fn is_sensitive_or_tracking_parameter(name: &str) -> bool {
     let normalized = name.to_ascii_lowercase();
     normalized.starts_with("utm_")
         || normalized.starts_with("mc_")
+        || normalized.starts_with("x-amz-")
+        || normalized.starts_with("x-goog-")
         || matches!(
             normalized.as_str(),
             "gclid"
@@ -375,10 +386,22 @@ fn is_sensitive_or_tracking_parameter(name: &str) -> bool {
                 | "api_key"
                 | "apikey"
                 | "access_token"
+                | "refresh_token"
                 | "auth"
                 | "authorization"
+                | "client_secret"
                 | "cookie"
                 | "session"
+                | "password"
+                | "passwd"
+                | "pwd"
+                | "secret"
+                | "signature"
+                | "sig"
+                | "policy"
+                | "expires"
+                | "key"
+                | "key-pair-id"
         )
 }
 
@@ -482,11 +505,11 @@ mod tests {
             "include_raw_content": false
         }));
         assert!(payload.get("api_key").is_none());
-        let provider = NativeTavilyProvider::from_api_key(Some("native-secret".to_owned())).unwrap();
+        let provider = NativeTavilyProvider::from_api_key(Some("example-token".to_owned())).unwrap();
         let request = provider.build_search_request("enemy factions").unwrap();
         assert_eq!(request.method(), reqwest::Method::POST);
         assert_eq!(request.url().as_str(), TAVILY_SEARCH_URL);
-        assert_eq!(request.headers().get(reqwest::header::AUTHORIZATION).unwrap(), "Bearer native-secret");
+        assert_eq!(request.headers().get(reqwest::header::AUTHORIZATION).unwrap(), "Bearer example-token");
     }
 
     #[test]
@@ -526,12 +549,12 @@ mod tests {
         assert!(validate_query("faction design api_key=secret").is_err());
         let body = serde_json::to_vec(&serde_json::json!({ "results": [{
             "title": "Useful source",
-            "url": "https://example.com/design?topic=factions&utm_source=test&access_token=secret#section",
+            "url": "https://example.com/design?topic=factions&utm_source=test&access_token=x#section",
             "content": "Useful bounded summary."
         }] })).unwrap();
         let response = normalize_response(&body, 1).unwrap();
         assert_eq!(response.results[0].url, "https://example.com/design?topic=factions");
-        assert!(!response.results[0].url.contains("secret"));
+        assert!(!response.results[0].url.contains("access_token"));
 
         let credential_url = serde_json::to_vec(&serde_json::json!({ "results": [{
             "title": "Unsafe",
@@ -539,6 +562,21 @@ mod tests {
             "content": "Ignored."
         }] })).unwrap();
         assert!(normalize_response(&credential_url, 1).unwrap().results.is_empty());
+
+        let signed_url = serde_json::to_vec(&serde_json::json!({ "results": [{
+            "title": "Signed source",
+            "url": "https://example.com/design?topic=factions&x-amz-signature=x&expires=x&key-pair-id=x",
+            "content": "Useful bounded summary."
+        }] })).unwrap();
+        let response = normalize_response(&signed_url, 1).unwrap();
+        assert_eq!(response.results[0].url, "https://example.com/design?topic=factions");
+
+        let secret_snippet = serde_json::to_vec(&serde_json::json!({ "results": [{
+            "title": "Unsafe source",
+            "url": "https://example.com/design",
+            "content": "authorization: bearer x"
+        }] })).unwrap();
+        assert!(normalize_response(&secret_snippet, 1).unwrap().results.is_empty());
     }
 
     #[test]
@@ -556,6 +594,8 @@ mod tests {
             "javascript:alert(1)",
             "data:text/plain,unsafe",
             "file:///tmp/unsafe",
+            "shell:unsafe",
+            "custom-protocol:unsafe",
             "https://user:password@example.com/unsafe",
         ] {
             assert!(open_source_with(unsafe_url, |_| Ok(())).is_err());

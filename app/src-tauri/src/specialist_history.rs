@@ -576,7 +576,7 @@ mod tests {
         fs::write(&decisions_path, "decisions sentinel").unwrap();
         fs::write(&interview_path, "interview sentinel").unwrap();
         let project_before = fs::read(&project_path).unwrap();
-        let invalid_contents = "malformed raw-provider-marker NEBIUS_API_KEY=secret";
+        let invalid_contents = "malformed raw-provider-marker NEBIUS_API_KEY=x";
         fs::write(history_path(directory.path()), invalid_contents).unwrap();
 
         let recovery = archive_and_reset(directory.path()).unwrap();

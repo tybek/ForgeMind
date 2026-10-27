@@ -581,6 +581,7 @@ fn safe_metadata(value: &str) -> Option<String> {
     let value = value.trim();
     if value.is_empty()
         || value.len() > 200
+        || looks_like_credential_metadata(value)
         || !value
             .chars()
             .all(|character| character.is_ascii_alphanumeric() || "-_.:/".contains(character))
@@ -588,6 +589,27 @@ fn safe_metadata(value: &str) -> Option<String> {
         return None;
     }
     Some(value.to_owned())
+}
+
+fn looks_like_credential_metadata(value: &str) -> bool {
+    let normalized = value.to_ascii_lowercase();
+    [
+        "nebius_api_key=",
+        "tavily_api_key=",
+        "api_key=",
+        "apikey=",
+        "access_token=",
+        "refresh_token=",
+        "client_secret=",
+        "authorization:",
+        "bearer:",
+        "bearer_",
+    ]
+    .iter()
+    .any(|marker| normalized.contains(marker))
+        || ["sk-", "tvly-", "github_pat_", "ghp_", "gho_", "ghu_", "ghs_", "ghr_"]
+            .iter()
+            .any(|prefix| normalized.contains(prefix))
 }
 
 #[cfg(test)]
@@ -892,6 +914,30 @@ mod tests {
         headers.insert(
             "request-id",
             reqwest::header::HeaderValue::from_static("unsafe value"),
+        );
+        assert_eq!(provider_request_id(&headers), None);
+    }
+
+    #[test]
+    fn secret_shaped_provider_metadata_is_dropped_from_errors_and_request_ids() {
+        let candidate = format!("{}-{}", "sk", "x".repeat(24));
+        let body = serde_json::to_vec(&serde_json::json!({
+            "error": {
+                "code": candidate,
+                "type": "invalid_request_error",
+                "param": "max_completion_tokens"
+            }
+        }))
+        .unwrap();
+        let error = error_for_provider_response(StatusCode::BAD_REQUEST, &body, None);
+        let serialized = serde_json::to_string(&error).unwrap();
+        assert!(error.diagnostics.unwrap().provider_error_code.is_none());
+        assert!(!serialized.contains(&candidate));
+
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            "x-request-id",
+            reqwest::header::HeaderValue::from_str(&candidate).unwrap(),
         );
         assert_eq!(provider_request_id(&headers), None);
     }

@@ -1527,6 +1527,12 @@ fn validate_external_research_sources(sources: &[ExternalResearchSource]) -> Res
             .map_err(|_| AiWorkspaceError::invalid("External research contains an invalid source URL."))?;
         if !matches!(parsed_url.scheme(), "http" | "https")
             || parsed_url.host_str().is_none()
+            || !parsed_url.username().is_empty()
+            || parsed_url.password().is_some()
+            || parsed_url.fragment().is_some()
+            || parsed_url
+                .query_pairs()
+                .any(|(name, _)| is_sensitive_or_tracking_url_parameter(&name))
             || parsed_url.host_str().is_some_and(|host| !host.eq_ignore_ascii_case(&source.domain))
             || Uuid::parse_str(&source.id).is_err()
             || !ids.insert(source.id.as_str())
@@ -1537,6 +1543,9 @@ fn validate_external_research_sources(sources: &[ExternalResearchSource]) -> Res
             || !valid_stored_text(&source.title, 1, 300)
             || !valid_stored_text(&source.domain, 1, 253)
             || !valid_stored_text(&source.snippet, 1, 1_200)
+            || contains_secret_marker(&source.query)
+            || contains_secret_marker(&source.title)
+            || contains_secret_marker(&source.snippet)
         {
             return Err(AiWorkspaceError::invalid("External research contains invalid or unsafe source metadata."));
         }
@@ -1614,7 +1623,55 @@ fn is_false(value: &bool) -> bool {
 
 fn contains_secret_marker(value: &str) -> bool {
     let normalized = value.to_ascii_lowercase();
-    ["nebius_api_key=", "api_key=", "authorization: bearer ", "\"apikey\":"].iter().any(|marker| normalized.contains(marker))
+    [
+        "nebius_api_key=",
+        "tavily_api_key=",
+        "api_key=",
+        "apikey=",
+        "authorization: bearer ",
+        "\"apikey\":",
+        "access_token=",
+        "refresh_token=",
+        "client_secret=",
+        "password=",
+        "-----begin private key-----",
+    ]
+    .iter()
+    .any(|marker| normalized.contains(marker))
+}
+
+fn is_sensitive_or_tracking_url_parameter(name: &str) -> bool {
+    let normalized = name.to_ascii_lowercase();
+    normalized.starts_with("utm_")
+        || normalized.starts_with("mc_")
+        || normalized.starts_with("x-amz-")
+        || normalized.starts_with("x-goog-")
+        || matches!(
+            normalized.as_str(),
+            "gclid"
+                | "dclid"
+                | "fbclid"
+                | "msclkid"
+                | "api_key"
+                | "apikey"
+                | "access_token"
+                | "refresh_token"
+                | "auth"
+                | "authorization"
+                | "client_secret"
+                | "cookie"
+                | "session"
+                | "password"
+                | "passwd"
+                | "pwd"
+                | "secret"
+                | "signature"
+                | "sig"
+                | "policy"
+                | "expires"
+                | "key"
+                | "key-pair-id"
+        )
 }
 
 fn contains_absolute_path(value: &str) -> bool {
@@ -1878,7 +1935,7 @@ mod tests {
         let (directory, project_id) = workspace();
         let knowledge = compendium::create_entry(CreateKnowledgeEntryRequest {
             root_path: directory.path().display().to_string(), project_id: project_id.clone(), area: KnowledgeArea::WorldNarrative,
-            title: "Black Tide".to_owned(), statement: "A disputed coastal faction.".to_owned(), status: KnowledgeStatus::Direction,
+            title: "Harbor Coalition".to_owned(), statement: "A disputed coastal faction.".to_owned(), status: KnowledgeStatus::Direction,
         }).unwrap().entries[0].clone();
         let question = compendium::create_entry(CreateKnowledgeEntryRequest {
             root_path: directory.path().display().to_string(), project_id: project_id.clone(), area: KnowledgeArea::OpenQuestions,
@@ -1943,7 +2000,7 @@ mod tests {
             sources: vec![AiWorkspaceContextSourceRequest::Document { relative_path: format!("../{outside_name}"), priority: AiWorkspaceSelectionPriority::Explicit }],
         }).unwrap_err();
         assert_eq!(escaping.code, "INVALID_AI_WORKSPACE_REQUEST");
-        fs::write(directory.path().join("secret.md"), "NEBIUS_API_KEY=synthetic-placeholder").unwrap();
+        fs::write(directory.path().join("secret.md"), "NEBIUS_API_KEY=x").unwrap();
         assert!(build_context(BuildAiWorkspaceContextRequest {
             root_path: directory.path().display().to_string(), project_id,
             sources: vec![AiWorkspaceContextSourceRequest::Document { relative_path: "secret.md".to_owned(), priority: AiWorkspaceSelectionPriority::Explicit }],
@@ -2056,7 +2113,7 @@ mod tests {
         let created = create_session(create_request(directory.path(), &project_id)).unwrap();
         let error = append_message(AppendAiWorkspaceMessageRequest {
             root_path: directory.path().display().to_string(), project_id, session_id: created.sessions[0].id.clone(),
-            role: AiWorkspaceMessageRole::User, content: "authorization: bearer synthetic-secret".to_owned(), source_trace: Vec::new(), usage_reference: None,
+            role: AiWorkspaceMessageRole::User, content: "authorization: bearer x".to_owned(), source_trace: Vec::new(), usage_reference: None,
         }).unwrap_err();
         assert_eq!(error.code, "INVALID_AI_WORKSPACE_REQUEST");
         assert!(append_message(AppendAiWorkspaceMessageRequest {
@@ -2100,7 +2157,7 @@ mod tests {
         let created = create_session(create_request(directory.path(), &project_id)).unwrap();
         let session_id = created.sessions[0].id.clone();
         for (proposal_type, title, summary, expected_area, expected_status, expected_provenance) in [
-            (AiWorkspaceProposalType::SaveKnowledge, "Black Tide", "A disputed coastal faction.", KnowledgeArea::WorldNarrative, KnowledgeStatus::Direction, KnowledgeProvenance::AiInferred),
+            (AiWorkspaceProposalType::SaveKnowledge, "Harbor Coalition", "A disputed coastal faction.", KnowledgeArea::WorldNarrative, KnowledgeStatus::Direction, KnowledgeProvenance::AiInferred),
             (AiWorkspaceProposalType::CreateOpenQuestion, "Faction loyalty", "What keeps members loyal?", KnowledgeArea::OpenQuestions, KnowledgeStatus::Tbd, KnowledgeProvenance::Unresolved),
         ] {
             let proposed = create_proposal(CreateAiWorkspaceProposalRequest {
@@ -2134,7 +2191,7 @@ mod tests {
         let session_id = created.sessions[0].id.clone();
         let proposed = create_proposal(CreateAiWorkspaceProposalRequest {
             root_path: directory.path().display().to_string(), project_id: project_id.clone(), session_id: session_id.clone(),
-            proposal_type: AiWorkspaceProposalType::CreateDecision, title: "Elect the Tide Speaker".to_owned(),
+            proposal_type: AiWorkspaceProposalType::CreateDecision, title: "Elect the Council Speaker".to_owned(),
             summary: "The faction elects its leader.".to_owned(), reason: Some("Preserve political tension.".to_owned()),
             source_trace: Vec::new(), proposed_edit: None,
         }).unwrap();
@@ -2159,6 +2216,35 @@ mod tests {
         let session_id = created.sessions[0].id.clone();
         let source_id = Uuid::new_v4().to_string();
         let retrieved_at = timestamp();
+        let unsafe_source = ExternalResearchSource {
+            id: Uuid::new_v4().to_string(),
+            query: "enemy faction encounters".to_owned(),
+            title: "Unsafe source".to_owned(),
+            url: "https://example.com/faction-conflict?access_token=x".to_owned(),
+            domain: "example.com".to_owned(),
+            snippet: "Bounded external reference data.".to_owned(),
+            retrieved_at: retrieved_at.clone(),
+            provider: ExternalResearchProvider::Tavily,
+            authority: AiWorkspaceAuthority::ExternalResearch,
+            selected: true,
+        };
+        assert!(replace_external_research(
+            &directory.path().display().to_string(),
+            &project_id,
+            &session_id,
+            vec![unsafe_source],
+            ExternalResearchRun {
+                provider: ExternalResearchProvider::Tavily,
+                operation: "SEARCH".to_owned(),
+                timestamp: retrieved_at.clone(),
+                query_length: 24,
+                result_count: 1,
+                latency_ms: 8,
+                status: ExternalResearchRunStatus::Success,
+                error_category: None,
+            },
+        )
+        .is_err());
         replace_external_research(
             &directory.path().display().to_string(),
             &project_id,

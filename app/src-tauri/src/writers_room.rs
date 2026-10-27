@@ -1028,7 +1028,7 @@ mod tests {
             let prepared = prepare_run(WritersRoomRunRequest {
                 root_path: directory.path().display().to_string(), project_id, session_id,
                 model_id: model_registry::CREATOR_DEFAULT_MODEL_ID.to_owned(), mode: WritersRoomRunMode::Send,
-                message: Some("Develop the Black Tide faction.".to_owned()),
+                message: Some("Develop the Harbor Coalition faction.".to_owned()),
             }).unwrap();
             assert!(prepared.ai_request.system_prompt.as_deref().unwrap().contains(profile_prompt(profile_id)));
             assert_eq!(prepared.ai_request.max_tokens, Some(MAX_COMPLETION_TOKENS));
@@ -1296,7 +1296,7 @@ mod tests {
             session_id,
             model_id: model_registry::CREATOR_DEFAULT_MODEL_ID.to_owned(),
             mode: WritersRoomRunMode::Send,
-            message: Some("Explore the Iron Covenant.".to_owned()),
+            message: Some("Explore the Example Guild.".to_owned()),
         }).unwrap();
         let cases = [
             (
@@ -1335,7 +1335,7 @@ mod tests {
                 StructuredOutputValidationCode::InvalidProposal,
             ),
             (
-                r#"{"message":"Visible answer.","privateProjectText":"Iron Covenant private marker"}"#,
+                r#"{"message":"Visible answer.","privateProjectText":"Example Guild private marker"}"#,
                 StructuredOutputExtractionStage::DeserializationFailed,
                 StructuredOutputValidationCode::UnknownField,
             ),
@@ -1352,7 +1352,7 @@ mod tests {
             assert_eq!(diagnostics.response_character_count, text.chars().count());
             let serialized = serde_json::to_string(&diagnostics).unwrap();
             assert!(!serialized.contains(text));
-            assert!(!serialized.contains("Iron Covenant private marker"));
+            assert!(!serialized.contains("Example Guild private marker"));
             assert!(!serialized.contains("privateProjectText"));
         }
     }
@@ -1406,7 +1406,7 @@ mod tests {
         let prepared = prepare_run(WritersRoomRunRequest {
             root_path: directory.path().display().to_string(), project_id, session_id,
             model_id: model_registry::CREATOR_DEFAULT_MODEL_ID.to_owned(), mode: WritersRoomRunMode::Send,
-            message: Some("Explore the Iron Covenant.".to_owned()),
+            message: Some("Explore the Example Guild.".to_owned()),
         }).unwrap();
         let variants = [
             (r#"{"message":"Possibilities remain open.","questions":[],"sourceRefs":[],"proposals":[]}"#, 0),
@@ -1442,7 +1442,7 @@ mod tests {
             vec!["First?", "Second?", "Third?"],
         );
         let proposal = normalize_response(
-            &provider_response(r#"{"message":"The direction is specific.","proposals":[{"proposalType":"CREATE_OPEN_QUESTION","title":"Covenant recognition","content":"Who recognizes the Iron Covenant?","reason":"External legitimacy remains unresolved.","sourceRefs":null}]}"#),
+            &provider_response(r#"{"message":"The direction is specific.","proposals":[{"proposalType":"CREATE_OPEN_QUESTION","title":"Guild recognition","content":"Who recognizes the Example Guild?","reason":"External legitimacy remains unresolved.","sourceRefs":null}]}"#),
             &prepared,
         ).unwrap();
         assert_eq!(proposal.proposals.len(), 1);
@@ -1481,11 +1481,11 @@ mod tests {
     }
 
     #[test]
-    fn iron_covenant_acceptance_flow_uses_the_restored_contract_without_mutating_project_truth() {
+    fn example_guild_acceptance_flow_uses_the_restored_contract_without_mutating_project_truth() {
         let (directory, project_id) = workspace();
         let covenant = compendium::create_entry(CreateKnowledgeEntryRequest {
             root_path: directory.path().display().to_string(), project_id: project_id.clone(), area: KnowledgeArea::WorldNarrative,
-            title: "Iron Covenant".to_owned(), statement: "The Iron Covenant already exists in the setting.".to_owned(), status: KnowledgeStatus::Direction,
+            title: "Example Guild".to_owned(), statement: "The Example Guild already exists in the setting.".to_owned(), status: KnowledgeStatus::Direction,
         }).unwrap().entries.into_iter().last().unwrap();
         let compendium_path = directory.path().join(".forgemind").join("compendium.json");
         let truth_before = std::fs::read(&compendium_path).unwrap();
@@ -1493,12 +1493,12 @@ mod tests {
         let prepared = prepare_run(WritersRoomRunRequest {
             root_path: directory.path().display().to_string(), project_id: project_id.clone(), session_id,
             model_id: model_registry::CREATOR_DEFAULT_MODEL_ID.to_owned(), mode: WritersRoomRunMode::Send,
-            message: Some("We already established the Iron Covenant. Help me develop this faction further, but don't invent a complete answer yet. First identify what is already established, what is still unresolved, and ask me the most important question we should answer next. Give me a few distinct directions to choose from.".to_owned()),
+            message: Some("We already established the Example Guild. Help me develop this faction further, but don't invent a complete answer yet. First identify what is already established, what is still unresolved, and ask me the most important question we should answer next. Give me a few distinct directions to choose from.".to_owned()),
         }).unwrap();
         assert!(prepared.context_plan.source_trace.iter().any(|source| source.source_id == covenant.id));
         assert_eq!(prepared.ai_request.response_format, Some(AIResponseFormat::JsonObject));
         let response = provider_response(serde_json::json!({
-            "message": "The Iron Covenant is already established. Its license-validation authority remains unresolved, so that should be grounded before inventing a complete structure.",
+            "message": "The Example Guild is already established. Its license-validation authority remains unresolved, so that should be grounded before inventing a complete structure.",
             "questions": ["Who should validate salvage licenses? Possible directions: settlement councils, broker consensus, inherited charters, or reputation."],
             "sourceRefs": [covenant.id.clone()],
             "proposals": []
@@ -1599,13 +1599,13 @@ mod tests {
         let (directory, project_id) = workspace();
         let entry = compendium::create_entry(CreateKnowledgeEntryRequest {
             root_path: directory.path().display().to_string(), project_id: project_id.clone(), area: KnowledgeArea::WorldNarrative,
-            title: "Black Tide".to_owned(), statement: "A disputed coastal faction.".to_owned(), status: KnowledgeStatus::Direction,
+            title: "Harbor Coalition".to_owned(), statement: "A disputed coastal faction.".to_owned(), status: KnowledgeStatus::Direction,
         }).unwrap().entries[0].clone();
         let session_id = session(&directory, &project_id, "lore_architect");
         let prepared = prepare_run(WritersRoomRunRequest {
             root_path: directory.path().display().to_string(), project_id, session_id,
             model_id: model_registry::CREATOR_DEFAULT_MODEL_ID.to_owned(), mode: WritersRoomRunMode::Send,
-            message: Some("Develop the Black Tide faction.".to_owned()),
+            message: Some("Develop the Harbor Coalition faction.".to_owned()),
         }).unwrap();
         assert!(prepared.context_plan.source_trace.iter().any(|source| source.source_id == entry.id));
         let response = AIResponse {
@@ -1615,8 +1615,8 @@ mod tests {
                 "sourceRefs": [entry.id.clone()],
                 "proposals": [{
                     "proposalType": "SAVE_KNOWLEDGE",
-                    "title": "Black Tide schism",
-                    "content": "The Black Tide contains two rival civic blocs.",
+                    "title": "Harbor Coalition schism",
+                    "content": "The Harbor Coalition contains two rival civic blocs.",
                     "reason": "This creates an actionable source of internal conflict.",
                     "sourceRefs": [entry.id.clone()]
                 }]
@@ -1771,8 +1771,8 @@ mod tests {
 
         let proposed = ai_workspace::create_proposal(ai_workspace::CreateAiWorkspaceProposalRequest {
             root_path: directory.path().display().to_string(), project_id: project_id.clone(), session_id: session_id.clone(),
-            proposal_type: AiWorkspaceProposalType::SaveKnowledge, title: "Iron Covenant authority".to_owned(),
-            summary: "The Iron Covenant uses decentralized broker licensing.".to_owned(), reason: Some("User-approved direction.".to_owned()),
+            proposal_type: AiWorkspaceProposalType::SaveKnowledge, title: "Example Guild authority".to_owned(),
+            summary: "The Example Guild uses decentralized broker licensing.".to_owned(), reason: Some("User-approved direction.".to_owned()),
             source_trace: Vec::new(), proposed_edit: None,
         }).unwrap();
         let proposal_id = proposed.sessions[0].proposals.last().unwrap().id.clone();

@@ -16,6 +16,9 @@ Desktop.ini
 !.env.example
 *.local
 
+# This source checkout must not become a ForgeMind project workspace
+/.forgemind/
+
 # Logs and temporary files
 *.log
 tmp/
