@@ -307,6 +307,10 @@ Submission copy must say Markdown-only, review-first, human Apply, and documente
 
 ## 3-Minute Demo Video
 
+### Optional MODEL-1 proof shot
+
+If the final cut benefits from visible model awareness, briefly open **AI Models** after one user-driven catalog refresh. Show the explicit Nebius Token Factory catalog versus ForgeMind enabled registry distinction, Nemotron as default, verified JSON Object metadata, and observed local usage. Do not spend demo time making an alternate inference call, and do not describe availability or latency as quality, ranking, pricing, benchmarking, or automatic routing.
+
 Treat the video as a pitch supported by a working product, not as a tutorial. Target `2:45-2:55` to leave upload/player margin under the three-minute maximum.
 
 ### Story structure and shot list

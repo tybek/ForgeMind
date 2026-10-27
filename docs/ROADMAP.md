@@ -15,6 +15,12 @@ The roadmap uses small, outcome-based milestones. A milestone is not assumed to 
 
 Only SUB-0 is complete. The final submission is not complete.
 
+## MODEL-1 Token Factory Model Catalog & Registry Management — IMPLEMENTED, MANUAL REFRESH PENDING
+
+Add one compact **AI Studio → AI Models** surface that distinguishes the dynamic Nebius Token Factory provider catalog from ForgeMind's application-local verified registry. The native boundary performs only an explicit authenticated `GET /v1/models`, caches normalized model IDs and refresh time outside project truth, preserves Nemotron as the protected default and DeepSeek as the existing alternate, enables or disables registry entries, accepts bounded custom IDs, and defaults unknown capability to `NONE`. Canonical local usage records provide run count, token totals, median latency, and last-used observations without pricing, score, ranking, or quality claims.
+
+Headless implementation and offline validation are complete. One user-driven catalog refresh plus the short selector/persistence acceptance remain pending before milestone closure. MODEL-1 adds no router, automatic selection, fallback chain, benchmark, pricing inference, provider integration, live inference validation, or project-truth mutation.
+
 ## 0A Product Foundation — COMPLETE
 
 Define the Intent / Reality / Alignment product model, MVP boundary, conceptual data model, workflows, architecture boundaries, roadmap, repository layout, contribution expectations, and license.

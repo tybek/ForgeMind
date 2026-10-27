@@ -190,6 +190,14 @@ Approval answers whether a person has accepted an artifact; it does not replace 
 - Omitted empty diagnostic lists in previously written format-version `1` failures deserialize as empty lists; this is backward compatibility, not a schema migration.
 - Invalid history is not discarded during startup. Explicit recovery archives only the history document and creates a valid empty replacement without changing Project, interview, Compendium, or Decision data.
 
+## MODEL-1 application-local model state
+
+`ModelCatalog` is a machine-local discovery cache: `formatVersion`, `refreshedAt`, and normalized `AvailableModel` records containing only provider model ID, display value, provider, discovery timestamp, and `AVAILABLE`. It is non-authoritative convenience data.
+
+`ModelEntry` remains the ForgeMind registry record for enabled state, friendly name, default semantics, explicit capability metadata, and optional verified pricing. Unknown discovered or custom entries enter with structured output `NONE`, no pricing, and no inferred task suitability. Registry preferences and catalog cache are application-local and are not Project, Compendium, Decision, Reality, Alignment, Feature Contract, or other `.forgemind/` truth.
+
+Observed model metrics are deterministic projections over canonical application-local usage records: run count, input/output token totals, median recorded latency, and last-used time. Absence is shown as no observed runs, never as zero quality or performance.
+
 ## AIW-0 / WR-1 AI Workspace invariants
 
 - `.forgemind/ai-workspace-sessions.json` is a human-readable format-version `1` work-history document tied to one portable Project ID; it is not Project truth.

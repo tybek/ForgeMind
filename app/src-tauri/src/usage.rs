@@ -92,6 +92,18 @@ pub struct UsageSummary {
     pub by_model: Vec<ModelUsageSummary>,
 }
 
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ObservedModelMetrics {
+    pub provider: String,
+    pub model_id: String,
+    pub run_count: u64,
+    pub input_tokens: u64,
+    pub output_tokens: u64,
+    pub median_latency_ms: Option<u64>,
+    pub last_used: String,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct UsageError {
@@ -302,6 +314,30 @@ pub fn summarize(records: &[UsageRecord], session_id: &str, project_id: Option<&
     }
 }
 
+pub fn observed_by_model(records: &[UsageRecord]) -> Vec<ObservedModelMetrics> {
+    let mut grouped: BTreeMap<(&str, &str), Vec<&UsageRecord>> = BTreeMap::new();
+    for record in records {
+        grouped.entry((&record.provider, &record.model_id)).or_default().push(record);
+    }
+    grouped.into_iter().map(|((provider, model_id), records)| {
+        let mut latencies = records.iter().filter_map(|record| record.latency_ms).collect::<Vec<_>>();
+        latencies.sort_unstable();
+        let median_latency_ms = if latencies.is_empty() { None } else if latencies.len() % 2 == 1 {
+            Some(latencies[latencies.len() / 2])
+        } else {
+            let upper = latencies.len() / 2;
+            Some((latencies[upper - 1] + latencies[upper]) / 2)
+        };
+        ObservedModelMetrics {
+            provider: provider.to_owned(), model_id: model_id.to_owned(), run_count: records.len() as u64,
+            input_tokens: records.iter().filter_map(|record| record.input_tokens).sum(),
+            output_tokens: records.iter().filter_map(|record| record.output_tokens).sum(),
+            median_latency_ms,
+            last_used: records.iter().map(|record| record.timestamp.as_str()).max().unwrap_or_default().to_owned(),
+        }
+    }).collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -443,5 +479,21 @@ mod tests {
         assert_eq!(summary.by_model[0].totals.requests, 2);
         assert_eq!(summary.by_model[0].totals.total_tokens, 6_000);
         assert_eq!(summary.by_model[0].totals.average_latency_ms, Some(50));
+    }
+
+    #[test]
+    fn observed_metrics_use_all_local_runs_and_deterministic_median() {
+        let mut first = record_for_result("one", Some("a"), &model(None), None, &Ok(response()));
+        first.timestamp = "2026-01-01T00:00:00.000Z".to_owned();
+        first.latency_ms = Some(10);
+        let mut second = record_for_result("two", Some("b"), &model(None), None, &Ok(response()));
+        second.timestamp = "2026-01-02T00:00:00.000Z".to_owned();
+        second.latency_ms = Some(30);
+        let metrics = observed_by_model(&[first, second]);
+        assert_eq!(metrics[0].run_count, 2);
+        assert_eq!(metrics[0].median_latency_ms, Some(20));
+        assert_eq!(metrics[0].input_tokens, 2_000);
+        assert_eq!(metrics[0].output_tokens, 4_000);
+        assert_eq!(metrics[0].last_used, "2026-01-02T00:00:00.000Z");
     }
 }

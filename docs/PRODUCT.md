@@ -2,7 +2,7 @@
 
 ## Status
 
-This document defines the product direction. **CURRENT:** 0K Feature Contracts, UI-1, UI-2, NPC-1, NPC-2, NEXT-1, AIW-0, and WR-1 through WR-1.3S are complete at their documented boundaries; WR-1.3S has a user-confirmed live manual PASS. IMP-1 Existing Project Knowledge Import is implemented and headless validated, with one controlled extraction and short manual UI/persistence acceptance pending. TAV-1 External Research in Writers' Room is implemented and headless validated, with its bounded live/manual acceptance pending. UI-3 Project Overview is implemented and headless validated, with manual responsive/visual closure pending. Writers' Room adds project-scoped narrative sessions for Lore Architect, Character & Dialogue, and Continuity Editor with deterministic Project Brain context, explicit Tavily research selection, separate provider preflight, the stable WR-1.3S response shape, and editable reviewed proposals. Optional NEXT-2 AI refinement, Wiki Chronicler, Rebaseline, a general Router, and the broader future direction remain unimplemented unless explicitly identified otherwise.
+This document defines the product direction. **CURRENT:** 0K Feature Contracts, UI-1, UI-2, NPC-1, NPC-2, NEXT-1, AIW-0, and WR-1 through WR-1.3S are complete at their documented boundaries; WR-1.3S has a user-confirmed live manual PASS. MODEL-1 model catalog and application-local registry management is implemented and headless validated, with one explicit catalog refresh plus selector/persistence acceptance pending. IMP-1 Existing Project Knowledge Import is implemented and headless validated, with one controlled extraction and short manual UI/persistence acceptance pending. TAV-1 External Research in Writers' Room is implemented and headless validated, with its bounded live/manual acceptance pending. UI-3 Project Overview is implemented and headless validated, with manual responsive/visual closure pending. Writers' Room adds project-scoped narrative sessions for Lore Architect, Character & Dialogue, and Continuity Editor with deterministic Project Brain context, explicit Tavily research selection, separate provider preflight, the stable WR-1.3S response shape, and editable reviewed proposals. Optional NEXT-2 AI refinement, Wiki Chronicler, Rebaseline, a general Router, and the broader future direction remain unimplemented unless explicitly identified otherwise.
 
 ## Problem
 
@@ -148,6 +148,10 @@ The future shared behavior underneath those workspaces is specified in [Context 
 [Security and Privacy Architecture](SECURITY_AND_PRIVACY.md) defines ForgeMind's local-first, BYOK-friendly security stance and the future shared AI Data Boundary, Context Preview, Security Preflight, Secret Guard, and credential diagnostics. SEC-0 is documentation only. Current factual safeguards remain limited to the native environment-backed Nebius credential path, narrow Tauri permissions, bounded workflow-specific requests, and privacy-minimized local histories; SEC-1 through SEC-6 are not implemented.
 
 ## What ForgeMind is not
+
+### Global AI Models
+
+AI Studio includes one compact global model-management surface. It shows the last explicitly refreshed Nebius Token Factory catalog separately from models enabled in ForgeMind, protects the current default, permits bounded manual model IDs, and labels unknown capability as not verified. Local usage observations help a human understand prior ForgeMind runs; they do not rank models or choose one automatically. This state is installation-local rather than game-project Intent or Reality.
 
 - **Not an AI coding agent:** it may prepare grounded implementation context, but its core job is project understanding, decisions, and alignment—not autonomous coding.
 - **Not a GDD generator:** it maintains living, attributable knowledge connected to actual implementation rather than producing a one-time design document.

@@ -116,6 +116,8 @@ The following vocabulary is an architectural and privacy concept first; SEC-0 do
 
 ## Provider credential policy
 
+MODEL-1 catalog discovery is native-only. React can request an explicit refresh but never receives `NEBIUS_API_KEY`, an Authorization header, or a configurable provider URL. The adapter calls only the compiled Token Factory `GET /v1/models` endpoint, returns allowlisted error categories, and normalizes model identifiers rather than retaining the raw response. Custom model IDs are bounded data, reject URLs and unsafe characters, and cannot alter the endpoint. Catalog and registry files contain no credentials and remain outside project data.
+
 ### Current MVP model
 
 ForgeMind's preferred early commercial and security model is BYOK:

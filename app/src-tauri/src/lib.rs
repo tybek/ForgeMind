@@ -9,6 +9,7 @@ pub mod interview;
 pub mod knowledge_import;
 pub mod git_reality;
 pub mod model_registry;
+pub mod model_catalog;
 pub mod reality_connections;
 pub mod specialist_history;
 pub mod specialists;
@@ -76,7 +77,7 @@ use specialists::{
     SpecialistAnalysisRequest, SpecialistAnalysisResult, SpecialistError, SpecialistHistoryWarning,
     SpecialistProfile,
 };
-use usage::{TaskCategory, UsageError, UsageSummary};
+use usage::{ObservedModelMetrics, TaskCategory, UsageError, UsageSummary};
 use writers_room::{
     WritersRoomPreflight, WritersRoomPreflightRequest, WritersRoomRunRequest,
     WritersRoomRunResult,
@@ -196,7 +197,45 @@ pub async fn evaluate_registered(
 
 #[tauri::command]
 fn list_models() -> Result<Vec<ModelEntry>, ModelRegistryError> {
-    model_registry::models()
+    model_registry::enabled_models()
+}
+
+#[tauri::command]
+fn get_model_management_state() -> Result<model_catalog::ModelManagementState, model_catalog::ModelCatalogError> {
+    model_catalog::state()
+}
+
+#[tauri::command]
+async fn refresh_model_catalog() -> Result<model_catalog::ModelManagementState, model_catalog::ModelCatalogError> {
+    model_catalog::refresh().await
+}
+
+#[tauri::command]
+fn enable_available_model(model_id: String) -> Result<model_catalog::ModelManagementState, model_catalog::ModelCatalogError> {
+    if !model_catalog::catalog_contains(&model_id)? {
+        return Err(model_catalog::ModelCatalogError { code: "MODEL_NOT_AVAILABLE", message: "The selected model is not present in the latest Token Factory catalog.".to_owned() });
+    }
+    model_registry::add_model(&model_id, None, "AVAILABLE")?;
+    model_catalog::state()
+}
+
+#[tauri::command]
+fn set_model_enabled(model_id: String, enabled: bool) -> Result<model_catalog::ModelManagementState, model_catalog::ModelCatalogError> {
+    model_registry::set_enabled(&model_id, enabled)?;
+    model_catalog::state()
+}
+
+#[tauri::command]
+fn add_custom_model(model_id: String, display_name: Option<String>) -> Result<model_catalog::ModelManagementState, model_catalog::ModelCatalogError> {
+    let availability = if model_catalog::catalog_contains(&model_id)? { "AVAILABLE" } else { "UNVERIFIED" };
+    model_registry::add_model(&model_id, display_name.as_deref(), availability)?;
+    model_catalog::state()
+}
+
+#[tauri::command]
+fn get_observed_model_metrics() -> Result<Vec<ObservedModelMetrics>, UsageError> {
+    let records = usage::load_records(&usage::application_usage_path()?)?;
+    Ok(usage::observed_by_model(&records))
 }
 
 #[tauri::command]
@@ -795,6 +834,12 @@ pub fn run() {
             suggest_new_project_design_pillars,
             get_creator_ai_preflight,
             list_models,
+            get_model_management_state,
+            refresh_model_catalog,
+            enable_available_model,
+            set_model_enabled,
+            add_custom_model,
+            get_observed_model_metrics,
             list_specialist_profiles,
             list_ai_workspace_profiles,
             load_ai_workspace_sessions,

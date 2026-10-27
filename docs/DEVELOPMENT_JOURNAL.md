@@ -763,6 +763,10 @@ The user-driven NPC-1 manual PASS was recorded on 2026-09-27. It confirmed Creat
 
 ## Update policy
 
+## MODEL-1 — 2026-10-27
+
+Implemented the final pre-freeze model-awareness surface: native explicit Token Factory `GET /v1/models` discovery, application-local catalog and registry persistence, protected Nemotron default, conservative custom/discovered capability, deterministic observed usage metrics, and AI Studio management UI. Provider availability remains distinct from ForgeMind-verified capability; there is no router, ranking, benchmark, pricing inference, provider editor, live inference, or project-truth change. Offline native/frontend validation is recorded in `VALIDATION.md`; one user-driven refresh and selector/persistence acceptance remain pending before closure.
+
 Update this journal:
 
 - after meaningful milestone completion;

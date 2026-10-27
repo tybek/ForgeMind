@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { EvaluationPage } from "./EvaluationPage";
+import { ModelsPage } from "./ModelsPage";
 import { InterviewPage } from "./InterviewPage";
 import { CompendiumPage } from "./CompendiumPage";
 import { DecisionsPage } from "./DecisionsPage";
@@ -66,7 +67,7 @@ const workspaceAreas = [
 ] as const;
 
 type WorkspaceArea = (typeof workspaceAreas)[number];
-type WorkspaceView = WorkspaceArea | "Project Interview" | "AI Behavior Designer" | "AI Evaluation";
+type WorkspaceView = WorkspaceArea | "Project Interview" | "AI Behavior Designer" | "AI Evaluation" | "AI Models";
 
 type NavigationSuite = "PROJECT" | "AI_STUDIO" | "DELIVERY";
 
@@ -89,7 +90,7 @@ const navigationGroups: readonly NavigationGroup[] = [
   {
     label: "AI Studio",
     suite: "AI_STUDIO",
-    items: ["Writers' Room", "AI Behavior Designer", "AI Evaluation"],
+    items: ["Writers' Room", "AI Behavior Designer", "AI Models", "AI Evaluation"],
   },
   {
     label: "Delivery",
@@ -115,6 +116,7 @@ const workspaceAreaIcons: Record<WorkspaceView, IconName> = {
   "Project Interview": "message",
   "AI Behavior Designer": "ai",
   "AI Evaluation": "gauge",
+  "AI Models": "ai",
   "Writers' Room": "message",
 };
 
@@ -133,10 +135,12 @@ const workspaceAreaDescriptions: Record<WorkspaceView, string> = {
   "Project Interview": "Draft initial Compendium knowledge for explicit human review.",
   "AI Behavior Designer": "Run bounded, non-authoritative game-behavior analysis.",
   "AI Evaluation": "Evaluate configured models through the explicit provider boundary.",
+  "AI Models": "Discover Token Factory models and manage ForgeMind's application-local registry.",
   "Writers' Room": "Develop lore, characters, dialogue, and continuity through source-aware AI conversation.",
 };
 
 function milestoneFor(area: WorkspaceView): string {
+  if (area === "AI Models") return "MODEL-1 · Model Registry";
   if (area === "Writers' Room") return "WR-1 · Headless validated";
   if (area === "Project Interview") return "0E · Complete";
   if (area === "AI Behavior Designer") return "0G · Specialist";
@@ -657,6 +661,8 @@ export function WorkspaceShell({
             <SpecialistPage workspace={workspace} onEditKnowledge={editKnowledgeAtSource} />
           ) : activeArea === "AI Evaluation" ? (
             <EvaluationPage projectId={workspace.projectId} />
+          ) : activeArea === "AI Models" ? (
+            <ModelsPage />
           ) : activeArea === "Writers' Room" ? (
             <WritersRoomPage workspace={workspace} onOpenSource={openWritersRoomSource} initialSessionId={writersRoomSessionTarget} />
           ) : activeArea === "Overview" ? (

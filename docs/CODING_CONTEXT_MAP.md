@@ -16,7 +16,7 @@ Always begin with `AGENTS.md`, `ROADMAP.md`, `ARCHITECTURE.md`, and `VALIDATION.
 | Compendium | `../app/src-tauri/src/compendium.rs`, `../app/src/platform/projectKnowledge.ts`, `../app/src/CompendiumPage.tsx` | Knowledge import, CRUD, status, provenance, or UI changes. |
 | Decisions | `../app/src-tauri/src/decisions.rs`, `../app/src/platform/decisions.ts`, `../app/src/DecisionsPage.tsx` | Decision lifecycle, approval, relationships, or supersession changes. |
 | AI provider | `../app/src-tauri/src/ai.rs`, `../app/src/platform/aiProvider.ts` | Provider requests, normalization, credentials, or safe errors change. |
-| Model registry | `../app/src-tauri/src/model_registry.rs`, `../app/src/platform/modelRegistry.ts` | Model metadata, capabilities, enablement, or selection changes. |
+| Model catalog and registry | `../app/src-tauri/src/model_catalog.rs`, `../app/src-tauri/src/model_registry.rs`, `../app/src/platform/modelRegistry.ts`, `../app/src/ModelsPage.tsx` | Provider discovery, application-local model preferences, metadata, capabilities, enablement, or selection changes. |
 | Usage metering | `../app/src-tauri/src/usage.rs`, `../app/src/platform/usageMetering.ts` | Usage records, aggregation, privacy, or cost estimates change. |
 | Project Interview | `../app/src-tauri/src/interview.rs`, `../app/src/platform/projectInterview.ts`, `../app/src/InterviewPage.tsx` | Interview prompts, candidates, review, or persistence change. |
 | Specialists | `AI_SPECIALISTS_AND_PRODUCTION.md`, `../app/src-tauri/src/specialists.rs`, `../app/src-tauri/src/specialist_history.rs`, `../app/src/platform/specialists.ts`, `../app/src/SpecialistPage.tsx` | Specialist tasks, selected context, output, budgets, or history change. |

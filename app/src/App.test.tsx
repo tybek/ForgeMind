@@ -67,6 +67,10 @@ vi.mock("./WritersRoomPage", () => ({
   ),
 }));
 
+vi.mock("./ModelsPage", () => ({
+  ModelsPage: () => <section><h2>Enabled models</h2><p>Provider catalog is separate from the ForgeMind registry.</p></section>,
+}));
+
 vi.mock("./platform/workspaceDirectory", () => ({
   getDevelopmentWorkspacePath: vi.fn(),
   selectWorkspaceDirectory: vi.fn(),
@@ -241,6 +245,7 @@ const requiredAreas = [
   "Alignment",
   "Feature Contracts",
   "Writers' Room",
+  "AI Models",
 ];
 
 function navigationName(area: string): string {
@@ -622,6 +627,17 @@ describe("ForgeMind local workspace", () => {
     expect(
       screen.getByRole("button", { name: "Project Interview" }),
     ).toBeInTheDocument();
+  });
+
+  it("opens global model management inside AI Studio", async () => {
+    const user = userEvent.setup();
+    render(<WorkspaceShell workspace={workspace} onHome={() => undefined} onOpen={async () => undefined} />);
+
+    await user.click(screen.getByRole("button", { name: "AI Models" }));
+
+    expect(screen.getByRole("heading", { name: "AI Models", level: 1 })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Enabled models", level: 2 })).toBeInTheDocument();
+    expect(screen.getByText("MODEL-1 · Model Registry")).toBeVisible();
   });
 
   it("keeps the sidebar project summary compact and exposes the full project name", () => {

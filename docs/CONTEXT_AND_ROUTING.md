@@ -411,6 +411,8 @@ The route must be explainable in plain language and correctable before execution
 
 ## Model recommendation
 
+MODEL-1 does not implement model recommendation or routing. The provider catalog answers only whether Token Factory listed an ID during the last explicit refresh; the ForgeMind registry separately answers whether that ID is enabled and which capabilities are explicitly verified. Observed local run metrics remain descriptive evidence and are not converted into a score, rank, winner, fallback order, or automatic selection.
+
 Model recommendation is task-specific and advisory. It must not define a universal model leaderboard.
 
 ### Inputs
