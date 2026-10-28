@@ -307,6 +307,11 @@ Submission copy must say Markdown-only, review-first, human Apply, and documente
 
 ## 3-Minute Demo Video
 
+DEMO-0's public-safe Hollow Reach template, exact operator path, prompts,
+failure fallbacks, and reset procedure are maintained in the
+[DEMO-0 Runbook](DEMO_RUNBOOK.md). This clean baseline does not by itself close
+SUB-3 or authorize a provider request, recording, upload, or publication.
+
 ### Optional MODEL-1 proof shot
 
 If the final cut benefits from visible model awareness, briefly open **AI Models** after one user-driven catalog refresh. Show the explicit Nebius Token Factory catalog versus ForgeMind enabled registry distinction, Nemotron as default, verified JSON Object metadata, and observed local usage. Do not spend demo time making an alternate inference call, and do not describe availability or latency as quality, ranking, pricing, benchmarking, or automatic routing.

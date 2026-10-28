@@ -1,0 +1,73 @@
+{
+  "formatVersion": 1,
+  "projectId": "4e1a5e18-6d8a-4ae5-bc2e-7ab74d3b1a01",
+  "updatedAt": "2026-10-28T09:00:00.000Z",
+  "entries": [
+    {
+      "id": "7d427b28-4548-4e43-b507-a2c59d75f101",
+      "area": "overview",
+      "title": "Project identity",
+      "statement": "Working title: Hollow Reach\nGenre / subgenre: Tactical extraction / survival strategy\nMode: Single-player",
+      "status": "DIRECTION",
+      "provenance": "USER_STATED",
+      "source": "new_project_creator",
+      "createdAt": "2026-10-28T09:00:00.000Z",
+      "updatedAt": "2026-10-28T09:00:00.000Z"
+    },
+    {
+      "id": "7d427b28-4548-4e43-b507-a2c59d75f102",
+      "area": "game_vision",
+      "title": "Game vision",
+      "statement": "Lead expeditions from a failing geothermal settlement, turning scarce information and risky salvage into survival.",
+      "status": "DIRECTION",
+      "provenance": "USER_STATED",
+      "source": "new_project_creator",
+      "createdAt": "2026-10-28T09:00:00.000Z",
+      "updatedAt": "2026-10-28T09:00:00.000Z"
+    },
+    {
+      "id": "7d427b28-4548-4e43-b507-a2c59d75f103",
+      "area": "core_loop",
+      "title": "Core loop",
+      "statement": "Survey a sector, choose a route and loadout, extract salvage, then invest the return before conditions shift.",
+      "status": "DIRECTION",
+      "provenance": "USER_STATED",
+      "source": "new_project_creator",
+      "createdAt": "2026-10-28T09:00:00.000Z",
+      "updatedAt": "2026-10-28T09:00:00.000Z"
+    },
+    {
+      "id": "7d427b28-4548-4e43-b507-a2c59d75f104",
+      "area": "game_vision",
+      "title": "Design pillar: Information creates advantage",
+      "statement": "Observation and preparation should create safer options without removing uncertainty.",
+      "status": "DIRECTION",
+      "provenance": "USER_STATED",
+      "source": "new_project_creator",
+      "createdAt": "2026-10-28T09:00:00.000Z",
+      "updatedAt": "2026-10-28T09:00:00.000Z"
+    },
+    {
+      "id": "7d427b28-4548-4e43-b507-a2c59d75f105",
+      "area": "game_vision",
+      "title": "Design pillar: Every haul carries a tradeoff",
+      "statement": "Salvage value competes with time, carrying capacity, and exposure.",
+      "status": "DIRECTION",
+      "provenance": "USER_STATED",
+      "source": "new_project_creator",
+      "createdAt": "2026-10-28T09:00:00.000Z",
+      "updatedAt": "2026-10-28T09:00:00.000Z"
+    },
+    {
+      "id": "7d427b28-4548-4e43-b507-a2c59d75f106",
+      "area": "open_questions",
+      "title": "Open question",
+      "statement": "Who has the final claim when the Salvage Compact marks a recovery zone that an independent crew entered first?",
+      "status": "TBD",
+      "provenance": "UNRESOLVED",
+      "source": "new_project_creator",
+      "createdAt": "2026-10-28T09:00:00.000Z",
+      "updatedAt": "2026-10-28T09:00:00.000Z"
+    }
+  ]
+}

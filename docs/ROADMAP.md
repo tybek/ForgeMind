@@ -13,6 +13,16 @@ The roadmap uses small, outcome-based milestones. A milestone is not assumed to 
 - **SUB-4 - Video production - PLANNED:** capture, edit, caption, upload, and verify a public video no longer than three minutes.
 - **SUB-5 - Final submission QA - PLANNED:** verify product, repository, Nebius, NVIDIA, video, and Devpost gates before the external deadline.
 
+### DEMO-0 - Clean Demo Workspace & Submission Baseline - COMPLETE
+
+The synthetic public-safe Hollow Reach workspace template and DEMO-0 operator
+runbook provide a sparse Project Brain baseline, three compact Markdown sources,
+the bounded Knowledge Import/Writers' Room/Tavily/model-catalog walkthrough,
+honest failure fallbacks, and a copy-to-reset procedure. The template contains
+no provider results, usage history, model registry, credentials, private project
+content, or production behavior. DEMO-0 does not close SUB-3 through SUB-5 and
+does not authorize recording, publication, or live provider calls.
+
 Only SUB-0 is complete. The final submission is not complete.
 
 ## MODEL-1 Token Factory Model Catalog & Registry Management — IMPLEMENTED, MODEL-1.1 MANUAL RECHECK PENDING

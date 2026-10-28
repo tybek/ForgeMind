@@ -428,6 +428,65 @@ mod tests {
     }
 
     #[test]
+    fn public_hollow_reach_demo_template_is_valid_sparse_and_import_ready() {
+        let root = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("..")
+            .join("..")
+            .join("demo")
+            .join("hollow-reach-template");
+
+        let WorkspaceInspection::Valid { project, .. } = inspect(&root).unwrap() else {
+            panic!("expected a valid public demo workspace");
+        };
+        assert_eq!(project.name, "Hollow Reach");
+
+        let document = compendium::load(&root).unwrap().unwrap();
+        assert_eq!(document.project_id, project.project_id);
+        assert_eq!(document.entries.len(), 6);
+        assert_eq!(
+            document
+                .entries
+                .iter()
+                .filter(|entry| entry.area == KnowledgeArea::OpenQuestions)
+                .count(),
+            1
+        );
+        assert!(document.entries.iter().all(|entry| {
+            !matches!(entry.title.trim().to_ascii_lowercase().as_str(), "test" | "test2")
+        }));
+        assert!(crate::decisions::load(&root).unwrap().is_none());
+
+        let metadata_files = fs::read_dir(root.join(METADATA_DIRECTORY))
+            .unwrap()
+            .map(|entry| entry.unwrap().file_name().to_string_lossy().into_owned())
+            .collect::<BTreeSet<_>>();
+        assert_eq!(
+            metadata_files,
+            BTreeSet::from([PROJECT_FILE.to_owned(), "compendium.json".to_owned()])
+        );
+
+        let import_source = fs::read_to_string(root.join("docs").join("combat-direction.md"))
+            .unwrap();
+        assert!(import_source.contains("## Decision"));
+        assert!(import_source.contains("## Open Question"));
+        assert!(import_source.contains("Maybe"));
+        assert!(!import_source.to_ascii_lowercase().contains("projectextract"));
+        assert!(!import_source.to_ascii_lowercase().contains("d:\\sandbox"));
+
+        let prepared = crate::knowledge_import::prepare(
+            crate::knowledge_import::KnowledgeImportRequest {
+                root_path: root.display().to_string(),
+                project_id: project.project_id,
+                relative_paths: vec!["docs/combat-direction.md".to_owned()],
+                model_id: None,
+            },
+        )
+        .unwrap();
+        assert_eq!(prepared.project_id, document.project_id);
+        assert_eq!(prepared.model.provider, "nebius_token_factory");
+    }
+
+    #[test]
     fn creator_initialization_refuses_orphaned_compendium_without_creating_project_identity() {
         let directory = TempDir::new().unwrap();
         fs::create_dir(directory.path().join(METADATA_DIRECTORY)).unwrap();
