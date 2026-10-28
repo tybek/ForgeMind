@@ -4,7 +4,7 @@
 
 This document is the durable submission-readiness source for ForgeMind's entry to the **Nebius x NVIDIA Global AI Hackathon**. It covers submission gates, evidence collection, public-repository safety, tool/model feedback, the demo video, and final Devpost QA. It does not authorize application behavior, a new product milestone, live inference, or publication.
 
-Current status: **SUB-2 demo storyboard and voice-over complete; final submission not complete.** The root README, Devpost draft, public asset plan, exact `2:38` storyboard, 359-word voice-over, live-call/fallback strategy, recording checklist, screenshot list, and video QA checklist are prepared. Screenshots, recording/editing, video and evaluator URLs, final fresh-clone smoke, and submission remain manual work. Product milestone status remains authoritative in [Roadmap](ROADMAP.md).
+Current status: **SUB-2 storyboard/voice-over and SUB-2.1 public screenshots complete; final submission not complete.** The root README, Devpost draft, reviewed public-safe assets, 323-word final voice-over, approximately `2:36` generated audio, live-call/fallback strategy, recording checklist, screenshot list, and video QA checklist are prepared. The edited video may finish at approximately `2:38` with a roughly two-second ending hold. Recording/editing, video and evaluator URLs, final fresh-clone smoke, and submission remain manual work. Product milestone status remains authoritative in [Roadmap](ROADMAP.md).
 
 Official sources re-checked on 2026-10-28:
 
@@ -42,7 +42,7 @@ ForgeMind currently satisfies the technical-use direction with:
 - local usage records that can capture provider/model identity, latency, and provider-reported token counts without prompts, responses, credentials, or authorization headers; and
 - an MIT license and documented local setup.
 
-This is not yet a submission-complete claim. The public documentation and Devpost draft are prepared, and the repository retains its recorded `PUBLIC_RELEASE_READY` security gate. Screenshots, demo packaging, the public video, working-demo distribution, final public links, a final secret/fresh-clone recheck, and submission QA remain open.
+This is not yet a submission-complete claim. The public documentation, Devpost draft, Hollow Reach rehearsal, and reviewed screenshots are prepared, and the repository retains its recorded `PUBLIC_RELEASE_READY` security gate. The public video, working-demo distribution, final public links, a final secret/fresh-clone recheck, and submission QA remain open.
 
 ## Required Tool Feedback
 
@@ -102,7 +102,7 @@ These are evidence-backed topics to refine, not final generalized verdicts about
 
 The tasks and output sizes differ, so these observations are not a controlled latency ranking.
 
-#### Would we use it again?
+#### Would I use it again?
 
 Current evidence supports **yes, with continued task-specific evaluation**. Token Factory already powers several bounded ForgeMind workflows, exposes useful metering data, and provides access to both the required NVIDIA model and comparison models through one provider boundary. The final answer should remain conditional on the remaining submission evidence and should identify any recurring reliability or catalog issues observed before submission.
 
@@ -111,7 +111,7 @@ Current evidence supports **yes, with continued task-specific evaluation**. Toke
 #### Exact model used
 
 - model ID: `nvidia/nemotron-3-super-120b-a12b`
-- ForgeMind display name: **NVIDIA Nemotron 3 Super 120B**
+- submission model name: **NVIDIA Nemotron 3 Super 120B A12B**
 - provider: Nebius Token Factory
 
 #### Tasks tested
@@ -170,7 +170,7 @@ The Lore Architect Writers' Room observation measured `1,795 ms / 447 / 189 / 63
 
 The Creator observations identified a concrete grounding issue: useful proposals sometimes introduced plausible but unconfirmed mechanics, including reconnaissance drones, explicit crew roles, medkits, ammo, power cells, fixed pressure meters, crew morale, and specific extraction prompts. Those ideas were not established project facts, and the fourth observation did not surface them as assumptions. NPC-2.2 strengthened the proposal-level grounding instruction while keeping assumptions informational even when proposal content is applied; the final recheck surfaced unsupported or new mechanics separately as assumptions. The five successful runs remain too small and too task-specific for a general hallucination rate.
 
-#### Would we use it again, and where?
+#### Would I use it again, and where?
 
 Current evidence supports **yes, as a candidate for bounded, structured, human-reviewed design and delivery proposals**. It fits best where ForgeMind supplies explicit selected context, validates a narrow schema, and keeps the result non-authoritative until human review. Evidence is not yet sufficient for automatic routing, a universal recommendation, or a claim that Nemotron is best for all ForgeMind tasks.
 
@@ -251,9 +251,9 @@ Use [Security and Privacy Architecture](SECURITY_AND_PRIVACY.md) as the detailed
 - [x] Root README is concise, current, and names Nebius Token Factory and NVIDIA Nemotron clearly.
 - [ ] Setup and run instructions work from a clean checkout.
 - [x] MIT `LICENSE` is present and visible at the repository root/top level.
-- [ ] Internal and external links have been checked.
-- [ ] No private or local absolute paths appear in tracked public content.
-- [ ] Screenshots and recordings are intentional, current, and public-safe.
+- [x] Local Markdown links, anchors, and image targets have been checked; final external-form URLs remain pending.
+- [x] No private or local absolute paths appear in tracked Markdown.
+- [x] Screenshots are intentional, current, and public-safe; recording review remains pending.
 - [ ] ForgeMind brand assets are intentional and licensing/ownership is clear.
 - [ ] Test fixtures, dogfooding data, diagnostics, and temporary files are not presented as production data.
 - [x] The architecture and Intent -> Reality -> Alignment -> Feature Contract story are understandable without internal context.
@@ -267,7 +267,7 @@ Use [Security and Privacy Architecture](SECURITY_AND_PRIVACY.md) as the detailed
 Include only technologies actually present in the submitted build:
 
 - Nebius Token Factory
-- NVIDIA Nemotron 3 Super 120B (`nvidia/nemotron-3-super-120b-a12b`)
+- NVIDIA Nemotron 3 Super 120B A12B (`nvidia/nemotron-3-super-120b-a12b`)
 - Tavily Search API
 - Tauri 2
 - React
@@ -322,7 +322,7 @@ data, prompt, safety, or reset contract.
 
 If the final cut benefits from visible model awareness, briefly open **AI Models** after one user-driven catalog refresh. Show the explicit Nebius Token Factory catalog versus ForgeMind enabled registry distinction, Nemotron as default, verified JSON Object metadata, and observed local usage. Do not spend demo time making an alternate inference call, and do not describe availability or latency as quality, ranking, pricing, benchmarking, or automatic routing.
 
-Treat the video as a pitch supported by a working product, not as a tutorial. Target `2:30-2:40`; the current storyboard targets `2:38` to leave clear margin under three minutes.
+Treat the video as a pitch supported by a working product, not as a tutorial. The final 323-word ElevenLabs voice-over runs approximately `2:36`; the edited video may finish at approximately `2:38` if a roughly two-second ending hold is retained. Both remain within the `2:30-2:40` target range and safely under three minutes.
 
 ### Story structure and shot list
 
@@ -358,8 +358,7 @@ closing visual if the final cut remains within target.
 
 ### Voice-over script
 
-Use the exact 359-word script in [3-Minute Demo Storyboard](DEMO_STORYBOARD.md).
-Do not expand it into a feature list or add claims during recording.
+The final ElevenLabs voice-over uses the shortened **323-word** script and runs approximately **2:36**. The earlier embedded script in [3-Minute Demo Storyboard](DEMO_STORYBOARD.md) is retained only as historical SUB-2 planning evidence. Do not expand the final recording into a feature list or add claims during editing.
 
 ## Devpost submission draft
 
@@ -396,8 +395,8 @@ Complete this section from the final public build and video. Do not copy interna
 - [x] Nebius Token Factory feedback is evidence-backed.
 - [x] NVIDIA Nemotron feedback is evidence-backed.
 - [x] Tavily's explicit, reviewed `EXTERNAL_RESEARCH` role is visible.
-- [x] Exact demo storyboard, 359-word voice-over, fallback strategy, recording checklist, screenshot list, and video QA checklist are complete for SUB-2.
-- [ ] Public-safe screenshots are captured, reviewed, and added.
+- [x] Demo storyboard, 323-word final voice-over, approximately `2:36` generated audio, fallback strategy, recording checklist, screenshot list, and video QA checklist are complete for SUB-2.
+- [x] Public-safe screenshots are captured, reviewed, and added.
 - [ ] Demo video is captured, edited, captioned, and under three minutes.
 - [ ] Public YouTube video URL is added and verified while signed out.
 - [ ] Final Devpost fields and track are completed in rendered form.
@@ -471,8 +470,9 @@ Do not plan to finish the video or first complete submission draft on the extern
 
 - **SUB-0 - Submission requirements documented - COMPLETE:** this document records confirmed requirements, evidence templates, safety/repository checks, video strategy, copy placeholders, and final QA without changing application behavior.
 - **SUB-1 - README + Devpost draft + public-facing cleanup - COMPLETE:** the root README, Devpost draft, public asset capture plan, Built With copy, honest limitations, Nebius/NVIDIA feedback, Tavily role, and remaining manual checklist are prepared without changing product behavior or making provider calls.
-- **SUB-2 - 3-Minute Demo Storyboard + Voice-over - COMPLETE:** the `2:38` judge-facing Hollow Reach storyboard, 359-word script, four-call live strategy, genuine-result fallbacks, recording preparation, screenshot list, and final QA checklist are documented without making a provider call or changing product behavior.
-- **SUB-3 - Public repository and evaluator finalization - PLANNED:** add reviewed screenshots and public URLs, then repeat clean-checkout, secret/history, private-data, link, setup, license, and distribution checks.
+- **SUB-2 - 3-Minute Demo Storyboard + Voice-over - COMPLETE:** the 323-word final voice-over runs approximately `2:36`; the planned edited Hollow Reach video may finish at approximately `2:38` with a roughly two-second ending hold. The four-call live strategy, genuine-result fallbacks, recording preparation, screenshot list, and final QA checklist remain documented without changing product behavior.
+- **SUB-2.1 - Public screenshots - COMPLETE:** eleven reviewed Hollow Reach screenshots are committed, and the strongest four are wired into the README and Devpost draft without fabricated UI or private project content.
+- **SUB-3 - Public repository and evaluator finalization - PLANNED:** add verified public URLs, then repeat clean-checkout, secret/history, private-data, link, setup, license, and distribution checks.
 - **SUB-4 - Video production - PLANNED:** capture, edit, caption, export, upload, and verify public playback.
 - **SUB-5 - Final submission QA - PLANNED:** verify every product, repository, Nebius, NVIDIA, video, and Devpost gate and submit.
 

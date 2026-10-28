@@ -8,7 +8,7 @@ This document records the agreed product and interface direction for ForgeMind. 
 
 Use this document with the [ForgeMind Brandbook](BRANDBOOK.md), [Product Direction](PRODUCT.md), and [Roadmap](ROADMAP.md). The Brandbook owns visual identity and voice; this document owns information architecture, dashboard behavior, layout, workflow, artwork policy inside the product, and phased UI implementation.
 
-The Brandbook's [concept and visual-direction references](BRANDBOOK.md#concept--visual-direction-references) illustrate the desired workshop/control-room atmosphere and possible dashboard composition. They are generated references rather than final UI specifications; this document's behavior, hierarchy, accessibility, authority, and phased-scope rules take precedence over literal reproduction.
+The Brandbook's [concept and visual-direction references](BRANDBOOK.md#concept-visual-direction-references) illustrate the desired workshop/control-room atmosphere and possible dashboard composition. They are generated references rather than final UI specifications; this document's behavior, hierarchy, accessibility, authority, and phased-scope rules take precedence over literal reproduction.
 
 ## Product experience
 

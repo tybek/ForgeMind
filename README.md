@@ -2,6 +2,8 @@
 
 **AI for Game Development**
 
+**Turn ideas into playable worlds.**
+
 **A source-aware AI workspace that keeps game design intent, implementation reality, and AI output aligned.**
 
 Game projects scatter truth across design documents, team conversations, Git, Unity, and AI output. ForgeMind turns those sources into a reviewable **Project Brain** without allowing temporary AI output to silently become project truth.
@@ -140,7 +142,7 @@ Nebius Token Factory is ForgeMind's current inference provider behind a replacea
 
 ### NVIDIA Nemotron
 
-The current default structured-output model is **NVIDIA Nemotron 3 Super 120B**:
+The current default structured-output model is **NVIDIA Nemotron 3 Super 120B A12B**:
 
 ```text
 nvidia/nemotron-3-super-120b-a12b
@@ -186,7 +188,7 @@ See [Architecture](docs/ARCHITECTURE.md) and [Workflows](docs/WORKFLOWS.md) for 
 ## Built With
 
 - **Nebius Token Factory** - inference, model discovery, and provider-reported usage for explicit AI workflows.
-- **NVIDIA Nemotron 3 Super 120B** - the default model for implemented structured proposal and extraction workflows.
+- **NVIDIA Nemotron 3 Super 120B A12B** - the default model for implemented structured proposal and extraction workflows.
 - **Tavily Search** - explicit, user-reviewed external research inside Writers' Room.
 - **Tauri 2** and **Rust** - the desktop/native trust boundary and local persistence.
 - **React**, **TypeScript**, and **Vite** - the desktop UI.
@@ -270,7 +272,7 @@ ForgeMind fails closed on malformed structured output, invalid source references
 
 ## Status and roadmap
 
-ForgeMind is feature frozen for the hackathon submission. The public-repository security gate is `PUBLIC_RELEASE_READY`; remaining work is submission packaging, screenshots, demo video, links, and final fresh-clone QA—not product feature development.
+ForgeMind is feature frozen for the hackathon submission. The public-repository security gate is `PUBLIC_RELEASE_READY`; the public-safe screenshots are complete, and the remaining work is the demo video, final links, fresh-clone QA, and submission—not product feature development.
 
 See the [Roadmap](docs/ROADMAP.md), [Hackathon Submission Readiness](docs/HACKATHON_SUBMISSION.md), [Devpost draft](docs/DEVPOST_SUBMISSION_DRAFT.md), and [DEMO-0 runbook](docs/DEMO_RUNBOOK.md).
 
@@ -278,7 +280,7 @@ See the [Roadmap](docs/ROADMAP.md), [Hackathon Submission Readiness](docs/HACKAT
 
 ForgeMind was built for the **Nebius x NVIDIA Global AI Hackathon**. The submission centers on one story: AI can help a game team reason faster without allowing temporary output to silently replace reviewed project truth.
 
-The public-safe demo workspace is **Hollow Reach**. Capture guidance and screenshot filenames are tracked in [docs/assets](docs/assets/README.md); no screenshots are fabricated or committed as placeholders.
+The public-safe demo workspace is **Hollow Reach**. The reviewed screenshot set and its public-safe filenames are documented in [docs/assets](docs/assets/README.md); no screenshot is fabricated or committed as a placeholder.
 
 ## License
 

@@ -8,8 +8,9 @@ The roadmap uses small, outcome-based milestones. A milestone is not assumed to 
 
 - **SUB-0 - Submission requirements documented - COMPLETE:** current official requirements, tool-feedback framework, current model evidence, credit-usage plan, repository/security checklists, video strategy, and final submission checklist are recorded.
 - **SUB-1 - README + Devpost draft + public-facing cleanup - COMPLETE:** the root README now leads with the Project Brain and review-first knowledge workflow; the evidence-backed Devpost draft, public screenshot capture plan, Built With copy, honest limitations, Nebius/NVIDIA feedback, Tavily positioning, and remaining manual checklist are prepared. No product behavior, provider request, screenshot, publication, or future milestone was added.
-- **SUB-2 - Public repository and evaluator finalization - PLANNED:** add reviewed screenshots and public repository/test-build URLs, then verify clean setup, license, links, public-safe assets/data, history, secrets, and distribution without private dogfood-project content.
-- **SUB-3 - Demo script / shot list - PLANNED:** lock the pitch against the actual submitted build and do not present planned behavior as shipped.
+- **SUB-2 - 3-minute demo storyboard and voice-over - COMPLETE:** the judge-facing Hollow Reach storyboard, shorter-than-three-minute script, live-call/fallback strategy, recording preparation, and video QA checklist are documented against shipped behavior.
+- **SUB-2.1 - Public screenshots - COMPLETE:** eleven reviewed Hollow Reach screenshots are committed; the strongest four are wired into the README and Devpost draft.
+- **SUB-3 - Public repository and evaluator finalization - PLANNED:** add verified public repository/test-build URLs, then repeat clean setup, license, links, public-safe assets/data, history, secrets, and distribution checks without private dogfood-project content.
 - **SUB-4 - Video production - PLANNED:** capture, edit, caption, upload, and verify a public video shorter than three minutes.
 - **SUB-5 - Final submission QA - PLANNED:** verify product, repository, Nebius, NVIDIA, video, and Devpost gates before the external deadline.
 
@@ -23,7 +24,7 @@ no provider results, usage history, model registry, credentials, private project
 content, or production behavior. DEMO-0 does not close SUB-3 through SUB-5 and
 does not authorize recording, publication, or live provider calls.
 
-SUB-0 and SUB-1 are complete. The final submission is not complete; screenshots, video, public URLs, final fresh-clone/secret checks, and Devpost submission remain pending.
+SUB-0, SUB-1, SUB-2, and SUB-2.1 are complete. The Hollow Reach demo rehearsal passed and the public screenshots are wired into the README and Devpost draft. The final submission is not complete; the video, public URLs, final fresh-clone/secret checks, and Devpost submission remain pending.
 
 ## MODEL-1 Token Factory Model Catalog & Registry Management — IMPLEMENTED, MODEL-1.1 MANUAL RECHECK PENDING
 
@@ -199,7 +200,7 @@ The editor-only `com.forgemind.unity-groundtruth` package adds **Tools > ForgeMi
 
 ForgeMind's existing Unity page loads the generated manifest and shows its real aggregate counts. Game Wiki Technical now includes snapshot counts from the same normalized manifest summary. Focused package EditMode coverage is included for ordering, portable paths, hierarchy/components, serialized fields, ScriptableObjects, tags/layers, and malformed project metadata; the normal ForgeMind frontend/native checks remain required. No Unity GUI automation, PlayMode simulation, live AI, Alignment, or 0J work is included.
 
-A user-driven private dogfood project export and mutation/revert check passed. ForgeMind loaded the real snapshot, reflected the one-GameObject/one-component mutation, and returned to baseline after the Unity change was reverted. The completed evidence is recorded in [Validation](VALIDATION.md#0i2-unity-groundtruth-exporter--completed).
+A user-driven private dogfood project export and mutation/revert check passed. ForgeMind loaded the real snapshot, reflected the one-GameObject/one-component mutation, and returned to baseline after the Unity change was reverted. The completed evidence is recorded in [Validation](VALIDATION.md#0i2-unity-groundtruth-exporter-completed).
 
 ### 0I.3 GroundTruth Coverage Transparency — COMPLETE
 
@@ -213,7 +214,7 @@ Exit condition met: ForgeMind can answer a bounded technical question using cite
 
 ForgeMind now provides a manual-first Alignment workspace over existing sources: current non-deprecated Compendium knowledge or an `APPROVED` Decision supplies Intent, while current Git Reality and Unity GroundTruth projections supply selectable evidence. Explicit per-evidence assessments deterministically produce `ALIGNED`, `UNVERIFIED`, or `OUT_OF_SYNC`; selecting a distinct conflicting approved Decision produces `CONFLICT`. Every result begins `PENDING_REVIEW`, records rationale, confidence, uncertainty, source snapshots, and provenance in portable `.forgemind/alignment.json`, and can be approved or rejected without changing Compendium, Decisions, Git Reality, or Unity GroundTruth.
 
-Game Wiki shows a compact read-only Alignment summary in the Intent source's existing Area. It remains an aggregation view, not another Alignment editor. 0J.1 performs no live AI inference, whole-project scan, background monitoring, semantic code analysis, task creation, or Feature Contract generation. Automated implementation and functional dogfooding are complete; the manual closure is recorded in [Validation](VALIDATION.md#0j1-alignment-engine-foundation--completed).
+Game Wiki shows a compact read-only Alignment summary in the Intent source's existing Area. It remains an aggregation view, not another Alignment editor. 0J.1 performs no live AI inference, whole-project scan, background monitoring, semantic code analysis, task creation, or Feature Contract generation. Automated implementation and functional dogfooding are complete; the manual closure is recorded in [Validation](VALIDATION.md#0j1-alignment-engine-foundation-completed).
 
 ### 0J.2 Alignment Evidence Selection UX — IMPLEMENTED
 
