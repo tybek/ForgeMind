@@ -25,12 +25,14 @@ vi.mock("./platform/featureContracts", async (importOriginal) => ({
   draftFeatureContractWithAi: vi.fn(),
   setFeatureContractStatus: vi.fn(),
 }));
-vi.mock("./platform/modelRegistry", () => ({ loadModelRegistry: vi.fn() }));
+vi.mock("./platform/modelRegistry", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./platform/modelRegistry")>()), loadModelRegistry: vi.fn(),
+}));
 
 const workspace = { path: "D:\\Games\\ExampleGame", projectId: "project-1" };
 const model = {
   provider: "nebius_token_factory", modelId: "test/model", displayName: "Test Draft Model", family: "test",
-  availability: "configured", capabilities: {}, enabled: true,
+  availability: "configured", capabilities: { structuredOutput: "JSON_OBJECT" as const }, enabled: true,
 };
 const evidence = {
   evidenceId: "unity:component:HearingPerception", source: "UNITY" as const,

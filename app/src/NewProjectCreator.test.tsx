@@ -22,7 +22,7 @@ vi.mock("./platform/creatorAi", () => ({
 const defaultModelId = "nvidia/nemotron-3-super-120b-a12b";
 const registryModels = [
   { provider: "nebius_token_factory", modelId: "deepseek-ai/DeepSeek-V4.1-Flash", displayName: "DeepSeek V4.1 Flash", family: "DeepSeek V4.1", availability: "configured", capabilities: { supportsReasoningEffort: true }, enabled: true },
-  { provider: "nebius_token_factory", modelId: defaultModelId, displayName: "NVIDIA Nemotron 3 Super 120B", family: "Nemotron 3 Super", availability: "configured", capabilities: {}, enabled: true },
+  { provider: "nebius_token_factory", modelId: defaultModelId, displayName: "NVIDIA Nemotron 3 Super 120B", family: "Nemotron 3 Super", availability: "configured", capabilities: { structuredOutput: "JSON_OBJECT" as const }, enabled: true },
 ];
 
 function preflight(task: "coreLoop" | "designPillars", modelId = defaultModelId) {
@@ -279,7 +279,7 @@ describe("New Project Creator", () => {
     expect(screen.queryByText(/No assumptions/i)).not.toBeInTheDocument();
   });
 
-  it("cancels preflight without a request and uses only a selected registered model", async () => {
+  it("cancels preflight without a request and blocks capability-NONE models", async () => {
     const user = userEvent.setup();
     renderCreator();
     await completeRequiredFoundation(user);
@@ -287,8 +287,8 @@ describe("New Project Creator", () => {
 
     await user.click(screen.getByRole("button", { name: "Suggest Core Loops" }));
     let dialog = await screen.findByRole("dialog", { name: "Core Loop suggestions" });
-    expect(within(dialog).getByRole("option", { name: /NVIDIA Nemotron 3 Super 120B.*Creator default/ })).toBeInTheDocument();
-    expect(within(dialog).getByRole("option", { name: "DeepSeek V4.1 Flash" })).toBeInTheDocument();
+    expect(within(dialog).getByRole("option", { name: /NVIDIA Nemotron 3 Super 120B.*default/ })).toBeInTheDocument();
+    expect(within(dialog).getByRole("option", { name: /DeepSeek V4.1 Flash.*incompatible/ })).toBeDisabled();
     expect(dialog).toHaveTextContent("Not enough local history");
     expect(dialog).not.toHaveTextContent("Estimated provider cost: $");
     await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
@@ -296,11 +296,11 @@ describe("New Project Creator", () => {
 
     await user.click(screen.getByRole("button", { name: "Suggest Core Loops" }));
     dialog = await screen.findByRole("dialog", { name: "Core Loop suggestions" });
-    await user.selectOptions(within(dialog).getByLabelText(/Model/), "deepseek-ai/DeepSeek-V4.1-Flash");
-    await waitFor(() => expect(dialog).toHaveTextContent("Alternative model available through Token Factory."));
-    await waitFor(() => expect(within(dialog).getByRole("button", { name: "Run AI" })).toBeEnabled());
+    expect(within(dialog).getByLabelText(/Model/)).toHaveValue(defaultModelId);
+    expect(within(dialog).getByRole("option", { name: /DeepSeek V4.1 Flash.*incompatible/ })).toBeDisabled();
+    expect(suggestNewProjectCoreLoops).not.toHaveBeenCalled();
     await user.click(within(dialog).getByRole("button", { name: "Run AI" }));
-    expect(suggestNewProjectCoreLoops).toHaveBeenCalledWith(expect.any(Object), "deepseek-ai/DeepSeek-V4.1-Flash");
+    expect(suggestNewProjectCoreLoops).toHaveBeenCalledWith(expect.any(Object), defaultModelId);
   });
 
   it("labels one latency observation differently from a recent local range", async () => {

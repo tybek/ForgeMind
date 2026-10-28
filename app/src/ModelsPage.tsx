@@ -50,6 +50,7 @@ export function ModelsPage() {
   const [showCustom, setShowCustom] = useState(false);
   const [customId, setCustomId] = useState("");
   const [customName, setCustomName] = useState("");
+  const [expandedModelIds, setExpandedModelIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     let active = true;
@@ -117,15 +118,24 @@ export function ModelsPage() {
         <button className="primary-button" disabled={Boolean(working)} type="submit">Add and enable</button>
       </form> : null}
       <div className="models-card-list">
-        {enabled.map((model) => <article className="models-card" key={model.modelId}>
+        {enabled.map((model) => {
+          const observed = metricsById.get(model.modelId);
+          const expanded = expandedModelIds.has(model.modelId);
+          const isCustom = model.availability === "UNVERIFIED";
+          return <article className="models-card models-card--compact" key={model.modelId}>
           <div className="models-card-heading"><div><h3>{model.displayName}</h3><code>{model.modelId}</code></div><div className="models-badges">
-            {model.modelId === DEFAULT_MODEL_ID ? <span>Default</span> : <span>Enabled</span>}
-            <span>{catalogModels.some((available) => available.providerModelId === model.modelId) ? "Available on Token Factory" : model.availability === "UNVERIFIED" ? "Custom · availability not verified" : "Configured"}</span>
+            {model.modelId === DEFAULT_MODEL_ID ? <span className="model-badge model-badge--default">Default</span> : <span className="model-badge model-badge--enabled">Enabled</span>}
+            {catalogModels.some((available) => available.providerModelId === model.modelId) ? <span className="model-badge model-badge--available">Available on Token Factory</span> : isCustom ? <span className="model-badge model-badge--custom">Custom</span> : null}
+            <span className={`model-badge ${model.capabilities.structuredOutput && model.capabilities.structuredOutput !== "NONE" ? "model-badge--verified" : "model-badge--unverified"}`}>{capability(model)}</span>
           </div></div>
-          <p><strong>Structured output:</strong> {capability(model)}</p>
-          <Metrics metrics={metricsById.get(model.modelId)} />
-          <button className="text-button" type="button" disabled={Boolean(working) || model.modelId === DEFAULT_MODEL_ID} title={model.modelId === DEFAULT_MODEL_ID ? "Choose a replacement default before disabling this model." : undefined} onClick={() => void act(model.modelId, () => setModelEnabled(model.modelId, false))}>Disable</button>
-        </article>)}
+          {isCustom ? <p className="models-availability"><strong>Availability:</strong> Not verified</p> : null}
+          <p className="models-observed-summary">{observed ? `${observed.runCount} ${observed.runCount === 1 ? "run" : "runs"} · median ${observed.medianLatencyMs == null ? "unavailable" : `${(observed.medianLatencyMs / 1000).toFixed(1)} s`}` : "No observed runs"}</p>
+          {expanded ? <Metrics metrics={observed} /> : null}
+          <div className="models-card-actions">
+            <button className="text-button" type="button" aria-expanded={expanded} onClick={() => setExpandedModelIds((current) => { const next = new Set(current); if (expanded) next.delete(model.modelId); else next.add(model.modelId); return next; })}>{expanded ? "Collapse" : "Expand"}</button>
+            <button className="text-button" type="button" disabled={Boolean(working) || model.modelId === DEFAULT_MODEL_ID} title={model.modelId === DEFAULT_MODEL_ID ? "Choose a replacement default before disabling this model." : undefined} onClick={() => void act(model.modelId, () => setModelEnabled(model.modelId, false))}>Disable</button>
+          </div>
+        </article>})}
       </div>
     </section>
 

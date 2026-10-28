@@ -25,6 +25,17 @@ pub enum StructuredOutputCapability {
     JsonSchema,
 }
 
+impl StructuredOutputCapability {
+    pub fn satisfies(self, required: Self) -> bool {
+        matches!(
+            (self, required),
+            (_, Self::None)
+                | (Self::JsonObject, Self::JsonObject)
+                | (Self::JsonSchema, Self::JsonObject | Self::JsonSchema)
+        )
+    }
+}
+
 #[derive(Clone, Debug, Default, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ModelCapabilities {
@@ -253,6 +264,20 @@ pub fn enabled_model(model_id: &str) -> Result<ModelEntry, ModelRegistryError> {
         })
 }
 
+pub fn require_structured_output(
+    model: &ModelEntry,
+    required: StructuredOutputCapability,
+) -> Result<(), ModelRegistryError> {
+    if model.capabilities.structured_output.satisfies(required) {
+        Ok(())
+    } else {
+        Err(ModelRegistryError {
+            code: "MODEL_CAPABILITY_REQUIRED",
+            message: "This workflow requires verified structured output, but the selected model is not verified for it.".to_owned(),
+        })
+    }
+}
+
 pub fn creator_default_model() -> Result<ModelEntry, ModelRegistryError> {
     enabled_model(CREATOR_DEFAULT_MODEL_ID)
 }
@@ -308,6 +333,19 @@ mod tests {
         assert_eq!(model.provider, NEBIUS_PROVIDER_ID);
         assert_eq!(model.pricing, None);
         assert_eq!(model.capabilities.structured_output, StructuredOutputCapability::JsonObject);
+    }
+
+    #[test]
+    fn json_object_requirement_rejects_none_and_accepts_object_or_schema() {
+        let mut model = entry("test/model");
+        assert_eq!(
+            require_structured_output(&model, StructuredOutputCapability::JsonObject).unwrap_err().code,
+            "MODEL_CAPABILITY_REQUIRED"
+        );
+        model.capabilities.structured_output = StructuredOutputCapability::JsonObject;
+        assert!(require_structured_output(&model, StructuredOutputCapability::JsonObject).is_ok());
+        model.capabilities.structured_output = StructuredOutputCapability::JsonSchema;
+        assert!(require_structured_output(&model, StructuredOutputCapability::JsonObject).is_ok());
     }
 
     #[test]

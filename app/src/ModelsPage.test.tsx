@@ -37,7 +37,10 @@ describe("ModelsPage", () => {
     expect(await screen.findByText("NVIDIA Nemotron 3 Super 120B")).toBeInTheDocument();
     expect(registry.refreshModelCatalog).not.toHaveBeenCalled();
     const enabled = screen.getByRole("heading", { name: "Enabled models" }).closest("section")!;
-    expect(within(enabled).getByText("Structured output:").parentElement).toHaveTextContent("JSON Object");
+    expect(within(enabled).getByText("JSON Object")).toHaveClass("model-badge--verified");
+    expect(enabled).toHaveTextContent("3 runs · median 0.9 s");
+    expect(within(enabled).queryByLabelText("Observed in this ForgeMind installation")).not.toBeInTheDocument();
+    await userEvent.setup().click(within(enabled).getByRole("button", { name: "Expand" }));
     expect(within(enabled).getByLabelText("Observed in this ForgeMind installation")).toHaveTextContent("3");
     const available = screen.getByRole("heading", { name: "Available models" }).closest("section")!;
     expect(available).toHaveTextContent("Structured output: Not verified");

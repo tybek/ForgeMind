@@ -767,6 +767,12 @@ The user-driven NPC-1 manual PASS was recorded on 2026-09-27. It confirmed Creat
 
 Implemented the final pre-freeze model-awareness surface: native explicit Token Factory `GET /v1/models` discovery, application-local catalog and registry persistence, protected Nemotron default, conservative custom/discovered capability, deterministic observed usage metrics, and AI Studio management UI. Provider availability remains distinct from ForgeMind-verified capability; there is no router, ranking, benchmark, pricing inference, provider editor, live inference, or project-truth change. Offline native/frontend validation is recorded in `VALIDATION.md`; one user-driven refresh and selector/persistence acceptance remain pending before closure.
 
+## MODEL-1.1 — 2026-10-28
+
+Manual MODEL-1 acceptance proved the catalog, custom/enable, metrics, selector, and persistence paths, then exposed a real safety defect: an enabled custom model whose structured-output capability remained `NONE` could be executed from Writers' Room and failed only after reaching the provider. MODEL-1.1 makes the workflow requirement explicit and rejects incompatible models before provider execution in Writers' Room, Knowledge Import, Creator proposals, Feature Contract drafting, and Specialist runs. The UI keeps these models visible but disables them with compatibility copy; native enforcement returns `MODEL_CAPABILITY_REQUIRED` and does not rely on frontend state.
+
+The registry page now presents compact expandable enabled rows with collapsed observed summaries and semantically distinct default, enabled, availability, custom, verified, and unverified badges. Discovered/custom entries still default to `NONE`; DeepSeek was not upgraded from historical use. No automatic probe, router, ranking, pricing, fallback, provider, schema, project-authority, live request, or GUI automation was added. Headless validation is recorded in `VALIDATION.md`; MODEL-1 Manual PASS remains pending until the short compatibility and visual/persistence recheck.
+
 Update this journal:
 
 - after meaningful milestone completion;

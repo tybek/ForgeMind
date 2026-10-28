@@ -1,5 +1,5 @@
-use crate::ai::{self, AIError, AIRequest, AIResponse, ProviderDiagnostics};
-use crate::model_registry::{self, ModelEntry};
+use crate::ai::{self, AIError, AIRequest, AIResponse, AIResponseFormat, ProviderDiagnostics};
+use crate::model_registry::{self, ModelEntry, StructuredOutputCapability};
 use crate::structured_output::extract_single_json_object;
 use crate::usage::{self, TaskCategory, UsageError};
 use serde::{Deserialize, Deserializer, Serialize};
@@ -251,6 +251,8 @@ fn build_request(context: CreatorAiContext, model_id: &str, system_prompt: &str,
     validate_context(&context)?;
     let model = model_registry::enabled_model(model_id)
         .map_err(|error| CreatorAiError::new(error.code, &error.message))?;
+    model_registry::require_structured_output(&model, StructuredOutputCapability::JsonObject)
+        .map_err(|error| CreatorAiError::new(error.code, &error.message))?;
     if model.provider != model_registry::NEBIUS_PROVIDER_ID {
         return Err(CreatorAiError::new("UNSUPPORTED_CREATOR_MODEL", "The selected model is not available through the Creator provider boundary."));
     }
@@ -268,7 +270,7 @@ fn build_request(context: CreatorAiContext, model_id: &str, system_prompt: &str,
             temperature: Some(0.2),
             max_tokens: Some(completion_budget),
             reasoning_effort: Some("minimal".to_owned()),
-            response_format: None,
+            response_format: Some(AIResponseFormat::JsonObject),
         },
         model,
     })
@@ -593,10 +595,13 @@ mod tests {
     }
 
     #[test]
-    fn creator_request_uses_only_an_enabled_selected_model() {
-        let selected = "deepseek-ai/DeepSeek-V4.1-Flash";
+    fn creator_request_requires_verified_structured_output() {
+        let error = build_request(context(), "deepseek-ai/DeepSeek-V4.1-Flash", CORE_LOOP_SYSTEM_PROMPT, CORE_LOOP_MAX_COMPLETION_TOKENS).unwrap_err();
+        assert_eq!(error.code, "MODEL_CAPABILITY_REQUIRED");
+        let selected = model_registry::CREATOR_DEFAULT_MODEL_ID;
         let prepared = build_request(context(), selected, CORE_LOOP_SYSTEM_PROMPT, CORE_LOOP_MAX_COMPLETION_TOKENS).unwrap();
         assert_eq!(prepared.ai_request.model, selected);
+        assert_eq!(prepared.ai_request.response_format, Some(AIResponseFormat::JsonObject));
         assert_eq!(
             build_request(context(), "unsupported/model", CORE_LOOP_SYSTEM_PROMPT, CORE_LOOP_MAX_COMPLETION_TOKENS).unwrap_err().code,
             "UNKNOWN_MODEL"

@@ -17,7 +17,7 @@ import {
   type FeatureContractSourceType,
   type FeatureContractsDocument,
 } from "./platform/featureContracts";
-import { loadModelRegistry, type ModelEntry } from "./platform/modelRegistry";
+import { loadModelRegistry, structuredWorkflowModelLabel, supportsStructuredOutput, type ModelEntry } from "./platform/modelRegistry";
 import type { RealitySource } from "./platform/alignment";
 
 interface FeatureContractsWorkspace {
@@ -338,7 +338,8 @@ export function FeatureContractsPage({
   }
 
   async function requestAiDraft() {
-    if (!selectedContract || selectedContract.status !== "DRAFT" || !modelId || workingAction) return;
+    if (!selectedContract || selectedContract.status !== "DRAFT" || !modelId || workingAction
+      || !models.some((model) => model.modelId === modelId && supportsStructuredOutput(model))) return;
     setWorkingAction("ai");
     setFeedback(null);
     setProposal(null);
@@ -480,10 +481,10 @@ export function FeatureContractsPage({
             {selectedContract.status === "DRAFT" ? <section className="feature-contract-ai" aria-label="AI-assisted drafting">
               <div><span className="section-label">Proposal only</span><h3>AI-assisted draft</h3><p>Uses captured Intent, approved Alignment, captured Reality, and the current editor text. It never saves or approves.</p></div>
               <label>Model<select value={modelId} disabled={models.length === 0 || Boolean(workingAction)} onChange={(event) => setModelId(event.target.value)}>
-                {models.map((model) => <option key={model.modelId} value={model.modelId}>{model.displayName}</option>)}
+                {models.map((model) => <option key={model.modelId} value={model.modelId} disabled={!supportsStructuredOutput(model)}>{structuredWorkflowModelLabel(model)}</option>)}
               </select></label>
               <div className="feature-contract-local-action">
-                <button className="outline-button" type="button" disabled={!modelId || Boolean(workingAction)} onClick={() => void requestAiDraft()}>
+                <button className="outline-button" type="button" disabled={!modelId || Boolean(workingAction) || !models.some((model) => model.modelId === modelId && supportsStructuredOutput(model))} onClick={() => void requestAiDraft()}>
                   {workingAction === "ai" ? <><span className="inline-spinner" aria-hidden="true" /> Drafting with {models.find((model) => model.modelId === modelId)?.displayName ?? modelId}…</> : "Draft with AI"}
                 </button>
                 {workingAction === "ai" ? <small role="status">Provider request running · {aiElapsedSeconds}s elapsed</small> : null}

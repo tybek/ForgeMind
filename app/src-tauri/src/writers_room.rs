@@ -272,6 +272,8 @@ pub fn prepare_run(request: WritersRoomRunRequest) -> Result<PreparedWritersRoom
         .ok_or_else(|| AiWorkspaceError::invalid("The selected profile is not runnable in Writers' Room."))?;
     let model = model_registry::enabled_model(&request.model_id)
         .map_err(|error| AiWorkspaceError::new(error.code, &error.message))?;
+    model_registry::require_structured_output(&model, StructuredOutputCapability::JsonObject)
+        .map_err(|error| AiWorkspaceError::new(error.code, &error.message))?;
     if model.provider != model_registry::NEBIUS_PROVIDER_ID {
         return Err(AiWorkspaceError::invalid("The selected model is not available through the Writers' Room provider boundary."));
     }
@@ -1034,6 +1036,20 @@ mod tests {
             assert_eq!(prepared.ai_request.max_tokens, Some(MAX_COMPLETION_TOKENS));
             assert_eq!(prepared.ai_request.response_format, Some(AIResponseFormat::JsonObject));
         }
+    }
+
+    #[test]
+    fn capability_none_is_rejected_before_writers_room_provider_execution() {
+        let (directory, project_id) = workspace();
+        let session_id = session(&directory, &project_id, "lore_architect");
+        let provider_request_count = 0;
+        let error = prepare_run(WritersRoomRunRequest {
+            root_path: directory.path().display().to_string(), project_id, session_id,
+            model_id: "deepseek-ai/DeepSeek-V4.1-Flash".to_owned(), mode: WritersRoomRunMode::Send,
+            message: Some("This must be blocked locally.".to_owned()),
+        }).unwrap_err();
+        assert_eq!(error.code, "MODEL_CAPABILITY_REQUIRED");
+        assert_eq!(provider_request_count, 0);
     }
 
     #[test]

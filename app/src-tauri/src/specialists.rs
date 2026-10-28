@@ -1,7 +1,7 @@
-use crate::ai::{AIError, AIRequest, MAX_COMPLETION_TOKENS};
+use crate::ai::{AIError, AIRequest, AIResponseFormat, MAX_COMPLETION_TOKENS};
 use crate::compendium::{self, KnowledgeArea, KnowledgeEntry, KnowledgeProvenance, KnowledgeSource, KnowledgeStatus};
 use crate::decisions::{self, Decision, DecisionStatus};
-use crate::model_registry;
+use crate::model_registry::{self, StructuredOutputCapability};
 use crate::structured_output::{extract_single_json_object, ExtractionError};
 use crate::usage::TaskCategory;
 use crate::workspace::{self, WorkspaceInspection};
@@ -413,6 +413,8 @@ pub fn build_ai_request(request: &SpecialistAnalysisRequest) -> Result<PreparedS
     }
     let model = model_registry::enabled_model(request.model_id.trim())
         .map_err(|error| SpecialistError::new(error.code, &error.message))?;
+    model_registry::require_structured_output(&model, StructuredOutputCapability::JsonObject)
+        .map_err(|error| SpecialistError::new(error.code, &error.message))?;
     let budget = resolve_budget(request.task_type, &model, request.max_completion_tokens)?;
     let scenario = request.scenario.trim();
     if scenario.is_empty() || scenario.chars().count() > MAX_SCENARIO_CHARS {
@@ -464,7 +466,7 @@ pub fn build_ai_request(request: &SpecialistAnalysisRequest) -> Result<PreparedS
             temperature: Some(0.2),
             max_tokens: Some(budget.effective_completion_budget),
             reasoning_effort: Some("minimal".to_owned()),
-            response_format: None,
+            response_format: Some(AIResponseFormat::JsonObject),
         },
         profile_id: specialist.id,
         task_type: request.task_type,
@@ -811,7 +813,7 @@ mod tests {
 
     fn request(root: &Path, project_id: &str) -> SpecialistAnalysisRequest {
         SpecialistAnalysisRequest { root_path: root.display().to_string(), project_id: project_id.to_owned(), profile_id: AI_BEHAVIOR_DESIGNER_ID.to_owned(),
-            task_type: SpecialistTaskType::ReactionModel, model_id: "deepseek-ai/DeepSeek-V4.1-Flash".to_owned(),
+            task_type: SpecialistTaskType::ReactionModel, model_id: model_registry::CREATOR_DEFAULT_MODEL_ID.to_owned(),
             knowledge_entry_ids: Vec::new(), decision_ids: Vec::new(), max_completion_tokens: None,
             scenario: "A guard hears a sound without visual confirmation.".to_owned() }
     }

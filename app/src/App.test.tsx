@@ -83,15 +83,16 @@ vi.mock("./platform/creatorAi", () => ({
   suggestNewProjectDesignPillars: vi.fn(),
 }));
 
-vi.mock("./platform/modelRegistry", () => ({
+vi.mock("./platform/modelRegistry", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./platform/modelRegistry")>()),
   loadModelRegistry: vi.fn().mockResolvedValue([
     {
       provider: "nebius_token_factory",
-      modelId: "deepseek-ai/DeepSeek-V4.1-Flash",
-      displayName: "DeepSeek V4.1 Flash",
-      family: "DeepSeek V4.1",
+      modelId: "nvidia/nemotron-3-super-120b-a12b",
+      displayName: "NVIDIA Nemotron 3 Super 120B",
+      family: "Nemotron 3 Super",
       availability: "configured",
-      capabilities: { supportsReasoningEffort: true },
+      capabilities: { structuredOutput: "JSON_OBJECT" },
       enabled: true,
     },
   ]),

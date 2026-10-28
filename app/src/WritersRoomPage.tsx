@@ -39,6 +39,7 @@ import {
   type WritersRoomRunMode,
   type WritersRoomUsageRecord,
 } from "./platform/writersRoom";
+import { structuredWorkflowModelLabel, supportsStructuredOutput } from "./platform/modelRegistry";
 
 const WRITERS_ROOM_PROFILE_IDS = ["lore_architect", "character_dialogue", "continuity_editor"];
 
@@ -400,7 +401,7 @@ function PreflightDialog({
             <label className="writers-room-model-select">
               Model
               <select value={selectedModelId} disabled={loading} onChange={(event) => onModelChange(event.target.value)}>
-                {preflight.models.map((candidate) => <option value={candidate.modelId} key={candidate.modelId}>{candidate.displayName}{candidate.modelId === preflight.defaultModelId ? " — profile default" : ""}</option>)}
+                {preflight.models.map((candidate) => <option value={candidate.modelId} key={candidate.modelId} disabled={!supportsStructuredOutput(candidate)}>{structuredWorkflowModelLabel(candidate, preflight.defaultModelId)}</option>)}
               </select>
               {model ? <small>{model.displayName} · {model.modelId}</small> : null}
             </label>
@@ -413,7 +414,7 @@ function PreflightDialog({
         {error ? <p role="alert" className="writers-room-error"><strong>{error.code ?? "PREFLIGHT_FAILED"}</strong> {error.message}</p> : null}
         <footer>
           <p>One confirmation sends exactly one provider request. Cancel sends nothing.</p>
-          <button className="primary-button" type="button" disabled={!preflight || loading || Boolean(error)} onClick={onRun}>{loading ? "Preparing…" : "Send request"}</button>
+          <button className="primary-button" type="button" disabled={!preflight || loading || Boolean(error) || !model || !supportsStructuredOutput(model)} onClick={onRun}>{loading ? "Preparing…" : "Send request"}</button>
         </footer>
       </section>
     </div>

@@ -2,10 +2,10 @@ use crate::alignment::{
     self, AlignmentProvenance, AlignmentReviewState, AlignmentStatus, IntentSourceType,
     RealitySource,
 };
-use crate::ai::{AIError, AIRequest};
+use crate::ai::{AIError, AIRequest, AIResponseFormat};
 use crate::compendium::{self, KnowledgeArea, KnowledgeStatus};
 use crate::decisions::{self, DecisionStatus};
-use crate::model_registry;
+use crate::model_registry::{self, StructuredOutputCapability};
 use crate::workspace::{self, WorkspaceInspection};
 use chrono::{DateTime, SecondsFormat, Utc};
 use serde::{Deserialize, Serialize};
@@ -465,6 +465,8 @@ pub fn build_ai_draft_request(
     verify_project(root, &request.project_id)?;
     let model = model_registry::enabled_model(request.model_id.trim())
         .map_err(|error| FeatureContractError::new(error.code, &error.message))?;
+    model_registry::require_structured_output(&model, StructuredOutputCapability::JsonObject)
+        .map_err(|error| FeatureContractError::new(error.code, &error.message))?;
     validate_draft_input(&request.draft)?;
     let document = load_for_project(root, &request.project_id)?
         .ok_or_else(|| FeatureContractError::new("FEATURE_CONTRACTS_NOT_FOUND", "No Feature Contracts exist yet."))?;
@@ -509,7 +511,7 @@ pub fn build_ai_draft_request(
             temperature: Some(0.2),
             max_tokens: Some(completion_budget),
             reasoning_effort: Some("minimal".to_owned()),
-            response_format: None,
+            response_format: Some(AIResponseFormat::JsonObject),
         },
     })
 }
@@ -1283,7 +1285,7 @@ mod tests {
         let contract = &created.contracts[0];
         let prepared = build_ai_draft_request(&DraftFeatureContractWithAiRequest {
             root_path: fixture.directory.path().display().to_string(), project_id: fixture.project_id.clone(),
-            contract_id: contract.id.clone(), model_id: "deepseek-ai/DeepSeek-V4.1-Flash".to_owned(),
+            contract_id: contract.id.clone(), model_id: model_registry::CREATOR_DEFAULT_MODEL_ID.to_owned(),
             draft: FeatureContractDraftInput {
                 title: contract.title.clone(), goal: "Human goal text".to_owned(), affected_systems: vec!["Enemy perception".to_owned()],
                 required_behavior: Vec::new(), out_of_scope: Vec::new(), risks: Vec::new(), acceptance_criteria: Vec::new(),

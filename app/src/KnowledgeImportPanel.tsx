@@ -10,6 +10,7 @@ import {
   type KnowledgeImportPreflight,
 } from "./platform/knowledgeImport";
 import { KNOWLEDGE_AREAS, type KnowledgeArea } from "./platform/projectKnowledge";
+import { structuredWorkflowModelLabel, supportsStructuredOutput } from "./platform/modelRegistry";
 
 interface KnowledgeImportWorkspace {
   path: string;
@@ -238,7 +239,7 @@ export function KnowledgeImportPanel({
           <dl className="knowledge-import-facts">
             <div><dt>Task</dt><dd>{preflight.taskLabel}</dd></div>
             <div><dt>Provider</dt><dd>{preflight.provider}</dd></div>
-            <div><dt>Model</dt><dd><select aria-label="Import model" value={preflight.modelId} disabled={loading} onChange={(event) => void changeModel(event.target.value)}>{preflight.models.map((model) => <option key={model.modelId} value={model.modelId}>{model.displayName}</option>)}</select></dd></div>
+            <div><dt>Model</dt><dd><select aria-label="Import model" value={preflight.modelId} disabled={loading} onChange={(event) => void changeModel(event.target.value)}>{preflight.models.map((model) => <option key={model.modelId} value={model.modelId} disabled={!supportsStructuredOutput(model)}>{structuredWorkflowModelLabel(model)}</option>)}</select></dd></div>
             <div><dt>Sources</dt><dd>{preflight.sources.length} Markdown {preflight.sources.length === 1 ? "file" : "files"} · {formatBytes(preflight.totalSourceBytes)}</dd></div>
             <div><dt>Source handling</dt><dd>{preflight.boundedOrTruncated ? "Bounded or truncated" : "Full bounded selection · no truncation"}</dd></div>
             <div><dt>Estimated input</dt><dd>{preflight.estimatedInputTokensMinimum.toLocaleString()}–{preflight.estimatedInputTokensMaximum.toLocaleString()} tokens · {preflight.usageBand}</dd></div>
@@ -247,7 +248,7 @@ export function KnowledgeImportPanel({
           </dl>
           <ul className="knowledge-import-source-list">{preflight.sources.map((source) => <li key={source.sourceId}><span>{source.sourceId}</span><small>{formatBytes(source.bytes)}</small></li>)}</ul>
           <p className="knowledge-import-boundary">Markdown is sent as untrusted project data. Extraction creates review candidates only; nothing becomes Project Brain until Apply Selected.</p>
-          <footer className="knowledge-import-actions"><button className="text-button" type="button" onClick={close} disabled={loading}>Cancel</button><button className="primary-button" type="button" onClick={() => void runExtraction()} disabled={loading}>{loading ? "Extracting…" : `Run extraction with ${selectedModel?.displayName ?? "selected model"}`}</button></footer>
+          <footer className="knowledge-import-actions"><button className="text-button" type="button" onClick={close} disabled={loading}>Cancel</button><button className="primary-button" type="button" onClick={() => void runExtraction()} disabled={loading || !selectedModel || !supportsStructuredOutput(selectedModel)}>{loading ? "Extracting…" : `Run extraction with ${selectedModel?.displayName ?? "selected model"}`}</button></footer>
         </div> : null}
 
         {phase === "RUNNING" && preflight ? <div className="knowledge-import-running" role="status" aria-live="polite">

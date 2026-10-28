@@ -97,13 +97,14 @@ const preflight = {
   nemotronProvider: "nebius_token_factory",
   modelId: "nvidia/nemotron-3-super-120b-a12b",
   defaultModelId: "nvidia/nemotron-3-super-120b-a12b",
-  models: [{ provider: "nebius_token_factory", modelId: "nvidia/nemotron-3-super-120b-a12b", displayName: "NVIDIA Nemotron 3 Super 120B", family: "Nemotron", availability: "configured", capabilities: {}, enabled: true }],
+  models: [{ provider: "nebius_token_factory", modelId: "nvidia/nemotron-3-super-120b-a12b", displayName: "NVIDIA Nemotron 3 Super 120B", family: "Nemotron", availability: "configured", capabilities: { structuredOutput: "JSON_OBJECT" as const }, enabled: true }],
   contextSummary: ["12 recent session messages maximum", "No matching Project Brain or Markdown sources"],
   sourceTrace: [],
   estimatedInputTokens: { minimum: 500, maximum: 700 },
   usageBand: "low" as const,
   historyAvailable: true,
 };
+const unverifiedModel = { provider: "nebius_token_factory", modelId: "custom/unverified", displayName: "Custom Unverified", family: "custom", availability: "UNVERIFIED", capabilities: { structuredOutput: "NONE" as const }, enabled: true };
 
 async function renderPage(current = session()) {
   vi.mocked(loadAiWorkspaceSessions).mockResolvedValue(document(current));
@@ -234,6 +235,16 @@ describe("Writers' Room", () => {
     expect(screen.getByText("What divides them?")).toBeInTheDocument();
     expect(screen.getByText(/100\/80\/180 tokens/)).toBeInTheDocument();
     expect(screen.getByLabelText("Continue the conversation")).toBeEnabled();
+  });
+
+  it("shows capability-NONE models but prevents Writers' Room execution", async () => {
+    vi.mocked(loadWritersRoomPreflight).mockResolvedValue({ ...preflight, models: [...preflight.models, unverifiedModel] });
+    const user = await renderPage();
+    await user.type(screen.getByLabelText("Continue the conversation"), "Do not send with an unverified model");
+    await user.click(screen.getByRole("button", { name: "Send" }));
+    const dialog = await screen.findByRole("dialog", { name: "Lore Architect response" });
+    expect(within(dialog).getByRole("option", { name: /Custom Unverified.*incompatible/ })).toBeDisabled();
+    expect(runWritersRoom).not.toHaveBeenCalled();
   });
 
   it("renders restored string questions, narrative context, and supplied sources without a phase badge", async () => {

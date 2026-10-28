@@ -15,11 +15,17 @@ The roadmap uses small, outcome-based milestones. A milestone is not assumed to 
 
 Only SUB-0 is complete. The final submission is not complete.
 
-## MODEL-1 Token Factory Model Catalog & Registry Management — IMPLEMENTED, MANUAL REFRESH PENDING
+## MODEL-1 Token Factory Model Catalog & Registry Management — IMPLEMENTED, MODEL-1.1 MANUAL RECHECK PENDING
 
 Add one compact **AI Studio → AI Models** surface that distinguishes the dynamic Nebius Token Factory provider catalog from ForgeMind's application-local verified registry. The native boundary performs only an explicit authenticated `GET /v1/models`, caches normalized model IDs and refresh time outside project truth, preserves Nemotron as the protected default and DeepSeek as the existing alternate, enables or disables registry entries, accepts bounded custom IDs, and defaults unknown capability to `NONE`. Canonical local usage records provide run count, token totals, median latency, and last-used observations without pricing, score, ranking, or quality claims.
 
-Headless implementation and offline validation are complete. One user-driven catalog refresh plus the short selector/persistence acceptance remain pending before milestone closure. MODEL-1 adds no router, automatic selection, fallback chain, benchmark, pricing inference, provider integration, live inference validation, or project-truth mutation.
+The catalog refresh, dynamic discovery, enable/custom flows, observed metrics, selector visibility, and restart persistence passed manual acceptance. That acceptance exposed one critical gap: an enabled custom model with capability `NONE` remained executable from a structured workflow and failed only at the provider. MODEL-1 Manual PASS therefore remains open until MODEL-1.1 receives its user-driven compatibility recheck.
+
+### MODEL-1.1 Structured-Output Compatibility Gate + Compact Registry — IMPLEMENTED, HEADLESS VALIDATED; MANUAL RECHECK PENDING
+
+Writers' Room, Knowledge Import, New Project Creator proposals, Feature Contract AI drafting, and Specialist runs explicitly require at least `JSON_OBJECT`; `JSON_SCHEMA` also satisfies that minimum and `NONE` does not. Incompatible enabled models remain visible but disabled in structured-workflow selectors. The native task boundary revalidates enabled state and capability before any provider execution and returns `MODEL_CAPABILITY_REQUIRED` locally. Nemotron remains the protected `JSON_OBJECT` default; DeepSeek, discovered models, and custom IDs retain their existing explicit capability, including conservative `NONE`.
+
+The AI Models surface now uses compact expandable enabled rows, collapsed run-count/median-latency summaries, full observed metrics on demand, separate availability/custom/capability labels, and semantic badge treatments. No registry schema, project authority, router, ranking, pricing, automatic probe, fallback, provider, or live request was added.
 
 ## 0A Product Foundation — COMPLETE
 

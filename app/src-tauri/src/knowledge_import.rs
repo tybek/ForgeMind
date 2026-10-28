@@ -355,6 +355,8 @@ pub fn prepare(request: KnowledgeImportRequest) -> Result<PreparedKnowledgeImpor
     let model_id = request.model_id.unwrap_or_else(|| model_registry::CREATOR_DEFAULT_MODEL_ID.to_owned());
     let model = model_registry::enabled_model(&model_id)
         .map_err(|error| KnowledgeImportError::new(error.code, &error.message))?;
+    model_registry::require_structured_output(&model, StructuredOutputCapability::JsonObject)
+        .map_err(|error| KnowledgeImportError::new(error.code, &error.message))?;
     if model.provider != model_registry::NEBIUS_PROVIDER_ID {
         return Err(KnowledgeImportError::invalid("The selected model is not available through Nebius Token Factory."));
     }
@@ -1033,6 +1035,18 @@ mod tests {
         }
         fs::write(directory.path().join("secret.md"), "NEBIUS_API_KEY=synthetic-placeholder").unwrap();
         assert_eq!(prepare(request(directory.path(), &project_id, vec!["secret.md".to_owned()])).unwrap_err().code, "SENSITIVE_SOURCE_REJECTED");
+    }
+
+    #[test]
+    fn capability_none_is_rejected_before_knowledge_import_provider_execution() {
+        let (directory, project_id) = workspace();
+        fs::write(directory.path().join("knowledge.md"), "# Project knowledge\nDocumented fact.").unwrap();
+        let mut input = request(directory.path(), &project_id, vec!["knowledge.md".to_owned()]);
+        input.model_id = Some("deepseek-ai/DeepSeek-V4.1-Flash".to_owned());
+        let provider_request_count = 0;
+        let error = prepare(input).unwrap_err();
+        assert_eq!(error.code, "MODEL_CAPABILITY_REQUIRED");
+        assert_eq!(provider_request_count, 0);
     }
 
     #[test]

@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { IconButton } from "./designSystem";
 import { loadDecisions, type Decision } from "./platform/decisions";
-import { loadModelRegistry, type ModelEntry } from "./platform/modelRegistry";
+import { loadModelRegistry, structuredWorkflowModelLabel, supportsStructuredOutput, type ModelEntry } from "./platform/modelRegistry";
 import {
   KNOWLEDGE_AREAS,
   KNOWLEDGE_STATUSES,
@@ -552,7 +552,7 @@ export function SpecialistPage({
   }
 
   async function executeAnalysis(completionBudget: number) {
-    if (isRunning || !profile || !taskType || !selectedModel || !Number.isInteger(completionBudget)
+    if (isRunning || !profile || !taskType || !selectedModel || !supportsStructuredOutput(selectedModel) || !Number.isInteger(completionBudget)
       || completionBudget < 1 || completionBudget > allowedBudgetMax) return;
     setIsRunning(true);
     setCrossModelRun(null);
@@ -597,7 +597,7 @@ export function SpecialistPage({
     if (isRunning || !selectedRun || selectedRun.status !== "SUCCEEDED" || !selectedRun.result) return;
     const targetModel = models.find((model) => model.modelId === comparisonModelId && model.modelId !== selectedRun.modelId);
     const taskGuidance = profile?.taskGuidance.find((item) => item.taskType === selectedRun.taskType);
-    if (!targetModel || !taskGuidance) return;
+    if (!targetModel || !supportsStructuredOutput(targetModel) || !taskGuidance) return;
     const completionBudget = Math.min(
       taskGuidance.preferredCompletionTokens,
       targetModel.capabilities.maxCompletionTokens ?? taskGuidance.preferredCompletionTokens,
@@ -819,7 +819,7 @@ export function SpecialistPage({
               Model
               <select value={modelId} required disabled={models.length === 0} onChange={(event) => setModelId(event.target.value)}>
                 {models.length === 0 ? <option value="">No configured models</option> : null}
-                {models.map((model) => <option key={model.modelId} value={model.modelId}>{model.displayName}</option>)}
+                {models.map((model) => <option key={model.modelId} value={model.modelId} disabled={!supportsStructuredOutput(model)}>{structuredWorkflowModelLabel(model)}</option>)}
               </select>
             </label>
           </div>
@@ -923,7 +923,7 @@ export function SpecialistPage({
             <small>Saved with this specialist run · {scenario.length}/4000 characters</small>
           </label>
           <div className="specialist-run-action">
-            <button className="primary-button" type="submit" disabled={isRunning || !profile || !taskType || !selectedModel || scenario.trim().length === 0 || Boolean(budgetError)}>Run Analysis</button>
+            <button className="primary-button" type="submit" disabled={isRunning || !profile || !taskType || !selectedModel || !supportsStructuredOutput(selectedModel) || scenario.trim().length === 0 || Boolean(budgetError)}>Run Analysis</button>
             {isRunning && !crossModelRun ? <span className="specialist-running-state" role="status"><span className="specialist-spinner specialist-spinner-small" aria-hidden="true" />Running Analysis… {elapsedSeconds}s</span> : null}
           </div>
         </form>
@@ -952,10 +952,10 @@ export function SpecialistPage({
                   Another enabled model
                   <select value={comparisonModelId} disabled={Boolean(crossModelRun)} onChange={(event) => setComparisonModelId(event.target.value)}>
                     <option value="">Choose a model</option>
-                    {comparisonModels.map((model) => <option key={model.modelId} value={model.modelId}>{model.displayName}</option>)}
+                    {comparisonModels.map((model) => <option key={model.modelId} value={model.modelId} disabled={!supportsStructuredOutput(model)}>{structuredWorkflowModelLabel(model)}</option>)}
                   </select>
                 </label>
-                <button type="button" disabled={comparisonModelId.length === 0 || isRunning} onClick={() => void runWithAnotherModel()}>Run with another model</button>
+                <button type="button" disabled={comparisonModelId.length === 0 || isRunning || !models.some((model) => model.modelId === comparisonModelId && supportsStructuredOutput(model))} onClick={() => void runWithAnotherModel()}>Run with another model</button>
                 {crossModelRun?.sourceRunId === selectedRun.id ? (
                   <span className="specialist-running-state specialist-cross-model-status" role="status">
                     <span className="specialist-spinner specialist-spinner-small" aria-hidden="true" />

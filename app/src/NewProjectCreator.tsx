@@ -14,6 +14,7 @@ import {
   type PillarProposal,
   type PillarProposalResult,
 } from "./platform/creatorAi";
+import { structuredWorkflowModelLabel, supportsStructuredOutput } from "./platform/modelRegistry";
 import type {
   FoundationPillar,
   ProjectFoundationInput,
@@ -182,7 +183,7 @@ function AiPreflightDialog({
             <label className="creator-ai-model-select">
               <span>Model</span>
               <select aria-label="Model" value={selectedModelId} disabled={loading} onChange={(event) => onModelChange(event.target.value)}>
-                {preflight.models.map((model) => <option value={model.modelId} key={model.modelId}>{model.displayName}{model.modelId === preflight.defaultModelId ? " — Creator default" : ""}</option>)}
+                {preflight.models.map((model) => <option value={model.modelId} key={model.modelId} disabled={!supportsStructuredOutput(model)}>{structuredWorkflowModelLabel(model, preflight.defaultModelId)}</option>)}
               </select>
               {selectedModel ? <small><strong>{selectedModel.displayName}</strong> · {selectedModel.modelId}<br />{selectedModel.modelId === preflight.defaultModelId ? "Current default for structured Creator suggestions." : "Alternative model available through Token Factory."}</small> : null}
             </label>
@@ -195,7 +196,7 @@ function AiPreflightDialog({
         ) : loading ? <p className="creator-ai-running" role="status"><span className="specialist-spinner specialist-spinner-small" aria-hidden="true" />Preparing local request details…</p> : null}
         <footer>
           <button className="outline-button" type="button" onClick={onCancel}>Cancel</button>
-          <button className="primary-button" type="button" disabled={!preflight || loading || Boolean(error)} onClick={onRun}>Run AI</button>
+          <button className="primary-button" type="button" disabled={!preflight || loading || Boolean(error) || !selectedModel || !supportsStructuredOutput(selectedModel)} onClick={onRun}>Run AI</button>
         </footer>
       </section>
     </div>

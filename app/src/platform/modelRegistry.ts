@@ -25,6 +25,22 @@ export interface ModelEntry {
   enabled: boolean;
 }
 
+export type StructuredOutputCapability = "NONE" | "JSON_OBJECT" | "JSON_SCHEMA";
+
+export function structuredOutputCapability(model: ModelEntry): StructuredOutputCapability {
+  return model.capabilities.structuredOutput ?? "NONE";
+}
+
+export function supportsStructuredOutput(model: ModelEntry, required: Exclude<StructuredOutputCapability, "NONE"> = "JSON_OBJECT"): boolean {
+  const capability = structuredOutputCapability(model);
+  return capability === "JSON_SCHEMA" || capability === required;
+}
+
+export function structuredWorkflowModelLabel(model: ModelEntry, defaultModelId?: string): string {
+  if (!supportsStructuredOutput(model)) return `${model.displayName} — incompatible: structured output not verified`;
+  return `${model.displayName}${model.modelId === defaultModelId ? " — default" : ""}`;
+}
+
 export function loadModelRegistry(): Promise<ModelEntry[]> {
   return invoke<ModelEntry[]>("list_models");
 }

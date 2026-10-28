@@ -24,6 +24,10 @@ const model = {
   provider: "nebius_token_factory", modelId: "nvidia/nemotron", displayName: "NVIDIA Nemotron", family: "Nemotron",
   availability: "configured", capabilities: { structuredOutput: "JSON_OBJECT" as const }, enabled: true,
 };
+const unverifiedModel = {
+  provider: "nebius_token_factory", modelId: "custom/unverified", displayName: "Custom Unverified", family: "custom",
+  availability: "UNVERIFIED", capabilities: { structuredOutput: "NONE" as const }, enabled: true,
+};
 const preflight: KnowledgeImportPreflight = {
   taskLabel: "Existing Project Knowledge Import", provider: "Nebius Token Factory", modelId: model.modelId, models: [model],
   sources: [{ sourceId: "docs/colony.md", bytes: 512 }], totalSourceBytes: 512, boundedOrTruncated: false,
@@ -62,6 +66,16 @@ describe("Knowledge Import review workflow", () => {
     expect(runKnowledgeImport).not.toHaveBeenCalled();
     await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(runKnowledgeImport).not.toHaveBeenCalled();
+  });
+
+  it("shows capability-NONE models but prevents Knowledge Import execution", async () => {
+    vi.mocked(getKnowledgeImportPreflight).mockResolvedValue({ ...preflight, models: [model, unverifiedModel] });
+    const user = userEvent.setup();
+    render(<KnowledgeImportPanel workspace={workspace} onApplied={vi.fn()} />);
+    await user.click(screen.getByRole("button", { name: "Import Knowledge" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByRole("option", { name: /Custom Unverified.*incompatible/ })).toBeDisabled();
     expect(runKnowledgeImport).not.toHaveBeenCalled();
   });
 

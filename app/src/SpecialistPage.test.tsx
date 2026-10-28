@@ -14,7 +14,9 @@ import {
   type SpecialistRun,
 } from "./platform/specialists";
 
-vi.mock("./platform/modelRegistry", () => ({ loadModelRegistry: vi.fn() }));
+vi.mock("./platform/modelRegistry", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./platform/modelRegistry")>()), loadModelRegistry: vi.fn(),
+}));
 vi.mock("./platform/projectKnowledge", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./platform/projectKnowledge")>()), loadCompendium: vi.fn(), promoteSpecialistFinding: vi.fn(),
 }));
@@ -39,11 +41,11 @@ const profile: SpecialistProfile = {
 };
 const model = {
   provider: "nebius_token_factory", modelId: "test/model", displayName: "Registry Test Model", family: "test",
-  availability: "configured", enabled: true, capabilities: {}, pricing: { inputUsdPerMillionTokens: 1, outputUsdPerMillionTokens: 2 },
+  availability: "configured", enabled: true, capabilities: { structuredOutput: "JSON_OBJECT" as const }, pricing: { inputUsdPerMillionTokens: 1, outputUsdPerMillionTokens: 2 },
 };
 const nemotronModel = {
   provider: "nebius_token_factory", modelId: "nvidia/nemotron-3-super-120b-a12b", displayName: "NVIDIA Nemotron 3 Super 120B", family: "Nemotron 3 Super",
-  availability: "configured", enabled: true, capabilities: {},
+  availability: "configured", enabled: true, capabilities: { structuredOutput: "JSON_OBJECT" as const },
 };
 const knowledge = {
   id: "knowledge-1", area: "systems" as const, title: "Imperfect information", statement: "Enemies know only perceived facts.",
@@ -140,7 +142,7 @@ describe("AI Behavior Designer production workbench", () => {
   it("renders configuration, compact history, and selected detail as the wide workbench columns", async () => { vi.mocked(loadSpecialistRuns).mockResolvedValue({ formatVersion: 1, projectId: workspace.projectId, updatedAt: successfulRun.createdAt, runs: [successfulRun] }); const { container } = render(<SpecialistPage workspace={workspace} />); await screen.findByRole("heading", { name: "AI Behavior Designer" }); expect(container.querySelector('[data-workbench-column="configuration"]')).toBeInTheDocument(); expect(container.querySelector('[data-workbench-column="analysis-history"]')).toBeInTheDocument(); expect(container.querySelectorAll('[data-workbench-column="selected-run-detail"]')).not.toHaveLength(0); });
   it("allows every supported task type to be selected", async () => { const user = await renderPage(); await user.selectOptions(screen.getByLabelText("Task Type"), "BEHAVIOR_CONTRACT"); expect(screen.getByLabelText("Task Type")).toHaveValue("BEHAVIOR_CONTRACT"); });
   it("uses enabled models from the registry", async () => { await renderPage(); expect(screen.getByLabelText("Model")).toHaveValue(model.modelId); expect(screen.getByRole("option", { name: model.displayName })).toBeInTheDocument(); });
-  it("keeps DeepSeek and Nemotron selectable from the registry", async () => { vi.mocked(loadModelRegistry).mockResolvedValue([{ ...model, modelId: "deepseek-ai/DeepSeek-V4.1-Flash", displayName: "DeepSeek V4.1 Flash" }, nemotronModel]); await renderPage(); const selector = screen.getByLabelText("Model"); expect(within(selector).getByRole("option", { name: "DeepSeek V4.1 Flash" })).toBeInTheDocument(); expect(within(selector).getByRole("option", { name: "NVIDIA Nemotron 3 Super 120B" })).toBeInTheDocument(); });
+  it("keeps DeepSeek visible but disables it for structured Specialist runs", async () => { vi.mocked(loadModelRegistry).mockResolvedValue([{ ...model, modelId: "deepseek-ai/DeepSeek-V4.1-Flash", displayName: "DeepSeek V4.1 Flash", capabilities: { structuredOutput: "NONE" } }, nemotronModel]); await renderPage(); const selector = screen.getByLabelText("Model"); expect(within(selector).getByRole("option", { name: /DeepSeek V4.1 Flash.*incompatible/ })).toBeDisabled(); expect(within(selector).getByRole("option", { name: "NVIDIA Nemotron 3 Super 120B" })).toBeInTheDocument(); });
   it("preserves exact stored inputs and makes only one explicit comparison request", async () => { vi.mocked(loadModelRegistry).mockResolvedValue([model, nemotronModel]); vi.mocked(loadSpecialistRuns).mockResolvedValue({ formatVersion: 1, projectId: workspace.projectId, updatedAt: successfulRun.createdAt, runs: [successfulRun] }); const user = await renderPage(); expect(runSpecialistAnalysis).not.toHaveBeenCalled(); await user.selectOptions(screen.getByLabelText("Another enabled model"), nemotronModel.modelId); expect(runSpecialistAnalysis).not.toHaveBeenCalled(); await user.click(screen.getByRole("button", { name: "Run with another model" })); await waitFor(() => expect(runSpecialistAnalysis).toHaveBeenCalledTimes(1)); expect(runSpecialistAnalysis).toHaveBeenCalledWith({ rootPath: workspace.path, projectId: workspace.projectId, profileId: successfulRun.specialistProfileId, taskType: successfulRun.taskType, modelId: nemotronModel.modelId, knowledgeEntryIds: successfulRun.selectedKnowledgeEntryIds, decisionIds: successfulRun.selectedDecisionIds, maxCompletionTokens: 4600, scenario: successfulRun.scenario }); await waitFor(() => expect(loadSpecialistRuns).toHaveBeenCalledTimes(2)); });
   it("keeps the source run detail and result visible during a cross-model run", async () => {
     vi.mocked(loadModelRegistry).mockResolvedValue([model, nemotronModel]);
