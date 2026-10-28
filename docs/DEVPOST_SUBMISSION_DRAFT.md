@@ -178,6 +178,6 @@ Yes, for bounded, structured, human-reviewed proposals where ForgeMind supplies 
 - **Public repository:** `TODO - add the verified public repository URL`
 - **Working demo / test build:** `TODO - add the verified evaluator URL or download`
 - **Demo video:** `TODO - add the public YouTube URL; final duration must be shorter than 3 minutes`
-- **Screenshots:** `TODO - capture from the public-safe Hollow Reach workspace`
+- **Screenshots:** [Knowledge Import review queue](assets/01_knowledge_import_decision_edit.png), [Game Wiki provenance](assets/03_game_wiki_imported_knowledge_provenance.png), [Writers' Room Project Brain sources](assets/06_writers_room_project_brain_sources.png), and [AI Models registry](assets/11_ai_models_nebius_nemotron.png)
 - **Track:** `TODO - confirm the final Devpost track selection`
 - **Submission-period update explanation:** `TODO - include if the project existed before 2026-08-26`

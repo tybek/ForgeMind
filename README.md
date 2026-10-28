@@ -54,7 +54,9 @@ Existing Markdown
 
 An imported statement is not automatically canon. A Decision candidate starts `PROPOSED`; an Open Question remains unresolved; Markdown-derived knowledge keeps `DOCUMENTED` provenance. Git and Unity evidence can then be compared with intent without being rewritten by the AI workflow.
 
-<!-- SCREENSHOT TODO (capture from the public-safe Hollow Reach demo): docs/assets/overview-control-room.png -->
+![Knowledge Import Decision candidate in the review queue](docs/assets/01_knowledge_import_decision_edit.png)
+
+*NVIDIA Nemotron extracts review candidates; nothing enters Project Brain until the developer explicitly applies it.*
 
 ## What it does
 
@@ -84,6 +86,10 @@ Conversation
 
 AI conversation and proposals are non-authoritative. External research remains `EXTERNAL_RESEARCH`. Selected Markdown begins as `DOCUMENTED`. Decisions require their own approval lifecycle. This boundary lets AI help without quietly changing the game's durable direction.
 
+![Game Wiki showing imported knowledge provenance](docs/assets/03_game_wiki_imported_knowledge_provenance.png)
+
+*Applied knowledge retains `DOCUMENTED` provenance, AI-assisted extraction, and human review.*
+
 ## Knowledge Import
 
 Knowledge Import supports 1-10 explicitly selected, project-contained Markdown files:
@@ -98,8 +104,6 @@ Markdown
 
 Speculative language is rejected from durable Knowledge rather than normalized into fact. The review queue is transient, selected items are revalidated before Apply, and exact duplicates are skipped. Import is Markdown-only; it is not a general document-ingestion, repository-crawling, or canon-generation system.
 
-<!-- SCREENSHOT TODO: docs/assets/knowledge-import-review.png -->
-
 ## Writers' Room
 
 Writers' Room is a source-aware collaborative AI workspace with three current profiles:
@@ -110,13 +114,15 @@ Writers' Room is a source-aware collaborative AI workspace with three current pr
 
 Each request uses bounded, deterministic Project Brain context and shows a source trace. Conversation remains work history, not project truth. Where a durable proposal is available, the flow is **Review/Edit -> Accept -> Apply**.
 
+![Writers' Room response with Project Brain sources](docs/assets/06_writers_room_project_brain_sources.png)
+
+*Writers' Room reasons over reviewed Project Brain knowledge with visible source traces.*
+
 ### Tavily external research
 
 The user can explicitly choose **Research web** to make one bounded Tavily Basic Search. Returned snippets are reviewed and selected before they may enter a later Writers' Room request. They remain `EXTERNAL_RESEARCH`, structurally distinct from `ESTABLISHED` and `DOCUMENTED` project sources.
 
 Tavily retrieves external patterns; NVIDIA Nemotron compares selected research with the project's existing direction. There is no autonomous search, hidden query rewriting, automatic retry, or automatic promotion into project truth.
-
-<!-- SCREENSHOT TODO: docs/assets/writers-room-source-trace.png (include selected Tavily sources only if public-safe) -->
 
 ## Reality and Alignment
 
@@ -155,7 +161,9 @@ Availability does not establish structured-output support, pricing, quality, or 
 
 Observed run count, median latency, input/output token totals, and last-used time are installation-local observations—not benchmark rankings or automatic routing signals.
 
-<!-- SCREENSHOT TODO: docs/assets/ai-models.png -->
+![AI Models registry showing Nebius availability and Nemotron capability](docs/assets/11_ai_models_nebius_nemotron.png)
+
+*Nebius Token Factory model discovery is separate from ForgeMind-verified structured capability.*
 
 ## Architecture
 
