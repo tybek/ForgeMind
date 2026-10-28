@@ -2,91 +2,227 @@
 
 **AI for Game Development**
 
-ForgeMind is a local-first AI game-development workspace that keeps game intent, team decisions, and actual implementation aligned.
+**A source-aware AI workspace that keeps game design intent, implementation reality, and AI output aligned.**
 
-**Turn ideas into playable worlds.**
+Game projects scatter truth across design documents, team conversations, Git, Unity, and AI output. ForgeMind turns those sources into a reviewable **Project Brain** without allowing temporary AI output to silently become project truth.
 
-## Core idea
+The fastest way to see it:
 
 ```text
-Intent
--> Reality
--> Alignment
--> Feature Contract
--> Implementation Brief
+Markdown
+-> NVIDIA Nemotron extracts candidates through Nebius Token Factory
+-> a human reviews, edits, and explicitly applies selected knowledge
+-> Game Wiki reflects the updated Project Brain
+-> Writers' Room reasons over that source-aware context
+-> optional Tavily research remains visibly external
 ```
 
-- **Intent** is what the team has agreed to build: design direction, narrative, technical constraints, and plans.
-- **Reality** is what the project currently contains: files, implementation evidence, tests, and engine state.
-- **Alignment** explains where the two agree, remain unverified, conflict, or have drifted apart.
-- **Feature Contracts** turn reviewed intent and evidence into explicit, human-approved delivery scope.
-- **Implementation Briefs** provide a deterministic handoff to a coding agent without making ForgeMind an autonomous executor.
+Imported Markdown remains `DOCUMENTED`, Decisions begin `PROPOSED`, Open Questions remain unresolved, and Writers' Room conversation stays non-authoritative until a human applies a reviewed proposal through its owning domain.
 
-ForgeMind is not a prompt-to-game generator. Its goal is to help AI and developers understand a game project before proposing changes.
+**INTENT ↔ REALITY ↔ ALIGNMENT**
 
-## Why ForgeMind
+ForgeMind is a local-first desktop workspace for indie developers, small game teams, technical designers, narrative designers, and teams already using AI in game development.
 
-Game projects distribute important context across design documents, conversations, repositories, and engine content. As a project evolves, that context can become inconsistent or disappear into individual tools and chat histories.
+## The problem
 
-ForgeMind is designed to keep project knowledge portable and reviewable, preserve human authority over durable decisions, and eventually connect those decisions to evidence from the implementation.
+AI makes it easier to generate ideas, but it can make a game's source of truth harder to maintain. A useful suggestion in one chat can contradict an approved design decision, drift away from the code, or be mistaken for implemented behavior.
 
-## Current status
+ForgeMind connects reviewed design intent, durable decisions, repository evidence, Unity evidence, and bounded AI workflows while preserving where every claim came from and who has authority to apply it.
 
-The current implementation includes:
+## The ForgeMind loop
 
-- a Tauri desktop application with project-oriented workspace navigation;
-- explicit local ForgeMind workspace initialization;
-- portable project identity in `.forgemind/project.json`;
-- safe local project handling that does not scan or modify game files implicitly;
-- a replaceable Rust AI-provider boundary;
-- Nebius Token Factory integration and an AI evaluation interface;
-- a centralized local model registry and privacy-conscious usage summaries;
-- a structured Project Interview with candidate review and approved-only local persistence;
-- a versioned Game Compendium and Game Wiki with explicit interview import and manual knowledge editing;
-- separate structured Decisions with rationale, explicit approval, knowledge links, and supersession history;
-- a bounded AI Behavior Designer specialist workbench using explicitly selected project context;
-- registered DeepSeek and NVIDIA Nemotron model support through Nebius Token Factory, with successful user-authorized use of both and no claim that one model is universally best;
-- a read-only Git Reality snapshot with branch, HEAD, working-tree, diff-stat, changed-file, and recent-commit evidence;
-- deterministic Unity GroundTruth export and safe partial-coverage reporting;
-- human-reviewable Alignment results with separate alignment and review states;
-- AI-assisted Feature Contract drafting with section-level review, explicit approval, and deterministic Implementation Brief preview/copy;
-- persistent Writers' Room sessions whose proposals require explicit human review and Apply before an owning project-truth domain changes;
-- explicitly triggered Tavily Search whose bounded sources remain `EXTERNAL_RESEARCH`, are treated as untrusted data, and do not mutate Project Brain automatically;
-- an explicitly triggered headless AI smoke command;
-- React/frontend and Rust/native automated tests; and
-- a headless-first validation workflow.
+```text
+INTENT ↔ REALITY ↔ ALIGNMENT
+```
 
-0J Alignment, 0K Feature Contracts, and the UI-1 design-system foundation are complete. AI output remains proposal-only, specialist history remains non-authoritative work material, and Git operations remain read-only. UI-2 through UI-5 and ForgeMind Studios S0 through S9 are planned but not started; no 0L implementation has started.
+- **Intent** is the game the team has agreed to build: its vision, design direction, narrative, constraints, and approved decisions.
+- **Reality** is bounded evidence of what currently exists in Git and Unity.
+- **Alignment** records whether selected evidence is `ALIGNED`, `UNVERIFIED`, `OUT_OF_SYNC`, or in `CONFLICT` with intent.
 
-## Tech stack
+AI helps extract, compare, and propose. Humans decide what becomes durable. ForgeMind does not autonomously edit the game, approve AI output, or replace Git, Unity, an IDE, or a coding agent.
 
-- Tauri 2 desktop shell
-- React, TypeScript, and Vite frontend
-- Rust native layer
-- Vitest and React Testing Library
-- Cargo-based native tests
+## The 30-second workflow
 
-## Running locally
+```text
+Existing Markdown
+-> Nebius / Nemotron extracts knowledge candidates
+-> a human reviews, edits, and applies selected candidates
+-> Game Wiki reflects the owning Project Brain domains
+-> Writers' Room reasons over that updated, source-aware context
+-> optional Tavily research stays visibly external
+```
 
-Prerequisites:
+An imported statement is not automatically canon. A Decision candidate starts `PROPOSED`; an Open Question remains unresolved; Markdown-derived knowledge keeps `DOCUMENTED` provenance. Git and Unity evidence can then be compared with intent without being rewritten by the AI workflow.
+
+<!-- SCREENSHOT TODO (capture from the public-safe Hollow Reach demo): docs/assets/overview-control-room.png -->
+
+## What it does
+
+ForgeMind currently provides:
+
+- a local-first project workspace with Project Overview, Game Design, Decisions, Game Wiki, and Open Questions;
+- review-first Markdown Knowledge Import;
+- a source-aware Writers' Room for lore, characters/dialogue, and continuity;
+- explicit Tavily web research that remains separate from established project knowledge;
+- read-only Git Reality and portable Unity GroundTruth evidence;
+- human-reviewed Alignment and Feature Contracts;
+- dynamic Nebius Token Factory model discovery with an application-local capability registry and observed metrics; and
+- source-aware navigation back to the domains that own project truth.
+
+## Project Brain and authority
+
+Project Brain is a logical aggregate over existing owning domains, not a second database. Game Wiki is a read-only projection; there is no `wiki.json`.
+
+```text
+Conversation
+-> Proposal
+-> Human review / edit
+-> Explicit Apply
+-> Owning domain
+-> Project Brain
+```
+
+AI conversation and proposals are non-authoritative. External research remains `EXTERNAL_RESEARCH`. Selected Markdown begins as `DOCUMENTED`. Decisions require their own approval lifecycle. This boundary lets AI help without quietly changing the game's durable direction.
+
+## Knowledge Import
+
+Knowledge Import supports 1-10 explicitly selected, project-contained Markdown files:
+
+```text
+Markdown
+-> NVIDIA Nemotron through Nebius Token Factory
+-> Project Knowledge / Proposed Decision / Open Question candidates
+-> Review, edit, select
+-> Apply through Compendium or Decisions
+```
+
+Speculative language is rejected from durable Knowledge rather than normalized into fact. The review queue is transient, selected items are revalidated before Apply, and exact duplicates are skipped. Import is Markdown-only; it is not a general document-ingestion, repository-crawling, or canon-generation system.
+
+<!-- SCREENSHOT TODO: docs/assets/knowledge-import-review.png -->
+
+## Writers' Room
+
+Writers' Room is a source-aware collaborative AI workspace with three current profiles:
+
+- **Lore Architect** for worldbuilding, factions, locations, history, cultures, and conflicts;
+- **Character & Dialogue** for characters, motivations, relationships, voice, scenes, and dialogue; and
+- **Continuity Editor** for established, documented, unresolved, conflicting, and missing narrative context.
+
+Each request uses bounded, deterministic Project Brain context and shows a source trace. Conversation remains work history, not project truth. Where a durable proposal is available, the flow is **Review/Edit -> Accept -> Apply**.
+
+### Tavily external research
+
+The user can explicitly choose **Research web** to make one bounded Tavily Basic Search. Returned snippets are reviewed and selected before they may enter a later Writers' Room request. They remain `EXTERNAL_RESEARCH`, structurally distinct from `ESTABLISHED` and `DOCUMENTED` project sources.
+
+Tavily retrieves external patterns; NVIDIA Nemotron compares selected research with the project's existing direction. There is no autonomous search, hidden query rewriting, automatic retry, or automatic promotion into project truth.
+
+<!-- SCREENSHOT TODO: docs/assets/writers-room-source-trace.png (include selected Tavily sources only if public-safe) -->
+
+## Reality and Alignment
+
+- **Git Reality** uses fixed, read-only inspection commands to expose branch, HEAD, working-tree, changed-file, diff-stat, and recent-commit evidence.
+- **Unity GroundTruth** uses a separate editor-only exporter to create portable, project-relative evidence with explicit coverage limits.
+- **Alignment** compares selected intent with selected evidence and produces `ALIGNED`, `UNVERIFIED`, `OUT_OF_SYNC`, or `CONFLICT`, followed by a separate human review state.
+
+Git and Unity evidence are read-only. Component or file presence does not prove runtime behavior, and incomplete coverage is not treated as evidence of absence.
+
+## AI and provider architecture
+
+### Nebius Token Factory
+
+Nebius Token Factory is ForgeMind's current inference provider behind a replaceable native Rust boundary. It powers explicit AI workflows, dynamic model-catalog refresh, and privacy-minimized local usage observations. Provider calls are never made on startup and are not retried automatically.
+
+### NVIDIA Nemotron
+
+The current default structured-output model is **NVIDIA Nemotron 3 Super 120B**:
+
+```text
+nvidia/nemotron-3-super-120b-a12b
+```
+
+ForgeMind uses it for Writers' Room structured responses, Markdown Knowledge Import extraction, New Project Creator proposals, Feature Contract drafting, and other implemented structured workflows. These are task-specific uses, not a claim that Nemotron is universally best.
+
+## Model Catalog
+
+ForgeMind explicitly refreshes the models currently listed by Nebius Token Factory, then keeps provider discovery separate from its local registry:
+
+- **Available** means Token Factory listed the model during the latest successful refresh.
+- **Enabled** means the model is available for explicit selection in ForgeMind.
+- **Verified capability** records only capabilities confirmed in the local registry.
+- **Custom** identifies a bounded model ID added locally rather than discovered.
+
+Availability does not establish structured-output support, pricing, quality, or task suitability. Discovered and custom models default to **Structured output: Not verified**. Structured workflows block an incompatible model locally before provider execution.
+
+Observed run count, median latency, input/output token totals, and last-used time are installation-local observations—not benchmark rankings or automatic routing signals.
+
+<!-- SCREENSHOT TODO: docs/assets/ai-models.png -->
+
+## Architecture
+
+```text
+React / TypeScript UI
+        |
+        | narrow Tauri commands
+        v
+Rust native domains
+  |-- local .forgemind JSON stores
+  |-- read-only Git / Unity evidence boundaries
+  |-- Nebius Token Factory provider adapter
+  `-- Tavily Search adapter
+```
+
+React has no generic filesystem, shell, or network capability. The native layer owns project validation, file access, credentials, outbound requests, normalization, and safe errors. Project-owned data remains portable under `.forgemind/`; model registry, catalog cache, and usage observations are application-local.
+
+See [Architecture](docs/ARCHITECTURE.md) and [Workflows](docs/WORKFLOWS.md) for the detailed contracts.
+
+## Built With
+
+- **Nebius Token Factory** - inference, model discovery, and provider-reported usage for explicit AI workflows.
+- **NVIDIA Nemotron 3 Super 120B** - the default model for implemented structured proposal and extraction workflows.
+- **Tavily Search** - explicit, user-reviewed external research inside Writers' Room.
+- **Tauri 2** and **Rust** - the desktop/native trust boundary and local persistence.
+- **React**, **TypeScript**, and **Vite** - the desktop UI.
+- **Vitest** and **React Testing Library** - deterministic frontend validation.
+- **Git** and **Unity GroundTruth** - read-only implementation evidence.
+- **Local-first JSON stores** - portable project truth and review history.
+
+## Getting started
+
+### Prerequisites
 
 - Node.js LTS and npm
 - Rust with the stable toolchain
-- On Windows, Microsoft C++ Build Tools and WebView2
+- platform prerequisites from the [Tauri 2 setup guide](https://v2.tauri.app/start/prerequisites/)
+- on Windows: the stable MSVC toolchain, Microsoft C++ Build Tools, and WebView2
 
-Install dependencies and start the desktop application:
+The current development and release-validation baseline is Windows desktop. See [Current limitations](#current-limitations).
+
+### Install and run
 
 ```powershell
-cd app
+git clone <your-fork-or-repository-url>
+cd ForgeMind/app
 npm install
 npm run tauri dev
 ```
 
 For frontend-only development, run `npm run dev` from `app/`.
 
-Nebius-assisted actions require `NEBIUS_API_KEY`, and Tavily Search requires `TAVILY_API_KEY`, in the environment of the process launching ForgeMind. These BYOK credentials remain in native Rust provider boundaries and are not returned to React or written to ForgeMind project files. External research is untrusted data; ForgeMind applies bounded, best-effort prompt-injection defenses rather than claiming complete protection. See the [application development notes](app/README.md) for current configuration details.
+### Configuration
 
-## Validation
+Live Nebius workflows require `NEBIUS_API_KEY` in the environment of the process that launches ForgeMind. Tavily is optional unless you use **Research web**.
+
+```powershell
+$env:NEBIUS_API_KEY = "<your-key>"
+$env:TAVILY_API_KEY = "<your-key>"
+npm run tauri dev
+Remove-Item Env:NEBIUS_API_KEY
+Remove-Item Env:TAVILY_API_KEY
+```
+
+ForgeMind does not load `.env` files. Never commit keys or place them under `.forgemind/`. The [application development notes](app/README.md) include a PowerShell secure-input example.
+
+### Validation
 
 From `app/`:
 
@@ -97,36 +233,45 @@ npm run build
 npm run tauri build -- --no-bundle
 ```
 
-Routine validation is headless. Native GUI interaction is reserved for a short manual smoke before milestone closure or for changes to GUI-only boundaries. See the [Validation Policy](docs/VALIDATION.md) for the full workflow and optional live-provider smoke command.
+Automated tests use mocks and offline fixtures. They do not make provider calls. See [Validation Policy](docs/VALIDATION.md).
 
-## Documentation
+## Security and privacy
 
-Product and implementation documentation:
+- project state is local-first and project-owned data stays under `.forgemind/`;
+- Nebius and Tavily credentials are read only by native provider adapters;
+- credentials, authorization headers, raw provider bodies, and hidden reasoning are not persisted in project files;
+- provider requests are explicit and bounded;
+- external research is treated as untrusted data; and
+- durable AI-assisted changes require human authority gates.
 
-- [Product direction](docs/PRODUCT.md)
-- [Hackathon MVP](docs/MVP.md)
-- [Architecture](docs/ARCHITECTURE.md)
-- [Data model](docs/DATA_MODEL.md)
-- [Workflows](docs/WORKFLOWS.md)
-- [Roadmap](docs/ROADMAP.md)
-- [Validation policy](docs/VALIDATION.md)
-- [Hackathon submission readiness](docs/HACKATHON_SUBMISSION.md)
-- [Security and privacy architecture](docs/SECURITY_AND_PRIVACY.md)
-- [UI direction](docs/UI_DIRECTION.md)
-- [Brandbook](docs/BRANDBOOK.md)
+These are bounded, best-effort safeguards, not a universal security guarantee or complete prompt-injection defense. See [Security and Privacy](docs/SECURITY_AND_PRIVACY.md) and the [Final Security Audit](docs/FINAL_SECURITY_AUDIT.md).
 
-Planning and future-direction documents:
+## Current limitations
 
-- [Development Journal](docs/DEVELOPMENT_JOURNAL.md) — historical progress and project-management estimates
-- [Specialist AI and production direction](docs/AI_SPECIALISTS_AND_PRODUCTION.md) — current bounded specialist foundation plus future direction
-- [ForgeMind Studios roadmap](docs/STUDIOS_ROADMAP.md) — planned S0-S9 work, not started
+- Knowledge Import accepts Markdown only; PDF, DOCX, chat, and generic repository ingestion are not implemented.
+- The implemented Writers' Room context is deterministic and bounded, not vector search, embeddings, or general semantic retrieval.
+- Tavily research is explicit and manual, not autonomous or multi-query research.
+- Only models with an explicitly verified structured-output capability can run structured workflows.
+- Provider availability and reliability remain external dependencies; ForgeMind does not infer quality or pricing from catalog discovery.
+- There is no general Task Router, automatic model recommender, or automatic model fallback.
+- Wiki Chronicler and the broader ForgeMind Studios roadmap are not implemented.
+- Git Reality and Unity GroundTruth are read-only evidence integrations.
+- The current UX and release-validation baseline are desktop-focused and Windows-tested; broader distribution remains future work.
+
+ForgeMind fails closed on malformed structured output, invalid source references, unsafe paths, and incompatible model capabilities instead of silently promoting uncertain output.
+
+## Status and roadmap
+
+ForgeMind is feature frozen for the hackathon submission. The public-repository security gate is `PUBLIC_RELEASE_READY`; remaining work is submission packaging, screenshots, demo video, links, and final fresh-clone QA—not product feature development.
+
+See the [Roadmap](docs/ROADMAP.md), [Hackathon Submission Readiness](docs/HACKATHON_SUBMISSION.md), [Devpost draft](docs/DEVPOST_SUBMISSION_DRAFT.md), and [DEMO-0 runbook](docs/DEMO_RUNBOOK.md).
 
 ## Hackathon
 
-ForgeMind is being developed for the Nebius x NVIDIA Global AI Hackathon. The hackathon target is a focused, evidence-backed flow connecting project intent, implementation reality, alignment findings, a reviewable Feature Contract, and an implementation-ready brief.
+ForgeMind was built for the **Nebius x NVIDIA Global AI Hackathon**. The submission centers on one story: AI can help a game team reason faster without allowing temporary output to silently replace reviewed project truth.
 
-The current build uses Nebius Token Factory with NVIDIA Nemotron 3 Super 120B. Submission requirements, evidence collection, public-repository safety, and the three-minute demo plan are tracked in [Hackathon Submission Readiness](docs/HACKATHON_SUBMISSION.md).
+The public-safe demo workspace is **Hollow Reach**. Capture guidance and screenshot filenames are tracked in [docs/assets](docs/assets/README.md); no screenshots are fabricated or committed as placeholders.
 
 ## License
 
-ForgeMind is open-source software available under the [MIT License](LICENSE).
+ForgeMind is open-source software under the [MIT License](LICENSE).

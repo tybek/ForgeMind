@@ -1,6 +1,6 @@
 # ForgeMind desktop application
 
-The ForgeMind desktop application uses Tauri 2, React, TypeScript, and Vite. 0J Alignment is complete. 0K Feature Contract is current: 0K.1 and 0K.2 are implemented, and the bounded 0K desktop/persistence validation remains pending. UI-1 through UI-5, Studios S0 through S9, and 0L are not started.
+The ForgeMind desktop application uses Tauri 2, React, TypeScript, and Vite. The product is feature frozen for hackathon submission packaging. Alignment, Feature Contracts, Project Overview, Game Wiki, Writers' Room, Markdown Knowledge Import, Tavily external research, and Token Factory model catalog/registry management are implemented at the boundaries recorded in the repository Roadmap and Validation Policy. Some feature-specific manual acceptance items remain pending; Studios S0 through S9, Wiki Chronicler, a general Router, and other future roadmap work are not implemented.
 
 It selects a local directory through Tauri's native dialog plugin, inspects `.forgemind/project.json`, and explicitly initializes that file when requested. Initialization creates no other ForgeMind paths and does not read, scan, or modify game-project files.
 

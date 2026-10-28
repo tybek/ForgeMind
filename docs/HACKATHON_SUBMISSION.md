@@ -4,9 +4,9 @@
 
 This document is the durable submission-readiness source for ForgeMind's entry to the **Nebius x NVIDIA Global AI Hackathon**. It covers submission gates, evidence collection, public-repository safety, tool/model feedback, the demo video, and final Devpost QA. It does not authorize application behavior, a new product milestone, live inference, or publication.
 
-Current status: **SUB-0 complete; final submission not complete.** Product milestone status remains authoritative in [Roadmap](ROADMAP.md).
+Current status: **SUB-1 public documentation package complete; final submission not complete.** The root README, evidence-backed Devpost draft, public asset capture plan, limitations, Built With copy, and provider/model feedback are prepared. Screenshots, video, public URLs, final fresh-clone smoke, and submission remain manual work. Product milestone status remains authoritative in [Roadmap](ROADMAP.md).
 
-Official sources reviewed on 2026-09-26:
+Official sources re-checked on 2026-10-28:
 
 - [Hackathon overview and What to Submit](https://nebiusglobalaihackathon.devpost.com/)
 - [Official Rules](https://nebiusglobalaihackathon.devpost.com/rules)
@@ -22,7 +22,7 @@ The current official guidance requires:
 - selection of the most appropriate submission category;
 - a project description explaining what was created, why, and how it works;
 - a working demo URL, hosted application, or test build;
-- a **public YouTube demo video no longer than 3 minutes** that shows the project working;
+- a **public YouTube demo video shorter than 3 minutes** that shows the project working;
 - audio in the video explaining how Nebius Token Factory and the NVIDIA model or technology were used;
 - a publicly accessible GitHub, GitLab, or Bitbucket repository;
 - an open-source license visible at the top of the repository page;
@@ -42,7 +42,7 @@ ForgeMind currently satisfies the technical-use direction with:
 - local usage records that can capture provider/model identity, latency, and provider-reported token counts without prompts, responses, credentials, or authorization headers; and
 - an MIT license and documented local setup.
 
-This is not yet a submission-complete claim. Public-repository QA, consolidated feedback evidence, demo packaging, the public video, working-demo distribution, Devpost copy, links, and final submission QA remain open.
+This is not yet a submission-complete claim. The public documentation and Devpost draft are prepared, and the repository retains its recorded `PUBLIC_RELEASE_READY` security gate. Screenshots, demo packaging, the public video, working-demo distribution, final public links, a final secret/fresh-clone recheck, and submission QA remain open.
 
 ## Required Tool Feedback
 
@@ -189,9 +189,9 @@ Use one row per deliberate evaluation. `Unknown` and `Not captured` are valid va
 | Date not captured in evidence entry | Nebius Token Factory / `deepseek-ai/DeepSeek-V4.1-Flash` | `COMPETENCE_TIERS` | Exact scenario not captured here | 746 | 2,159 | 2,905 | 19,517 ms | Yes | Yes | Meaningful tier differentiation, imperfect information, and implementation-oriented tests | A later Reaction Model attempt reached its then-current token limit | Do not compare directly with unmatched Nemotron work |
 | Date not captured in evidence entry | Nebius Token Factory / `nvidia/nemotron-3-super-120b-a12b` | AI Behavior Designer Specialist analysis; exact task not captured | Same-input comparison context existed; exact scenario not captured here | 1,096 | 1,045 | 2,141 | 6,454 ms | Valid JSON; failed then-current five-item bound | No, not as a full Specialist run | Fast recorded response and valid extractable JSON | Returned 7 recommendations where 5 were allowed | Provider success; application schema failure; no retry |
 | Date not captured in evidence entry | Nebius Token Factory / `nvidia/nemotron-3-super-120b-a12b` | Post-normalization Specialist run | Not captured in current docs | Not captured | Not captured | Not captured | Not captured | Yes, after bounded normalization | Useful local result; exact acceptance rating not captured | Completed full normalized workflow | Sample too small for recommendation | Capture the underlying stored run only if it is public-safe; do not expose private project content |
-| 2026-09-27 user-observed | Nebius Token Factory / `nvidia/nemotron-3-super-120b-a12b` | `NEW_PROJECT_CORE_LOOP` | Tactical extraction Creator draft | 388 | 262 | 650 | 2,500 ms | Yes | One proposal applied, then manually edited | Three concise, relevant, immediately usable proposals | Some suggestions introduced mechanics not explicitly supplied by the user | Raw SUB-1 evidence only; do not derive a universal score or acceptance rate |
+| 2026-09-27 user-observed | Nebius Token Factory / `nvidia/nemotron-3-super-120b-a12b` | `NEW_PROJECT_CORE_LOOP` | Tactical extraction Creator draft | 388 | 262 | 650 | 2,500 ms | Yes | One proposal applied, then manually edited | Three concise, relevant, immediately usable proposals | Some suggestions introduced mechanics not explicitly supplied by the user | Recorded feedback evidence only; do not derive a universal score or acceptance rate |
 | 2026-09-27 user-observed | Nebius Token Factory / `nvidia/nemotron-3-super-120b-a12b` | `NEW_PROJECT_CORE_LOOP` regeneration | Same current Creator workflow; accepted Core Loop preserved | 417 | 295 | 712 | 2,037 ms | Yes | Alternatives reviewed, then discarded | Two useful alternatives; regeneration did not overwrite accepted editable content | Some plausible mechanics remained unconfirmed by the Creator draft | One explicit regeneration; no automatic retry or comparison call |
-| 2026-09-27 user-observed | Nebius Token Factory / `nvidia/nemotron-3-super-120b-a12b` | `NEW_PROJECT_DESIGN_PILLARS` | Tactical extraction Creator draft | 428 | 304 | 732 | 3,314 ms | Yes | Individual Accept and Apply All used; manual pillar preserved | Five relevant, useful pillars; individual and bulk application worked | Some proposals introduced unconfirmed systems such as crew morale, particular consumables, noise-driven pressure, or extraction-speed mechanics | Raw SUB-1 evidence only; assumptions require human review |
+| 2026-09-27 user-observed | Nebius Token Factory / `nvidia/nemotron-3-super-120b-a12b` | `NEW_PROJECT_DESIGN_PILLARS` | Tactical extraction Creator draft | 428 | 304 | 732 | 3,314 ms | Yes | Individual Accept and Apply All used; manual pillar preserved | Five relevant, useful pillars; individual and bulk application worked | Some proposals introduced unconfirmed systems such as crew morale, particular consumables, noise-driven pressure, or extraction-speed mechanics | Recorded feedback evidence only; assumptions require human review |
 | 2026-09-27 user-observed | Nebius Token Factory / `nvidia/nemotron-3-super-120b-a12b` | `NEW_PROJECT_CORE_LOOP` | Creator draft; sanitized specifics not recorded | 434 | 425 | 859 | 2,900 ms | Yes | Three proposals reviewed; accepted content remained editable | Three useful proposals; preflight and regeneration preservation worked | Multiple unestablished mechanics were presented without corresponding assumptions | Prompt-grounding evidence only; no general model score or reliability rate |
 | 2026-09-27 user-observed | Nebius Token Factory / `nvidia/nemotron-3-super-120b-a12b` | `NEW_PROJECT_CORE_LOOP` | Final NPC-2.2 grounding check; sanitized specifics not retained | 491 | 407 | 898 | 2,853 ms | No - `INVALID_CREATOR_AI_OUTPUT` | No proposal applied; draft stayed intact; manual continuation remained available | Strict rejection protected human-authored state and project truth | Exact structural mismatch unavailable because raw response text is not persisted | Most recent matching local usage record; an adjacent usage-only failure is documented above; no automatic retry path exists |
 | 2026-09-27 user-observed | Nebius Token Factory / `nvidia/nemotron-3-super-120b-a12b` | `NEW_PROJECT_CORE_LOOP` | Final NPC-2.2 grounding/normalization recheck; sanitized specifics not retained | 533 | 371 | 904 | 3,348 ms | Yes | Two proposals reviewed | Grounding/normalization passed and unsupported or new mechanics were separated as assumptions | Single task-specific observation | Closed the focused live recheck; no reliability percentage or universal score derived |
@@ -223,7 +223,7 @@ Priority task set:
 - **Behavior Design:** uncertainty handling, deterministic rules, exploits, and testability.
 - **Exploit Analysis:** specificity, false-positive rate, evidence discipline, and mitigation quality.
 - **Test Design:** deterministic coverage, feasibility, and traceability to acceptance criteria.
-- **New Project Creator proposals:** five successful user-observed NPC-2 runs and one user-visible structured-output failure are recorded above. The failure was safely rejected with no draft or project-truth mutation, bounded resilience hardening followed without loosening semantics, and the final grounding/normalization recheck passed. The sample is too small for a success rate, universal model score, winner, or completed SUB-1 claim.
+- **New Project Creator proposals:** five successful user-observed NPC-2 runs and one user-visible structured-output failure are recorded above. The failure was safely rejected with no draft or project-truth mutation, bounded resilience hardening followed without loosening semantics, and the final grounding/normalization recheck passed. The sample is too small for a success rate, universal model score, or winner claim.
 - **Recommended Next Steps AI refinement:** NEXT-1 deterministic local guidance is implemented without AI. Optional NEXT-2 provider refinement remains unimplemented and must not be claimed.
 
 Stop collecting when there is enough evidence to write honest, specific feedback. Preserve credits for final demo recovery and one controlled confirmation run if a materially changed workflow needs it.
@@ -248,16 +248,16 @@ Use [Security and Privacy Architecture](SECURITY_AND_PRIVACY.md) as the detailed
 ## Public repository checklist
 
 - [ ] Repository visibility is public and independently accessible while signed out.
-- [ ] Root README is concise, current, and names Nebius Token Factory and NVIDIA Nemotron clearly.
+- [x] Root README is concise, current, and names Nebius Token Factory and NVIDIA Nemotron clearly.
 - [ ] Setup and run instructions work from a clean checkout.
-- [ ] MIT `LICENSE` is present and visible at the repository root/top level.
+- [x] MIT `LICENSE` is present and visible at the repository root/top level.
 - [ ] Internal and external links have been checked.
 - [ ] No private or local absolute paths appear in tracked public content.
 - [ ] Screenshots and recordings are intentional, current, and public-safe.
 - [ ] ForgeMind brand assets are intentional and licensing/ownership is clear.
 - [ ] Test fixtures, dogfooding data, diagnostics, and temporary files are not presented as production data.
-- [ ] The architecture and Intent -> Reality -> Alignment -> Feature Contract story are understandable without internal context.
-- [ ] Build and test instructions are present and accurate.
+- [x] The architecture and Intent -> Reality -> Alignment -> Feature Contract story are understandable without internal context.
+- [x] Build and test instructions are present and accurate.
 - [ ] A reviewer can evaluate ForgeMind without access to private dogfood-project data.
 - [ ] The working demo/test-build URL is public, stable enough for judging, and documented.
 - [ ] If applicable, the submission explains significant work completed during the submission period.
@@ -385,7 +385,7 @@ The narration must audibly say:
 - [ ] Export at a common YouTube-compatible resolution and codec.
 - [ ] Watch the final export end to end before upload.
 - [ ] Upload to YouTube and verify public visibility while signed out.
-- [ ] Confirm the public link plays, audio works, captions load, and duration is no more than 3 minutes.
+- [ ] Confirm the public link plays, audio works, captions load, and duration is shorter than 3 minutes.
 
 ### Draft narration skeleton
 
@@ -400,7 +400,9 @@ Use this as a timing scaffold, not final marketing copy:
 7. **Technology:** `ForgeMind uses Nebius Token Factory with NVIDIA Nemotron 3 Super 120B to [specific demonstrated workflows].`
 8. **Close:** `[Audience plus final value statement.]`
 
-## Submission copy template
+## Devpost submission draft
+
+The evidence-backed, judge-facing draft is maintained in [Devpost Submission Draft](DEVPOST_SUBMISSION_DRAFT.md). The fields below remain a compact final-form cross-check rather than the primary draft.
 
 Complete this section from the final public build and video. Do not copy internal planning claims into Devpost without verification.
 
@@ -418,11 +420,30 @@ Complete this section from the final public build and video. Do not copy interna
 - **Built With:** `[Use the verified list above and final Devpost tags.]`
 - **Links:** `[Public product/demo/test-build URL and any intentional supporting links.]`
 - **Source repository:** `[Public repository URL.]`
-- **Demo video:** `[Public YouTube URL, <= 3:00.]`
+- **Demo video:** `[Public YouTube URL, shorter than 3:00.]`
 - **Required feedback:** `[Condensed, evidence-backed Nebius and NVIDIA feedback from this document.]`
 - **Submission-period work:** `[Complete only if the pre-existing-project rule applies.]`
 
 ## Final submission checklist
+
+### FINAL MANUAL ARTIFACTS
+
+- [x] README complete for SUB-1.
+- [x] Devpost draft created and linked.
+- [x] Built With names each implemented service and its role.
+- [x] Current limitations are explicit.
+- [x] Nebius Token Factory feedback is evidence-backed.
+- [x] NVIDIA Nemotron feedback is evidence-backed.
+- [x] Tavily's explicit, reviewed `EXTERNAL_RESEARCH` role is visible.
+- [ ] Public-safe screenshots are captured, reviewed, and added.
+- [ ] Demo video is captured, edited, captioned, and under three minutes.
+- [ ] Public YouTube video URL is added and verified while signed out.
+- [ ] Final Devpost fields and track are completed in rendered form.
+- [ ] Public GitHub URL is added and verified while signed out.
+- [ ] Working demo or test-build URL is added and verified.
+- [ ] Final secret/current-history scan passes after all assets and links are added.
+- [ ] Final fresh-clone setup and smoke pass.
+- [ ] Final submission is completed and confirmation retained.
 
 ### PRODUCT
 
@@ -454,7 +475,7 @@ Complete this section from the final public build and video. Do not copy interna
 
 ### VIDEO
 
-- [ ] Final duration is no more than 3 minutes.
+- [ ] Final duration is shorter than 3 minutes.
 - [ ] Audio narration is present and intelligible.
 - [ ] Captions are present and checked.
 - [ ] Nebius is mentioned audibly.
@@ -487,8 +508,8 @@ Do not plan to finish the video or first complete submission draft on the extern
 ## Submission workstream status
 
 - **SUB-0 - Submission requirements documented - COMPLETE:** this document records confirmed requirements, evidence templates, safety/repository checks, video strategy, copy placeholders, and final QA without changing application behavior.
-- **SUB-1 - Tool-feedback evidence collection - IN PROGRESS:** the five successful Creator observations and one safely handled structured failure above are recorded; continue only deliberate, public-safe evaluations needed to complete specific feedback.
-- **SUB-2 - Public repository finalization - PLANNED:** perform clean-checkout, secret/history, private-data, link, README, license, and distribution checks.
+- **SUB-1 - README + Devpost draft + public-facing cleanup - COMPLETE:** the root README, Devpost draft, public asset capture plan, Built With copy, honest limitations, Nebius/NVIDIA feedback, Tavily role, and remaining manual checklist are prepared without changing product behavior or making provider calls.
+- **SUB-2 - Public repository and evaluator finalization - PLANNED:** add reviewed screenshots and public URLs, then repeat clean-checkout, secret/history, private-data, link, setup, license, and distribution checks.
 - **SUB-3 - Demo script and shot list - PLANNED:** finalize the narrative against the actual submitted build.
 - **SUB-4 - Video production - PLANNED:** capture, edit, caption, export, upload, and verify public playback.
 - **SUB-5 - Final submission QA - PLANNED:** verify every product, repository, Nebius, NVIDIA, video, and Devpost gate and submit.

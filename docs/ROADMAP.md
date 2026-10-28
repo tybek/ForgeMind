@@ -7,10 +7,10 @@ The roadmap uses small, outcome-based milestones. A milestone is not assumed to 
 [Hackathon Submission Readiness](HACKATHON_SUBMISSION.md) owns the requirements, evidence templates, public-repository and secret-safety checks, three-minute video plan, submission-copy placeholders, and final QA gates. This parallel delivery track does not change product milestone ordering or authorize application behavior.
 
 - **SUB-0 - Submission requirements documented - COMPLETE:** current official requirements, tool-feedback framework, current model evidence, credit-usage plan, repository/security checklists, video strategy, and final submission checklist are recorded.
-- **SUB-1 - Tool-feedback evidence collection - IN PROGRESS:** first real Creator evidence is recorded; continue only the deliberate evaluations needed for specific Nebius Token Factory and NVIDIA model feedback, without turning the small sample into a score or winner.
-- **SUB-2 - Public repository finalization - PLANNED:** verify clean setup, license, links, public-safe assets/data, history, secrets, and evaluation without private dogfood-project content.
+- **SUB-1 - README + Devpost draft + public-facing cleanup - COMPLETE:** the root README now leads with the Project Brain and review-first knowledge workflow; the evidence-backed Devpost draft, public screenshot capture plan, Built With copy, honest limitations, Nebius/NVIDIA feedback, Tavily positioning, and remaining manual checklist are prepared. No product behavior, provider request, screenshot, publication, or future milestone was added.
+- **SUB-2 - Public repository and evaluator finalization - PLANNED:** add reviewed screenshots and public repository/test-build URLs, then verify clean setup, license, links, public-safe assets/data, history, secrets, and distribution without private dogfood-project content.
 - **SUB-3 - Demo script / shot list - PLANNED:** lock the pitch against the actual submitted build and do not present planned behavior as shipped.
-- **SUB-4 - Video production - PLANNED:** capture, edit, caption, upload, and verify a public video no longer than three minutes.
+- **SUB-4 - Video production - PLANNED:** capture, edit, caption, upload, and verify a public video shorter than three minutes.
 - **SUB-5 - Final submission QA - PLANNED:** verify product, repository, Nebius, NVIDIA, video, and Devpost gates before the external deadline.
 
 ### DEMO-0 - Clean Demo Workspace & Submission Baseline - COMPLETE
@@ -23,7 +23,7 @@ no provider results, usage history, model registry, credentials, private project
 content, or production behavior. DEMO-0 does not close SUB-3 through SUB-5 and
 does not authorize recording, publication, or live provider calls.
 
-Only SUB-0 is complete. The final submission is not complete.
+SUB-0 and SUB-1 are complete. The final submission is not complete; screenshots, video, public URLs, final fresh-clone/secret checks, and Devpost submission remain pending.
 
 ## MODEL-1 Token Factory Model Catalog & Registry Management — IMPLEMENTED, MODEL-1.1 MANUAL RECHECK PENDING
 
