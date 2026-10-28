@@ -92,6 +92,46 @@ Only `origin/main` was rewritten. The live preflight matched the recorded old ti
 
 Existing collaborators must re-clone or deliberately reset/rebase work created from the replaced history. Already-shared forks, archives, and caches remain outside this repository operation and should be reviewed separately. Credential rotation is not indicated because no credential was confirmed. The private local safety bundle remains available outside the repository.
 
+## Post-feature-freeze delta audit
+
+**Audit date:** 2026-10-28
+
+**Milestone:** SEC-2 post-feature-freeze delta security audit
+
+**Audited range:** `74287bd5cfcb1bca31a5754d8909293ea5fbf99c..d61b9aa4cbbd36a48ad3d5e56290271f76a1507c`
+
+The previous `PUBLIC_RELEASE_READY` reference is the final public-release audit commit `74287bd5cfcb1bca31a5754d8909293ea5fbf99c`. The delta contains three commits and 53 changed files covering IMP-1 Knowledge Import, UX-P2 transient Writers' Room return and Game Design polish, and MODEL-1 catalog, registry, compatibility, observed-metrics, and compact-model UI work.
+
+### Delta findings
+
+- **BLOCKER/HIGH findings:** zero.
+- **Confirmed secrets:** zero. Masked high-confidence scans of the current tracked tree, each added commit, and added delta lines found only synthetic security-test values, native environment-variable reads, or policy wording. No secret value was printed. No dedicated scanner was installed, so none was added.
+- **Private-content findings:** zero confirmed. No known private-project identifier, private dogfood material, private absolute machine path, credential-bearing asset, or root `.forgemind` state was added. The delta contains no binary fixture or screenshot. The tracked root `.forgemind` count and delta object-path count are both zero; `/.forgemind/`, local environment files, logs, build output, and other local artifacts remain ignored.
+- **Credential boundary:** passed. `NEBIUS_API_KEY` and `TAVILY_API_KEY` remain native-process environment inputs and do not enter React contracts, project truth, application-local catalog/registry persistence, prompts, usage records, or safe errors. The catalog refresh performs one fixed native `GET https://api.tokenfactory.nebius.com/v1/models` with bearer authentication, normalizes only bounded model identifiers and catalog metadata, and never serializes headers or credentials.
+- **Knowledge Import containment:** passed. The native prepare and apply paths revalidate project identity, normal path components, project-relative `.md` paths, canonical containment, file identity, per-file and aggregate bounds, supplied-only source IDs, and credential-like content. Canonical containment prevents symlink escape. Provider context and durable source trace use project-relative IDs only; Markdown is explicitly untrusted data; candidates remain transient until explicit selection; Decisions begin `PROPOSED`; and diagnostics, usage, and persistence exclude raw provider output, hidden reasoning, credentials, and absolute paths.
+- **Model capability gate:** passed. Catalog-discovered and custom registry entries default structured-output capability to `NONE`. Custom model IDs accept bounded identifier characters only and cannot provide a URL or endpoint. Writers' Room, Knowledge Import, Creator, Feature Contract drafting, and Specialist preparation revalidate enabled registry state and require verified structured output before provider execution. Focused Writers' Room and Knowledge Import regressions confirm incompatible attempts fail locally with `MODEL_CAPABILITY_REQUIRED` and zero provider calls. No automatic capability probe, fallback, retry, ranking, or multi-model request exists.
+- **Transient navigation:** passed. UX-P2 return origin, session ID, session title, and profile label are React state only, clear on unrelated navigation, and select the prior session only when returning. The delta adds no `.forgemind` schema field or native persistence for navigation metadata, paths, or content.
+- **Tauri and permissions:** passed. The delta does not modify Tauri capabilities, configuration, dependencies, or the narrow dialog permission. React receives no generic network, shell, process, or arbitrary-filesystem authority. Catalog network access and Knowledge Import filesystem access remain typed native commands. External URL opening retains native HTTP(S) validation and direct argument passing without a shell string.
+- **Repository hygiene:** passed. The worktree was clean before the report update. Tracked inventory contains source, public documentation, synthetic fixtures, manifests, lockfiles, public assets, and the MIT license; it contains no root project state, credential config, environment file, private submodule, or generated build output.
+
+### SEC-2 validation
+
+- Focused frontend security regressions: 55 tests across six files passed.
+- Focused native regressions: 13 Knowledge Import tests; two incompatible-model gate tests; seven credential-boundary tests; 13 Tavily-related tests; and the AI Workspace cross-project-isolation test passed.
+- TypeScript plus complete frontend suite: 343 tests across 31 files passed through `npm run check`.
+- Complete native suite: 254 library tests and 2 CLI tests passed.
+- Production frontend build: passed; the existing chunk-size warning remains non-blocking.
+- Tauri no-bundle release build: passed; the existing Windows import-library linker warning remains non-blocking.
+- Markdown local-link validation and `git diff --check`: passed after this report update.
+
+No provider call, GUI automation, credential rotation, history rewrite, dependency addition, or product feature change was performed. No SEC-2 manual security action remains. Existing feature-specific manual acceptance items remain governed by the Roadmap and are not closed by this security audit.
+
+### SEC-2 release gate
+
+`PUBLIC_RELEASE_READY`
+
+The audited delta preserves the prior public-release security boundary. This conclusion is based on history and tree review, masked scans, native-boundary inspection, focused security regressions, complete offline suites, production builds, permission review, and repository hygiene—not on tests alone.
+
 ## Submission gate
 
 `PUBLIC_RELEASE_READY`
