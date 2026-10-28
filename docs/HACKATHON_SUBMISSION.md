@@ -4,7 +4,7 @@
 
 This document is the durable submission-readiness source for ForgeMind's entry to the **Nebius x NVIDIA Global AI Hackathon**. It covers submission gates, evidence collection, public-repository safety, tool/model feedback, the demo video, and final Devpost QA. It does not authorize application behavior, a new product milestone, live inference, or publication.
 
-Current status: **SUB-1 public documentation package complete; final submission not complete.** The root README, evidence-backed Devpost draft, public asset capture plan, limitations, Built With copy, and provider/model feedback are prepared. Screenshots, video, public URLs, final fresh-clone smoke, and submission remain manual work. Product milestone status remains authoritative in [Roadmap](ROADMAP.md).
+Current status: **SUB-2 demo storyboard and voice-over complete; final submission not complete.** The root README, Devpost draft, public asset plan, exact `2:38` storyboard, 359-word voice-over, live-call/fallback strategy, recording checklist, screenshot list, and video QA checklist are prepared. Screenshots, recording/editing, video and evaluator URLs, final fresh-clone smoke, and submission remain manual work. Product milestone status remains authoritative in [Roadmap](ROADMAP.md).
 
 Official sources re-checked on 2026-10-28:
 
@@ -310,59 +310,28 @@ Submission copy must say Markdown-only, review-first, human Apply, and documente
 DEMO-0's public-safe Hollow Reach template, exact operator path, prompts,
 failure fallbacks, and reset procedure are maintained in the
 [DEMO-0 Runbook](DEMO_RUNBOOK.md). This clean baseline does not by itself close
-SUB-3 or authorize a provider request, recording, upload, or publication.
+video production or authorize a provider request, recording, upload, or publication.
+
+The current judge-facing timing, exact voice-over, shot sequence, genuine-fallback
+rules, screenshot plan, and final QA gates are maintained in the
+[3-Minute Demo Storyboard](DEMO_STORYBOARD.md). It supersedes the earlier
+feature-oriented timing scaffold for the final cut without changing DEMO-0's
+data, prompt, safety, or reset contract.
 
 ### Optional MODEL-1 proof shot
 
 If the final cut benefits from visible model awareness, briefly open **AI Models** after one user-driven catalog refresh. Show the explicit Nebius Token Factory catalog versus ForgeMind enabled registry distinction, Nemotron as default, verified JSON Object metadata, and observed local usage. Do not spend demo time making an alternate inference call, and do not describe availability or latency as quality, ranking, pricing, benchmarking, or automatic routing.
 
-Treat the video as a pitch supported by a working product, not as a tutorial. Target `2:45-2:55` to leave upload/player margin under the three-minute maximum.
+Treat the video as a pitch supported by a working product, not as a tutorial. Target `2:30-2:40`; the current storyboard targets `2:38` to leave clear margin under three minutes.
 
 ### Story structure and shot list
 
-#### 0:00-0:20 - Problem
-
-- Narration: game-development intent, decisions, repository reality, and engine reality drift apart.
-- Show one clean visual that makes the fragmentation legible; avoid private project material.
-
-#### 0:20-0:40 - ForgeMind positioning
-
-- Show ForgeMind branding and the project workspace.
-- State the local-first value proposition and the Intent -> Reality -> Alignment loop.
-
-#### 0:40-1:20 - New Project / Project Brain
-
-Available sequence after the completed NPC-2.2 focused grounding/form-alignment recheck:
-
-- Start New Project;
-- enter a short idea;
-- review an AI-assisted foundation;
-- show Vision, Core Loop, and Pillars, then return Home to show the deterministic Recommended Next Steps derived from the current project.
-
-The AI-assisted Creator path is manually validated for the focused grounding/normalization and form-alignment scope. A fully manual Creator or sanitized initialized workspace remains a safe fallback. The five successful Creator observations plus the safe structured-output failure may support feedback copy without implying a universal reliability claim. NEXT-1 deterministic recommendations may be shown after its pending manual Home check; do not imply AI refinement, autonomous execution, or task creation.
-
-#### 1:20-2:00 - Reality and Alignment
-
-- Show read-only Git Reality.
-- Show Unity GroundTruth with honest coverage language.
-- Open one Alignment result that connects Intent to selected Reality and explains an unverified or out-of-sync case.
-
-#### 2:00-2:35 - Feature Contract and Implementation Brief
-
-- Show an explicitly triggered AI-assisted Feature Contract proposal.
-- Emphasize human section review and explicit approval.
-- Show the deterministic implementation-ready brief and its evidence/source trace.
-
-#### 2:35-3:00 - Nebius, NVIDIA, and value
-
-The narration must audibly say:
-
-- **Nebius Token Factory**;
-- **NVIDIA Nemotron 3 Super 120B**, preferably with the exact model ID on screen;
-- which bounded proposal/evaluation workflows they power;
-- that outputs remain human-reviewed rather than automatically authoritative;
-- that ForgeMind is for game developers and teams managing intent-to-implementation drift; and
-- the final value statement.
+Use the exact table in [3-Minute Demo Storyboard](DEMO_STORYBOARD.md). The final
+story is reviewed Markdown -> Nemotron extraction through Nebius -> human review
+and Apply -> updated Project Brain -> source-aware Writers' Room -> explicitly
+selected Tavily research -> Nemotron synthesis with external authority preserved.
+AI Models is a short supporting proof; Git/Unity/Alignment receives only a brief
+closing visual if the final cut remains within target.
 
 ### Production checklist
 
@@ -387,18 +356,10 @@ The narration must audibly say:
 - [ ] Upload to YouTube and verify public visibility while signed out.
 - [ ] Confirm the public link plays, audio works, captions load, and duration is shorter than 3 minutes.
 
-### Draft narration skeleton
+### Voice-over script
 
-Use this as a timing scaffold, not final marketing copy:
-
-1. **Problem:** `[One sentence about game intent, decisions, code, and engine state drifting apart.]`
-2. **Positioning:** `ForgeMind is [supported one-line value proposition].`
-3. **Project Brain:** `[Explain reviewed knowledge and decisions; mention Creator only if shipped.]`
-4. **Reality:** `[Explain read-only Git Reality and Unity GroundTruth.]`
-5. **Alignment:** `[Explain the demonstrated mismatch or uncertainty.]`
-6. **Delivery:** `[Explain human-reviewed Feature Contract and Implementation Brief.]`
-7. **Technology:** `ForgeMind uses Nebius Token Factory with NVIDIA Nemotron 3 Super 120B to [specific demonstrated workflows].`
-8. **Close:** `[Audience plus final value statement.]`
+Use the exact 359-word script in [3-Minute Demo Storyboard](DEMO_STORYBOARD.md).
+Do not expand it into a feature list or add claims during recording.
 
 ## Devpost submission draft
 
@@ -435,6 +396,7 @@ Complete this section from the final public build and video. Do not copy interna
 - [x] Nebius Token Factory feedback is evidence-backed.
 - [x] NVIDIA Nemotron feedback is evidence-backed.
 - [x] Tavily's explicit, reviewed `EXTERNAL_RESEARCH` role is visible.
+- [x] Exact demo storyboard, 359-word voice-over, fallback strategy, recording checklist, screenshot list, and video QA checklist are complete for SUB-2.
 - [ ] Public-safe screenshots are captured, reviewed, and added.
 - [ ] Demo video is captured, edited, captioned, and under three minutes.
 - [ ] Public YouTube video URL is added and verified while signed out.
@@ -509,8 +471,8 @@ Do not plan to finish the video or first complete submission draft on the extern
 
 - **SUB-0 - Submission requirements documented - COMPLETE:** this document records confirmed requirements, evidence templates, safety/repository checks, video strategy, copy placeholders, and final QA without changing application behavior.
 - **SUB-1 - README + Devpost draft + public-facing cleanup - COMPLETE:** the root README, Devpost draft, public asset capture plan, Built With copy, honest limitations, Nebius/NVIDIA feedback, Tavily role, and remaining manual checklist are prepared without changing product behavior or making provider calls.
-- **SUB-2 - Public repository and evaluator finalization - PLANNED:** add reviewed screenshots and public URLs, then repeat clean-checkout, secret/history, private-data, link, setup, license, and distribution checks.
-- **SUB-3 - Demo script and shot list - PLANNED:** finalize the narrative against the actual submitted build.
+- **SUB-2 - 3-Minute Demo Storyboard + Voice-over - COMPLETE:** the `2:38` judge-facing Hollow Reach storyboard, 359-word script, four-call live strategy, genuine-result fallbacks, recording preparation, screenshot list, and final QA checklist are documented without making a provider call or changing product behavior.
+- **SUB-3 - Public repository and evaluator finalization - PLANNED:** add reviewed screenshots and public URLs, then repeat clean-checkout, secret/history, private-data, link, setup, license, and distribution checks.
 - **SUB-4 - Video production - PLANNED:** capture, edit, caption, export, upload, and verify public playback.
 - **SUB-5 - Final submission QA - PLANNED:** verify every product, repository, Nebius, NVIDIA, video, and Devpost gate and submit.
 
