@@ -27,7 +27,9 @@ ForgeMind is a local-first desktop workspace for indie developers, small game te
 
 ## Download / Try ForgeMind
 
-ForgeMind is available as a prebuilt Windows test release. Download the latest hackathon build from [GitHub Releases](https://github.com/tybek/ForgeMind/releases); the recommended release is **ForgeMind v0.1.0-hackathon**.
+ForgeMind is available as a prebuilt Windows test release.
+
+Download **ForgeMind v0.1.0-hackathon** from the [GitHub Release](https://github.com/tybek/ForgeMind/releases/tag/v0.1.0-hackathon).
 
 - Windows desktop build; no source build is required to launch the packaged release.
 - No API credentials are included in the public build.
