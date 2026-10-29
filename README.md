@@ -25,6 +25,16 @@ Imported Markdown remains `DOCUMENTED`, Decisions begin `PROPOSED`, Open Questio
 
 ForgeMind is a local-first desktop workspace for indie developers, small game teams, technical designers, narrative designers, and teams already using AI in game development.
 
+## Download / Try ForgeMind
+
+ForgeMind is available as a prebuilt Windows test release. Download the latest hackathon build from [GitHub Releases](https://github.com/tybek/ForgeMind/releases); the recommended release is **ForgeMind v0.1.0-hackathon**.
+
+- Windows desktop build; no source build is required to launch the packaged release.
+- No API credentials are included in the public build.
+- Live Nebius Token Factory / NVIDIA Nemotron and Tavily workflows require credentials supplied by the person testing them.
+- Local and read-only areas can be inspected without exposing developer credentials.
+- The public demo video shows the complete reviewed AI workflow using Nebius Token Factory, NVIDIA Nemotron, and Tavily.
+
 ## The problem
 
 AI makes it easier to generate ideas, but it can make a game's source of truth harder to maintain. A useful suggestion in one chat can contradict an approved design decision, drift away from the code, or be mistaken for implemented behavior.
@@ -272,7 +282,7 @@ ForgeMind fails closed on malformed structured output, invalid source references
 
 ## Status and roadmap
 
-ForgeMind is feature frozen for the hackathon submission. The public-repository security gate is `PUBLIC_RELEASE_READY`; the public-safe screenshots are complete, and the remaining work is the demo video, final links, fresh-clone QA, and submission—not product feature development.
+ForgeMind is feature frozen for the hackathon submission. The public-repository security gate is `PUBLIC_RELEASE_READY`; the public-safe screenshots and final demo video are complete, and the remaining work is release publication, final links, fresh-clone QA, and submission—not product feature development.
 
 See the [Roadmap](docs/ROADMAP.md), [Hackathon Submission Readiness](docs/HACKATHON_SUBMISSION.md), [Devpost draft](docs/DEVPOST_SUBMISSION_DRAFT.md), and [DEMO-0 runbook](docs/DEMO_RUNBOOK.md).
 
