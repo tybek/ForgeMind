@@ -37,6 +37,47 @@ Download **ForgeMind v0.1.0-hackathon** from the [GitHub Release](https://github
 - Local and read-only areas can be inspected without exposing developer credentials.
 - The public demo video shows the complete reviewed AI workflow using Nebius Token Factory, NVIDIA Nemotron, and Tavily.
 
+### Optional AI credentials
+
+The packaged release contains no API keys and has no in-app credential fields. To test live AI workflows, provide your own credentials through Windows user environment variables:
+
+- `NEBIUS_API_KEY` — Nebius Token Factory / NVIDIA Nemotron workflows
+- `TAVILY_API_KEY` — optional Tavily **Research web** workflow
+
+Close ForgeMind, open PowerShell, and run the following. The prompt masks each value so it is not echoed or placed directly in shell history.
+
+```powershell
+function Set-ForgeMindUserKey {
+  param([string] $Name)
+  $secureValue = Read-Host "Enter $Name" -AsSecureString
+  $pointer = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secureValue)
+  try {
+    [Environment]::SetEnvironmentVariable(
+      $Name,
+      [Runtime.InteropServices.Marshal]::PtrToStringBSTR($pointer),
+      "User"
+    )
+  } finally {
+    [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($pointer)
+  }
+}
+
+Set-ForgeMindUserKey "NEBIUS_API_KEY"
+Set-ForgeMindUserKey "TAVILY_API_KEY" # Optional; omit if you will not test Research web
+Remove-Item Function:Set-ForgeMindUserKey
+```
+
+Launch a new ForgeMind instance from the Start Menu or Windows Explorer. It inherits the user environment variables when the process starts. Assigning `$env:NEBIUS_API_KEY` or `$env:TAVILY_API_KEY` in one PowerShell window affects only that PowerShell process and programs launched from it; it does not configure a separate Start Menu launch.
+
+Windows user environment variables persist for that account and are not an encrypted credential vault. Remove the evaluator keys when finished:
+
+```powershell
+[Environment]::SetEnvironmentVariable("NEBIUS_API_KEY", "", "User")
+[Environment]::SetEnvironmentVariable("TAVILY_API_KEY", "", "User")
+```
+
+ForgeMind reads these variables from its native process environment. It does not load `.env` files, send credential values to React, or store them in project JSON.
+
 ## The problem
 
 AI makes it easier to generate ideas, but it can make a game's source of truth harder to maintain. A useful suggestion in one chat can contradict an approved design decision, drift away from the code, or be mistaken for implemented behavior.
