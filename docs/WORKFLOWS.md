@@ -268,3 +268,12 @@ Open Questions remain lightweight project knowledge, not chat threads or task ti
 2. Cursor, Codex, or another coding agent edits the repository and runs compile/test/fix loops.
 3. ForgeMind refreshes supported Reality evidence and presents Alignment for human review.
 4. Persistent execution tracking remains in GitHub Issues / Projects, Linear, Jira, or another integrated delivery tool rather than a ForgeMind Kanban clone.
+
+## Manual Atlassian snapshot handoff
+
+1. In Game Wiki, choose **Create Atlassian Snapshot**.
+2. ForgeMind validates current project identity and source domains, transforms Project Brain export version `1`, and replaces only `.forgemind/exports/atlassian-project-snapshot.json`.
+3. The user opens that local file and manually pastes its JSON into ForgeMind Atlassian Companion.
+4. **Validate Snapshot** checks schema, identity, fixed section order, entry/anchor uniqueness, references, authority semantics, provenance paths, and reports a bounded summary.
+
+The pasted value exists only in companion component state. This workflow performs no upload, storage, Confluence publication, Jira issue operation, Rovo action, sync, provider request, or other remote side effect.

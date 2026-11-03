@@ -11,6 +11,7 @@ pub mod git_reality;
 pub mod model_registry;
 pub mod model_catalog;
 pub mod project_export;
+pub mod atlassian_snapshot;
 pub mod reality_connections;
 pub mod specialist_history;
 pub mod specialists;
@@ -622,6 +623,14 @@ fn export_project_brain(
 }
 
 #[tauri::command]
+fn export_atlassian_snapshot(
+    path: String,
+    project_id: String,
+) -> Result<atlassian_snapshot::AtlassianSnapshotExportResult, atlassian_snapshot::AtlassianSnapshotError> {
+    atlassian_snapshot::export(Path::new(&path), &project_id)
+}
+
+#[tauri::command]
 fn create_decision(request: CreateDecisionRequest) -> Result<DecisionsDocument, DecisionError> {
     decisions::create(request)
 }
@@ -887,6 +896,7 @@ pub fn run() {
             import_interview_to_compendium,
             load_decisions,
             export_project_brain,
+            export_atlassian_snapshot,
             create_decision,
             update_decision,
             approve_decision,

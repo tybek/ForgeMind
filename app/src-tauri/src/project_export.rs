@@ -160,7 +160,7 @@ pub fn export(root: &Path, project_id: &str) -> Result<ProjectBrainExportResult,
     })
 }
 
-fn build_contract(root: &Path, project_id: &str, generated_at: &str) -> Result<ProjectBrainExport, ProjectBrainExportError> {
+pub(crate) fn build_contract(root: &Path, project_id: &str, generated_at: &str) -> Result<ProjectBrainExport, ProjectBrainExportError> {
     let project = match workspace::inspect(root).map_err(|_| invalid_workspace())? {
         WorkspaceInspection::Valid { project, .. } if project.project_id == project_id => project,
         WorkspaceInspection::Valid { .. } => return Err(ProjectBrainExportError::new("PROJECT_ID_MISMATCH", "The selected workspace does not match the active ForgeMind project.")),

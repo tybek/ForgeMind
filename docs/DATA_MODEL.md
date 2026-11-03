@@ -275,3 +275,15 @@ Observed model metrics are deterministic projections over canonical application-
 ## Deliberately unresolved
 
 Indexing, merge behavior, schema migration beyond rejecting unsupported versions, audit/version-history UI, and any database design remain deferred.
+
+## Atlassian integration snapshot
+
+`AtlassianProjectSnapshot` is a derived, renderer-neutral integration DTO with independent `schemaVersion: 1`. It is not an owning domain and does not change the Project Brain export contract. Its source compatibility is explicit: snapshot version `1` accepts only Project Brain export version `1`.
+
+The top level contains `generatedAt`, `sourceExport.schemaVersion`, portable `project.projectId` and `project.name`, and the fixed ordered sections `project-knowledge`, `decisions`, `open-questions`, and `specialist-analysis`. Entries contain stable integration `id` and `anchor`, kind, optional area, title/body, real status and authority, safe provenance, timestamps, content-oriented details, and existing references. Empty sections remain present. Specialist entries retain `AI_ANALYSIS` authority and `SUCCEEDED` status.
+
+The transformation omits author identity, project creation time, internal source IDs, specialist profile/task/model metadata, provider payloads, usage/cost data, diagnostics, hidden reasoning, credentials, authorization data, and machine-absolute paths. Documented source IDs must be safe project-relative identifiers. Unknown fields are rejected by the Rust DTO decoder; the TypeScript validator likewise treats version `1` as a closed shape.
+
+- **Include:** generated time, source schema version, portable Project ID/name, fixed sections, integration IDs/anchors, kind/area, title/body, real status/authority, timestamps, content details, and existing references.
+- **Transform:** Project Brain `project.id` becomes `project.projectId`; source/provenance/documented traces become one safe provenance object; structured details are filtered to rationale, assumptions, recommendations, risks, exploits, open questions, and suggested tests.
+- **Omit:** project creation time, authors, internal source IDs, specialist profile/task/model fields, usage/cost, diagnostics, provider payloads, reasoning, secrets, authorization data, and machine paths.

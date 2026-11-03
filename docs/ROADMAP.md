@@ -286,6 +286,14 @@ Automated validation covers deterministic output except `generatedAt`, fixed hie
 
 Exit condition met: one explicit action produces a readable, stable, project-local derived snapshot and manifest while all owning Project Brain domains remain unchanged.
 
+## FM-ATL-DTO-1 Versioned Atlassian Integration Snapshot — COMPLETE
+
+ForgeMind now transforms Project Brain export version `1` into a separate `AtlassianProjectSnapshot` schema version `1` at `.forgemind/exports/atlassian-project-snapshot.json`. One explicit Game Wiki action creates the local derived file without changing Project Metadata, Compendium, Decisions, Open Questions, Specialist History, or the existing Project Brain export. The companion validates pasted snapshot JSON only in transient UI state and displays a bounded summary.
+
+The contract preserves identity, fixed section order, real status and authority semantics, safe provenance, timestamps, content details, and existing references while omitting provider/process metadata, authors, credentials, usage, diagnostics, hidden reasoning, and absolute paths. A shared Rust/TypeScript golden fixture covers Unicode, empty sections, versions, identity, uniqueness, references, authority, provenance, and path safety. This milestone adds no transport, deployment requirement, Confluence publishing, Jira issue integration, Rovo agent, storage, synchronization, provider call, or product API call.
+
+Exit condition met: the desktop produces a deterministic local DTO that the independently packaged Forge companion can validate through an explicit manual paste handoff.
+
 ## IMP-1 Existing Project Knowledge Import — IMPLEMENTED, IMP-1.1/IMP-1.2 HEADLESS VALIDATED; MANUAL ACCEPTANCE PENDING
 
 IMP-1 adds a bounded **Game Wiki -> Import Knowledge** path for an existing project. The user explicitly selects 1-10 project-contained `.md` files; native preflight rejects traversal, external paths, symlink escape, non-Markdown input, files above 128 KiB, and batches above 512 KiB rather than truncating silently. One confirmed Nebius Token Factory request asks the selected registry model, defaulting to NVIDIA Nemotron, for at most 30 strict `KNOWLEDGE`, `DECISION`, or `OPEN_QUESTION` candidates. Imported Markdown is framed as untrusted data and source IDs remain project-relative.
