@@ -4,6 +4,7 @@ import { loadAlignmentResults, type AlignmentResult } from "./platform/alignment
 import { loadDecisions, type Decision } from "./platform/decisions";
 import { loadFeatureContracts, type FeatureContract } from "./platform/featureContracts";
 import { KNOWLEDGE_AREAS, loadCompendium, type KnowledgeArea, type KnowledgeEntry } from "./platform/projectKnowledge";
+import { exportProjectBrain, type ProjectBrainExportResult } from "./platform/projectExport";
 import type { RepositoryRealityResult } from "./platform/repositoryReality";
 import { loadSpecialistRuns, type SpecialistRun } from "./platform/specialists";
 import type { UnityGroundTruthResult } from "./platform/unityGroundTruth";
@@ -118,6 +119,9 @@ export function WikiPage({
   const [loading, setLoading] = useState(true);
   const [errors, setErrors] = useState<string[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [exporting, setExporting] = useState(false);
+  const [exportResult, setExportResult] = useState<ProjectBrainExportResult | null>(null);
+  const [exportError, setExportError] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -199,10 +203,33 @@ export function WikiPage({
     else onOpenSpecialist?.();
   }
 
+  async function handleExport() {
+    setExporting(true);
+    setExportResult(null);
+    setExportError("");
+    try {
+      setExportResult(await exportProjectBrain(workspace.path, workspace.projectId));
+    } catch (error) {
+      setExportError(messageFromError(error));
+    } finally {
+      setExporting(false);
+    }
+  }
+
   return (
     <div className="wiki-page">
       <header className="wiki-intro">
-        <div className="wiki-intro-heading"><div><span className="section-label">Read-only knowledge explorer</span><h2>Game Wiki</h2></div><KnowledgeImportPanel workspace={workspace} onApplied={() => setRefreshKey((value) => value + 1)} /></div>
+        <div className="wiki-intro-heading">
+          <div><span className="section-label">Read-only knowledge explorer</span><h2>Game Wiki</h2></div>
+          <div className="wiki-export-control">
+            <div className="wiki-export-actions">
+              <KnowledgeImportPanel workspace={workspace} onApplied={() => setRefreshKey((value) => value + 1)} />
+              <button className="outline-button compact-action" type="button" disabled={exporting} onClick={() => void handleExport()}>{exporting ? "Exporting..." : "Export Project Brain"}</button>
+            </div>
+            {exportResult ? <p className="wiki-export-status" role="status">Exported {exportResult.entryCount} entries to <code>{exportResult.markdownPath}</code>. Manifest: <code>{exportResult.manifestPath}</code>.</p> : null}
+            {exportError ? <p className="wiki-export-error" role="alert">Project Brain export failed: {exportError}</p> : null}
+          </div>
+        </div>
         <p>Browse project knowledge across its owning domains. Game Design, Decisions, and other source workspaces remain authoritative.</p>
       </header>
 

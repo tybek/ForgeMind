@@ -3460,6 +3460,32 @@ button:focus-visible {
   gap: var(--space-4);
 }
 
+.wiki-export-control {
+  display: flex;
+  max-width: min(44rem, 55vw);
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.wiki-export-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.wiki-export-status,
+.wiki-export-error {
+  margin: 0;
+  font-size: 0.8rem;
+  overflow-wrap: anywhere;
+}
+
+.wiki-export-error {
+  color: var(--color-danger);
+}
+
 .knowledge-import-backdrop {
   position: fixed;
   z-index: 110;
@@ -3649,6 +3675,10 @@ button:focus-visible {
   .knowledge-import-candidate > header {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .wiki-export-control {
+    max-width: none;
   }
 
   .knowledge-import-backdrop {

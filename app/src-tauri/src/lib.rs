@@ -10,6 +10,7 @@ pub mod knowledge_import;
 pub mod git_reality;
 pub mod model_registry;
 pub mod model_catalog;
+pub mod project_export;
 pub mod reality_connections;
 pub mod specialist_history;
 pub mod specialists;
@@ -613,6 +614,14 @@ fn load_decisions(path: String) -> Result<Option<DecisionsDocument>, DecisionErr
 }
 
 #[tauri::command]
+fn export_project_brain(
+    path: String,
+    project_id: String,
+) -> Result<project_export::ProjectBrainExportResult, project_export::ProjectBrainExportError> {
+    project_export::export(Path::new(&path), &project_id)
+}
+
+#[tauri::command]
 fn create_decision(request: CreateDecisionRequest) -> Result<DecisionsDocument, DecisionError> {
     decisions::create(request)
 }
@@ -877,6 +886,7 @@ pub fn run() {
             deprecate_knowledge_entry,
             import_interview_to_compendium,
             load_decisions,
+            export_project_brain,
             create_decision,
             update_decision,
             approve_decision,

@@ -62,6 +62,12 @@ Minimal attribution attached to created or changed artifacts. It may contain a s
 
 A reviewable record of one explicit specialist request. Format version `1` stores a run ID and timestamp, profile/task/model identities, selected Compendium and approved-Decision IDs, the user-authored scenario, success/failure status, either a normalized bounded result or safe error category/diagnostics, and optional usage/latency/cost metadata. Additive optional fields record `preferredTaskBudget`, `effectiveCompletionBudget`, and `knownModelMaxCompletionTokens` when available. Successful runs may also include `normalizationNotices` containing only a canonical list field plus returned and retained item counts; older format-version `1` records without these additive fields remain valid. It never stores credentials, authorization headers, absolute workspace paths, raw requests or provider responses, discarded overflow items, or hidden reasoning. A SpecialistRun is analysis history, not approved Project knowledge.
 
+### ProjectBrainExport
+
+A versioned, renderer-neutral, derived projection for external inspection and future one-way publishing adapters. Schema version `1` contains portable Project identity plus fixed ordered sections for Project Knowledge, Decisions, Open Questions, and successful Specialist Analysis. Entries preserve stable typed identity, collision-safe full-ID anchor, area, content, lifecycle status, authority, provenance, source, timestamps, documented-source trace, structured specialist details, and only source relationships that already exist. Open Questions remain KnowledgeEntries; they are separated into an export section without becoming a new domain. Successful Specialist output remains non-authoritative analysis.
+
+The accompanying manifest contains the export schema version, Project ID, `generatedAt`, included section IDs, entry count, and each entry's stable ID, anchor, and section membership. `generatedAt` is the only intentionally variable field when source data is unchanged. Both files under `.forgemind/exports/` are replaceable derived artifacts, not Project truth, review state, authorization, task state, or synchronization state.
+
 ### AIWorkspaceSession / Message
 
 A project-scoped non-authoritative work session with stable identity, surface, purpose, specialist-profile ID, title, timestamps, active/archive lifecycle, bounded user/assistant messages, up to five project-relative Markdown references, up to five current external-research sources, aggregate source trace, usage-record references, bounded external-service run metadata, and pending proposals. Archive retains history and can be reopened. Explicit confirmed deletion removes only the selected session history. Current WR-1.3S assistant messages store up to three focused string questions plus compact counts for established knowledge, approved Decisions, Open Questions, documented sources, external research, and recent messages. Existing format-version `1` sessions that contain WR-1.3 phase or nested-question metadata remain readable, but new provider responses neither require nor persist that metadata. Messages store visible content only; system prompts, raw provider payloads, hidden reasoning, and credentials are excluded. Nemotron messages reference canonical application-global AI usage; Tavily Search records stay separate and contain no LLM tokens or fake cost.
@@ -255,6 +261,16 @@ Observed model metrics are deterministic projections over canonical application-
 - 0K.2 AI drafting is an explicit single-request transient proposal. It uses an enabled registered model, is metered as `feature_contract`, includes only captured source facts plus current human fields, never retries automatically, and never writes to project persistence. The normalized proposal contains no file path; evidence-backed locations continue to come only from captured Reality references selected by the user.
 - Applying an AI proposal changes only unsaved editor state. Per-section replacement is explicit, Apply All fills only empty sections, and Save/Approve remain separate human actions.
 - Game Wiki reads compact Area-scoped counts and latest-approved title from this domain; it does not persist a copy or expose the full editor.
+
+## FM-EXP-1 Project Brain export invariants
+
+- Project Metadata, Compendium, Decisions, Open Questions, and Specialist History remain the only source records; exporting mutates none of them.
+- The export contract is schema version `1`, renderer-neutral, project-bound, deterministic except for `generatedAt`, and ordered without locale-sensitive comparison.
+- Entry anchors include the full stable source ID. Duplicate titles, punctuation, and non-ASCII titles cannot collide.
+- References are emitted only for existing Decision supersession/knowledge relationships and Specialist selected-context relationships whose targets are present in the export.
+- Only successful Specialist results are included, always with the existing `AI_ANALYSIS` non-authoritative class. Failed runs, safe diagnostics, usage/cost data, raw provider data, and hidden reasoning are excluded.
+- The native command writes only `.forgemind/exports/project-brain.md` and `.forgemind/exports/project-brain.manifest.json`; frontend responses expose only these project-relative managed paths.
+- Exporting makes no provider or network request and creates no wiki store, approval, task, milestone, release, Atlassian, or synchronization state.
 
 ## Deliberately unresolved
 
