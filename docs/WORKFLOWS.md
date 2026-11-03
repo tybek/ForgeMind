@@ -176,6 +176,17 @@ The MVP checks selected structured context. Broad proactive scanning is a stretc
 
 Result: Game Wiki is a read-only knowledge browser. Compendium, Decisions, Open Questions, and other established domains remain authoritative; there is no `wiki.json`.
 
+### 4A.1 Export the Project Brain — FM-EXP-1
+
+1. The user opens **Game Wiki** and explicitly chooses **Export Project Brain**.
+2. The native boundary revalidates the active workspace and portable Project ID, then loads Project Metadata, Compendium, Decisions, and Specialist History through their existing validators. No AI or network request occurs.
+3. ForgeMind builds export schema version `1` with the fixed Project Knowledge, Decisions, Open Questions, and successful Specialist Analysis hierarchy. Source identity, authority, provenance, lifecycle, timestamps, documented-source trace, and existing relationships remain distinct.
+4. A renderer consumes only that contract and writes deterministic Markdown. Full stable IDs make anchors collision-safe; human-readable title slugs remain supplemental. Failed specialist runs and diagnostic/usage/provider internals are omitted.
+5. ForgeMind replaces only `.forgemind/exports/project-brain.md` and `.forgemind/exports/project-brain.manifest.json`. The manifest records schema, Project ID, generation time, included sections, entry count, IDs, anchors, and section membership.
+6. Game Wiki reports the entry count and the two project-relative managed paths. Export failure stays local and does not hide or mutate available Project Brain data.
+
+Result: the project has a readable, future-publishing-ready derived snapshot. It is not Project truth, an approval, a task, a release record, or a synchronized external copy.
+
 ## 5. Inspect Repository Reality — Implemented 0H, manual validation pending
 
 1. The user opens **Repository** for an initialized ForgeMind workspace.
