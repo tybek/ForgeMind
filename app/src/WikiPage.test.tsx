@@ -6,7 +6,7 @@ import { loadAlignmentResults, type AlignmentResult } from "./platform/alignment
 import { loadDecisions } from "./platform/decisions";
 import { loadFeatureContracts, type FeatureContract } from "./platform/featureContracts";
 import { loadCompendium, type KnowledgeArea } from "./platform/projectKnowledge";
-import { exportProjectBrain } from "./platform/projectExport";
+import { exportAtlassianSnapshot, exportProjectBrain } from "./platform/projectExport";
 import { inspectRepositoryReality } from "./platform/repositoryReality";
 import { loadSpecialistRuns } from "./platform/specialists";
 import { inspectUnityGroundTruth } from "./platform/unityGroundTruth";
@@ -15,7 +15,7 @@ vi.mock("./platform/projectKnowledge", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./platform/projectKnowledge")>()),
   loadCompendium: vi.fn(),
 }));
-vi.mock("./platform/projectExport", () => ({ exportProjectBrain: vi.fn() }));
+vi.mock("./platform/projectExport", () => ({ exportProjectBrain: vi.fn(), exportAtlassianSnapshot: vi.fn() }));
 vi.mock("./platform/decisions", () => ({ loadDecisions: vi.fn() }));
 vi.mock("./platform/specialists", () => ({ loadSpecialistRuns: vi.fn() }));
 vi.mock("./platform/repositoryReality", () => ({ inspectRepositoryReality: vi.fn() }));
@@ -74,6 +74,7 @@ describe("Game Wiki knowledge explorer", () => {
     vi.mocked(loadAlignmentResults).mockResolvedValue({ formatVersion: 1, projectId: "project", updatedAt: alignment.createdAt, results: [alignment] });
     vi.mocked(loadFeatureContracts).mockResolvedValue({ formatVersion: 1, projectId: "project", updatedAt: featureContract.updatedAt, contracts: [featureContract] });
     vi.mocked(exportProjectBrain).mockResolvedValue({ schemaVersion: 1, generatedAt: "2026-11-03T12:00:00.000Z", entryCount: 4, markdownPath: ".forgemind/exports/project-brain.md", manifestPath: ".forgemind/exports/project-brain.manifest.json" });
+    vi.mocked(exportAtlassianSnapshot).mockResolvedValue({ schemaVersion: 1, generatedAt: "2026-11-03T12:00:00.000Z", entryCount: 4, snapshotPath: ".forgemind/exports/atlassian-project-snapshot.json" });
   });
 
   it("renders category, compact result, and selected-detail panes from existing stores", async () => {
@@ -188,5 +189,22 @@ describe("Game Wiki knowledge explorer", () => {
     const user = await renderWiki();
     await user.click(screen.getByRole("button", { name: "Export Project Brain" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("Project Brain export failed: The managed export could not be written.");
+  });
+
+  it("creates the versioned Atlassian snapshot through the native boundary", async () => {
+    const user = await renderWiki();
+    await user.click(screen.getByRole("button", { name: "Create Atlassian Snapshot" }));
+    expect(exportAtlassianSnapshot).toHaveBeenCalledWith(workspace.path, workspace.projectId);
+    const status = await screen.findByRole("status");
+    expect(status).toHaveTextContent("Created Atlassian snapshot v1 with 4 entries");
+    expect(status).toHaveTextContent(".forgemind/exports/atlassian-project-snapshot.json");
+    expect(status).not.toHaveTextContent(workspace.path);
+  });
+
+  it("keeps Atlassian snapshot failures local and actionable", async () => {
+    vi.mocked(exportAtlassianSnapshot).mockRejectedValue(new Error("The managed snapshot could not be written."));
+    const user = await renderWiki();
+    await user.click(screen.getByRole("button", { name: "Create Atlassian Snapshot" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Atlassian snapshot failed: The managed snapshot could not be written.");
   });
 });

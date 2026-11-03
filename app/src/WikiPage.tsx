@@ -4,7 +4,7 @@ import { loadAlignmentResults, type AlignmentResult } from "./platform/alignment
 import { loadDecisions, type Decision } from "./platform/decisions";
 import { loadFeatureContracts, type FeatureContract } from "./platform/featureContracts";
 import { KNOWLEDGE_AREAS, loadCompendium, type KnowledgeArea, type KnowledgeEntry } from "./platform/projectKnowledge";
-import { exportProjectBrain, type ProjectBrainExportResult } from "./platform/projectExport";
+import { exportAtlassianSnapshot, exportProjectBrain, type AtlassianSnapshotExportResult, type ProjectBrainExportResult } from "./platform/projectExport";
 import type { RepositoryRealityResult } from "./platform/repositoryReality";
 import { loadSpecialistRuns, type SpecialistRun } from "./platform/specialists";
 import type { UnityGroundTruthResult } from "./platform/unityGroundTruth";
@@ -122,6 +122,9 @@ export function WikiPage({
   const [exporting, setExporting] = useState(false);
   const [exportResult, setExportResult] = useState<ProjectBrainExportResult | null>(null);
   const [exportError, setExportError] = useState("");
+  const [atlassianExporting, setAtlassianExporting] = useState(false);
+  const [atlassianExportResult, setAtlassianExportResult] = useState<AtlassianSnapshotExportResult | null>(null);
+  const [atlassianExportError, setAtlassianExportError] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -216,6 +219,19 @@ export function WikiPage({
     }
   }
 
+  async function handleAtlassianExport() {
+    setAtlassianExporting(true);
+    setAtlassianExportResult(null);
+    setAtlassianExportError("");
+    try {
+      setAtlassianExportResult(await exportAtlassianSnapshot(workspace.path, workspace.projectId));
+    } catch (error) {
+      setAtlassianExportError(messageFromError(error));
+    } finally {
+      setAtlassianExporting(false);
+    }
+  }
+
   return (
     <div className="wiki-page">
       <header className="wiki-intro">
@@ -225,9 +241,12 @@ export function WikiPage({
             <div className="wiki-export-actions">
               <KnowledgeImportPanel workspace={workspace} onApplied={() => setRefreshKey((value) => value + 1)} />
               <button className="outline-button compact-action" type="button" disabled={exporting} onClick={() => void handleExport()}>{exporting ? "Exporting..." : "Export Project Brain"}</button>
+              <button className="outline-button compact-action" type="button" disabled={atlassianExporting} onClick={() => void handleAtlassianExport()}>{atlassianExporting ? "Creating..." : "Create Atlassian Snapshot"}</button>
             </div>
             {exportResult ? <p className="wiki-export-status" role="status">Exported {exportResult.entryCount} entries to <code>{exportResult.markdownPath}</code>. Manifest: <code>{exportResult.manifestPath}</code>.</p> : null}
             {exportError ? <p className="wiki-export-error" role="alert">Project Brain export failed: {exportError}</p> : null}
+            {atlassianExportResult ? <p className="wiki-export-status" role="status">Created Atlassian snapshot v{atlassianExportResult.schemaVersion} with {atlassianExportResult.entryCount} entries at <code>{atlassianExportResult.snapshotPath}</code>.</p> : null}
+            {atlassianExportError ? <p className="wiki-export-error" role="alert">Atlassian snapshot failed: {atlassianExportError}</p> : null}
           </div>
         </div>
         <p>Browse project knowledge across its owning domains. Game Design, Decisions, and other source workspaces remain authoritative.</p>

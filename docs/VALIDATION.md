@@ -709,3 +709,9 @@ The production regression came from two coupled defects: ForgeMind serialized fa
 Frontend tests reject history loading while independently resolving profiles, registry models, Compendium, and Decisions. They verify that all six profile tasks and configured models remain selectable, context remains present, Run Analysis remains enabled, the warning is confined to History, recovery requires confirmation, and successful recovery clears the warning. Valid history coverage remains unchanged and all provider calls are mocked.
 
 Native tests cover valid, malformed, unsupported, and backward-compatible history; registry/profile independence; empty reset; archive-and-reset isolation; unchanged Project/Compendium/Decision/Interview files; and recovery responses that contain no archived contents, credentials, or absolute paths. No generic best-effort repair or automatic deletion exists.
+
+## FM-ATL-DTO-1 Atlassian integration snapshot
+
+Focused native tests verify the shared golden fixture, closed versioned schema, Unicode and empty sections, identity, unique IDs/anchors, reference integrity, authority semantics, safe provenance paths, provider/process-detail omission, project-relative result paths, and source immutability. Companion tests load the same fixture and cover the corresponding TypeScript validator failure modes. Game Wiki tests cover the explicit action, schema/path success feedback, and local error feedback.
+
+Companion validation requires `npm.cmd test`, `npm.cmd run typecheck`, `npm.cmd run lint`, and `forge lint`; normal desktop frontend/native checks and `git diff --check` remain required. All tests are offline. No provider or Atlassian product API call is permitted. Deployment and a manual Forge UI smoke are optional for this local-only milestone; if performed, they must use only the personal development site and fictional snapshot fixture.
