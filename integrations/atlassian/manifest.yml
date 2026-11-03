@@ -1,0 +1,17 @@
+modules:
+  jira:globalPage:
+    - key: forgemind-atlassian-companion-page
+      resource: main
+      render: native
+      title: ForgeMind Atlassian Companion
+resources:
+  - key: main
+    path: src/frontend/index.tsx
+permissions:
+  scopes: []
+app:
+  runtime:
+    name: nodejs24.x
+    memoryMB: 256
+    architecture: arm64
+  id: ari:cloud:ecosystem::app/02c0bfd7-96e0-42d6-b63c-a78858d136ad
