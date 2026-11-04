@@ -770,6 +770,16 @@ The user-driven NPC-1 manual PASS was recorded on 2026-09-27. It confirmed Creat
 
 **CONF-1 is complete after headless validation and the single controlled development-site live publish.**
 
+### CONF-2 Stable Confluence Page Mapping + Explicit Update
+
+- Added installation-local Forge KVS mapping schema version `1`, keyed by stable ForgeMind project ID. Storage contains only page/space identity, descriptive title, timestamps, source schema metadata, and the deterministic content fingerprint; Project Brain, snapshot, rendered page bodies, provider data, credentials, and machine paths remain outside KVS.
+- Added mapped-page verification and the `NOT PUBLISHED`, `UP TO DATE`, `OUTDATED`, `MAPPED PAGE MISSING`, and `ACCESS ERROR` states. First publish saves the mapping only after confirmed page creation; later explicit updates target the same page ID and fixed space using the next Confluence page version. Missing-page recovery forgets only the mapping, and `409` conflicts or ambiguous mutations are never forced or automatically retried.
+- Corrected the first live no-mapping diagnostic by returning bridge-safe resolver envelopes (`{ found: false }` or `{ found: true, mapping }`) rather than a bare nullable response. Focused coverage retains null/undefined compatibility and distinguishes missing, valid, malformed, unsupported-schema, and storage-failure states.
+- Live acceptance passed on 2026-11-04 with public-safe synthetic data. One explicit publish moved the project from `NOT PUBLISHED` to reload-persistent `UP TO DATE`; a synthetic content/timestamp change produced `OUTDATED`; exactly one explicit update changed Signal fog on the same managed page; the final reload returned `UP TO DATE`, with no duplicate page observed.
+- Final companion validation passed 44 tests, TypeScript, ESLint, Forge lint, inspected build, diff/security hygiene, and development installation verification. Jira remains required, Confluence optional, and the four scopes remain `read:space:confluence`, `read:page:confluence`, `write:page:confluence`, and `storage:app`.
+
+**CONF-2 is complete after headless validation and the controlled development-site create/update live acceptance. ForgeMind remains authoritative; no reverse or automatic synchronization exists.**
+
 ## Update policy
 
 ## MODEL-1 — 2026-10-27

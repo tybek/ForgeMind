@@ -57,7 +57,7 @@ function renderStorageBody(snapshot: AtlassianProjectSnapshot): string {
     `<p><strong>Source project:</strong> ${escapeStorage(snapshot.project.name)}<br />` +
       `<strong>Snapshot schema:</strong> v${snapshot.schemaVersion}<br />` +
       `<strong>Generated:</strong> ${escapeStorage(snapshot.generatedAt)}</p>`,
-    "<p><em>This page is a derived published copy. ForgeMind remains the source of truth; edits made here are not read back.</em></p>",
+    "<p><em>Managed by ForgeMind. This page is a derived published copy; edits made here are not read back, and an explicit ForgeMind update may replace manual edits.</em></p>",
   ];
 
   for (const section of snapshot.sections) {

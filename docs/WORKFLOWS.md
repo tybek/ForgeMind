@@ -286,4 +286,15 @@ The pasted value exists only in companion component state. This workflow perform
 4. The user chooses **Publish new page to Confluence**. Only then does the companion revalidate the snapshot and create one escaped storage-format root page.
 5. The companion reports the page ID and a safe page link when the API supplies enough trusted link data. It does not write that ID into ForgeMind.
 
-Every successful publish creates a new page. ForgeMind remains the source of truth and never reads Confluence edits back. CONF-1 has no page mapping, update, deletion, sync, polling, reverse import, child-page tree, Jira operation, Rovo action, background publish, automatic retry, or provider call.
+CONF-1's first-publish path creates a new page. ForgeMind remains the source of truth and never reads Confluence edits back.
+
+## Explicit mapped Confluence update
+
+1. Validate `AtlassianProjectSnapshot` version `1`. The companion looks up `confluence-publication:v1:<projectId>` through its minimal KVS resolver.
+2. With no mapping, use the first-publish workflow. After Confluence confirms creation, store only mapping schema `1` metadata. If that write fails, retain the returned safe page ID and do not publish again automatically.
+3. With a mapping, verify the same page ID through Confluence REST v2 and compare the current draft fingerprint with the stored fingerprint.
+4. Review page, fixed space, current and proposed titles, section/entry counts, timestamps, and the warning that managed content may replace manual edits.
+5. Choose **Update existing page**. The companion revalidates the snapshot and mapping, reads the current version, and sends one update with the next version. It never automatically retries an ambiguous result or resolves a `409` conflict.
+6. If the page is missing, **Forget mapping** deletes only KVS metadata and returns to the first-publish flow. Access failures preserve the mapping.
+
+The page ID is stable identity; title changes update the same page. CONF-2 does not move mapped pages between spaces, import manual edits, poll, auto-sync, create Jira issues, or depend on Rovo/MCP.
