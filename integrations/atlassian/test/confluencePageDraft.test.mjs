@@ -7,6 +7,7 @@ import {
   defaultConfluencePageTitle,
   validateConfluencePageTitle,
 } from "../src/confluence/confluencePageDraft.ts";
+import { fingerprintConfluencePageDraft } from "../src/publication/contentFingerprint.ts";
 
 const fixturePath = fileURLToPath(new URL("../../../contracts/fixtures/atlassian-project-snapshot-v1.json", import.meta.url));
 const fixture = () => JSON.parse(readFileSync(fixturePath, "utf8"));
@@ -73,4 +74,11 @@ test("generates and validates bounded editable titles", () => {
   assert.equal(validateConfluencePageTitle(""), "Page title is required.");
   assert.match(validateConfluencePageTitle("A".repeat(256)), /255 characters or fewer/);
   assert.equal(validateConfluencePageTitle("ForgeMind CONF-1 Synthetic Test — Project Brain"), null);
+});
+
+test("treats the intentionally visible generated timestamp as publishable content", () => {
+  const first = fixture();
+  const second = fixture();
+  second.generatedAt = "2026-11-04T13:00:00.000Z";
+  assert.notEqual(fingerprintConfluencePageDraft(buildConfluencePageDraft(first)), fingerprintConfluencePageDraft(buildConfluencePageDraft(second)));
 });

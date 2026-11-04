@@ -18,6 +18,16 @@ export interface ConfluencePublishResult {
   url?: string;
 }
 
+export interface ConfluencePage extends ConfluencePublishResult {
+  version: number;
+}
+
+export interface UpdateConfluencePageInput {
+  pageId: string;
+  currentVersion: number;
+  draft: ConfluencePageDraft;
+}
+
 export interface ConfluenceResponse {
   ok: boolean;
   status: number;
@@ -84,6 +94,36 @@ export function createConfluenceService(request: ConfluenceRequester) {
       }
       return { pageId: payload.id, title: payload.title, spaceId: payload.spaceId, url: safePageUrl(payload) };
     },
+
+    async getPage(pageId: string): Promise<ConfluencePage> {
+      if (!text(pageId)) throw new ConfluenceServiceError("INVALID_PAGE_ID", "The mapped Confluence page ID is invalid.");
+      const response = await performRequest(request, `/wiki/api/v2/pages/${encodeURIComponent(pageId.trim())}`, undefined, "read");
+      if (!response.ok) throw responseError(response.status, "read");
+      return parsePage(await readJson(response, "read"), "read");
+    },
+
+    async updatePage({ pageId, currentVersion, draft }: UpdateConfluencePageInput): Promise<ConfluencePage> {
+      if (!text(pageId)) throw new ConfluenceServiceError("INVALID_PAGE_ID", "The mapped Confluence page ID is invalid.");
+      if (!Number.isInteger(currentVersion) || currentVersion < 1) throw new ConfluenceServiceError("INVALID_PAGE_VERSION", "The mapped Confluence page version is invalid.");
+      validateDraft(draft);
+      const response = await performRequest(request, `/wiki/api/v2/pages/${encodeURIComponent(pageId.trim())}`, {
+        method: "PUT",
+        headers: { Accept: "application/json", "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: pageId.trim(),
+          status: "current",
+          title: draft.title,
+          body: { representation: "storage", value: draft.body },
+          version: { number: currentVersion + 1, message: "Updated from ForgeMind" },
+        }),
+      }, "update");
+      if (!response.ok) throw responseError(response.status, "update");
+      const page = parsePage(await readJson(response, "update"), "update");
+      if (page.pageId !== pageId.trim() || page.version !== currentVersion + 1) {
+        throw new ConfluenceServiceError("MALFORMED_UPDATE_RESPONSE", "Confluence may have updated the page but returned an invalid result. Check the mapped page before trying again.");
+      }
+      return page;
+    },
   };
 }
 
@@ -103,43 +143,85 @@ export function createSingleFlightPublisher(service: ReturnType<typeof createCon
   };
 }
 
-async function performRequest(request: ConfluenceRequester, path: string, init: RequestInit | undefined, operation: "list" | "create"): Promise<ConfluenceResponse> {
+export function createSingleFlightUpdater(service: ReturnType<typeof createConfluenceService>) {
+  let pending = false;
+  return {
+    isPending: () => pending,
+    async update(input: UpdateConfluencePageInput): Promise<ConfluencePage> {
+      if (pending) throw new ConfluenceServiceError("UPDATE_IN_PROGRESS", "A Confluence update request is already in progress.");
+      pending = true;
+      try {
+        return await service.updatePage(input);
+      } finally {
+        pending = false;
+      }
+    },
+  };
+}
+
+type ConfluenceOperation = "list" | "create" | "read" | "update";
+
+async function performRequest(request: ConfluenceRequester, path: string, init: RequestInit | undefined, operation: ConfluenceOperation): Promise<ConfluenceResponse> {
   try {
     return await request(path, init);
   } catch {
     if (operation === "create") {
       throw new ConfluenceServiceError("CREATE_RESULT_UNKNOWN", "The publish result is unknown because Confluence could not be reached. Check Confluence before publishing again.");
     }
+    if (operation === "update") throw new ConfluenceServiceError("UPDATE_RESULT_UNKNOWN", "The update result is unknown because Confluence could not be reached. Check the mapped page before trying again.");
+    if (operation === "read") throw new ConfluenceServiceError("MAPPED_PAGE_ACCESS_ERROR", "The mapped page could not be reached. Confirm the Confluence connection and try again.");
     throw new ConfluenceServiceError("CONFLUENCE_UNAVAILABLE", "Confluence could not be reached. Confirm the app is connected to Confluence and try again.");
   }
 }
 
-async function readJson(response: ConfluenceResponse, operation: "list" | "create"): Promise<unknown> {
+async function readJson(response: ConfluenceResponse, operation: ConfluenceOperation): Promise<unknown> {
   try {
     return await response.json();
   } catch {
     if (operation === "create") {
       throw new ConfluenceServiceError("MALFORMED_CREATE_RESPONSE", "Confluence may have created the page but returned an unreadable result. Check Confluence before publishing again.");
     }
+    if (operation === "update") throw new ConfluenceServiceError("MALFORMED_UPDATE_RESPONSE", "Confluence may have updated the page but returned an unreadable result. Check the mapped page before trying again.");
+    if (operation === "read") throw malformedResponse("Confluence returned an unreadable mapped-page response.");
     throw malformedResponse("Confluence returned an unreadable spaces response.");
   }
 }
 
-function responseError(status: number, operation: "list" | "create"): ConfluenceServiceError {
+function responseError(status: number, operation: ConfluenceOperation): ConfluenceServiceError {
   if (status === 401 || status === 403) {
+    if (operation === "read" || operation === "update") return new ConfluenceServiceError("MAPPED_PAGE_ACCESS_DENIED", "The mapped page is not accessible with current permissions.");
     return new ConfluenceServiceError("CONFLUENCE_PERMISSION_DENIED", operation === "list"
       ? "Confluence denied access to spaces. Confirm the app is connected and the read:space:confluence permission is approved."
       : "Confluence denied page creation. Confirm the target space allows page creation and the write:page:confluence permission is approved.");
   }
+  if (status === 404 && (operation === "read" || operation === "update")) return new ConfluenceServiceError("MAPPED_PAGE_MISSING", "The mapped Confluence page no longer exists.");
   if (status === 404) return new ConfluenceServiceError("CONFLUENCE_NOT_FOUND", "Confluence or the selected space is unavailable. Confirm the app is connected and choose an available space.");
+  if (operation === "update" && status === 409) return new ConfluenceServiceError("PAGE_VERSION_CONFLICT", "Page changed in Confluence since ForgeMind last checked. Review and retry.");
   if (operation === "create" && (status === 400 || status === 409)) {
     return new ConfluenceServiceError("PAGE_REJECTED", "Confluence rejected the page. Check the title, target space, and whether that space already has a page with the same title.");
   }
   if (status >= 500 && operation === "create") {
     return new ConfluenceServiceError("CREATE_RESULT_UNKNOWN", "Confluence reported a server error and the publish result may be unknown. Check Confluence before publishing again.");
   }
+  if (status >= 500 && operation === "update") return new ConfluenceServiceError("UPDATE_RESULT_UNKNOWN", "Confluence reported a server error and the update result may be unknown. Check the mapped page before trying again.");
+  if (operation === "update") return new ConfluenceServiceError("PAGE_UPDATE_REJECTED", `Confluence rejected the page update (HTTP ${status}). Review the mapped page before trying again.`);
+  if (operation === "read") return new ConfluenceServiceError("MAPPED_PAGE_ACCESS_ERROR", `The mapped page could not be verified (HTTP ${status}).`);
   if (status >= 500) return new ConfluenceServiceError("CONFLUENCE_UNAVAILABLE", "Confluence reported a server error. Try listing spaces again later.");
   return new ConfluenceServiceError("CONFLUENCE_REQUEST_FAILED", `Confluence rejected the ${operation === "list" ? "space list" : "page publish"} request (HTTP ${status}).`);
+}
+
+function validateDraft(draft: ConfluencePageDraft): void {
+  if (!text(draft.title)) throw new ConfluenceServiceError("INVALID_TITLE", "Page title is required.");
+  if (draft.title.trim().length > 255) throw new ConfluenceServiceError("INVALID_TITLE", "Page title must be 255 characters or fewer.");
+  if (!text(draft.body)) throw new ConfluenceServiceError("INVALID_BODY", "The Confluence page body is empty.");
+}
+
+function parsePage(value: unknown, operation: "read" | "update"): ConfluencePage {
+  if (!isRecord(value) || !text(value.id) || !text(value.title) || !text(value.spaceId) || !isRecord(value.version) || !Number.isInteger(value.version.number) || Number(value.version.number) < 1) {
+    if (operation === "update") throw new ConfluenceServiceError("MALFORMED_UPDATE_RESPONSE", "Confluence may have updated the page but returned an invalid result. Check the mapped page before trying again.");
+    throw malformedResponse("Confluence returned an invalid mapped-page response.");
+  }
+  return { pageId: value.id, title: value.title, spaceId: value.spaceId, version: Number(value.version.number), url: safePageUrl(value) };
 }
 
 function nextSpacesPath(payload: Record<string, unknown>): string | null {

@@ -5,6 +5,7 @@ import {
   ConfluenceServiceError,
   createConfluenceService,
   createSingleFlightPublisher,
+  createSingleFlightUpdater,
 } from "../src/confluence/confluenceService.ts";
 
 const response = (status, payload) => ({
@@ -121,4 +122,72 @@ test("single-flight publisher prevents UI double submission while POST is pendin
   resolveRequest(response(200, { id: "page", title: draft.title, spaceId: "space" }));
   assert.equal((await first).pageId, "page");
   assert.equal(publisher.isPending(), false);
+});
+
+test("reads an existing mapped page and its current version", async () => {
+  let call;
+  const service = createConfluenceService(async (path, init) => {
+    call = { path, init };
+    return response(200, { id: "98765", title: "Mapped", spaceId: "space-1", version: { number: 7 }, _links: { base: "https://example.atlassian.net", webui: "/wiki/pages/98765" } });
+  });
+  assert.deepEqual(await service.getPage("98765"), { pageId: "98765", title: "Mapped", spaceId: "space-1", version: 7, url: "https://example.atlassian.net/wiki/pages/98765" });
+  assert.equal(call.path, "/wiki/api/v2/pages/98765");
+  assert.equal(call.init, undefined);
+});
+
+test("updates the same page ID with title, storage body, and incremented version", async () => {
+  let call;
+  const service = createConfluenceService(async (path, init) => {
+    call = { path, init };
+    return response(200, { id: "98765", title: "Renamed", spaceId: "space-1", version: { number: 8 } });
+  });
+  const renamedDraft = { ...draft, title: "Renamed" };
+  const result = await service.updatePage({ pageId: "98765", currentVersion: 7, draft: renamedDraft });
+  assert.equal(call.path, "/wiki/api/v2/pages/98765");
+  assert.equal(call.init.method, "PUT");
+  assert.deepEqual(JSON.parse(call.init.body), {
+    id: "98765",
+    status: "current",
+    title: "Renamed",
+    body: { representation: "storage", value: draft.body },
+    version: { number: 8, message: "Updated from ForgeMind" },
+  });
+  assert.equal(result.pageId, "98765");
+  assert.equal(result.version, 8);
+});
+
+test("handles mapped-page 404, 403, version conflict, other 4xx, and 5xx safely", async () => {
+  for (const [status, code] of [[404, "MAPPED_PAGE_MISSING"], [403, "MAPPED_PAGE_ACCESS_DENIED"]]) {
+    const service = createConfluenceService(async () => response(status, {}));
+    await assert.rejects(service.getPage("page"), (error) => error.code === code);
+  }
+  for (const [status, code] of [[404, "MAPPED_PAGE_MISSING"], [403, "MAPPED_PAGE_ACCESS_DENIED"], [409, "PAGE_VERSION_CONFLICT"], [400, "PAGE_UPDATE_REJECTED"], [503, "UPDATE_RESULT_UNKNOWN"]]) {
+    const service = createConfluenceService(async () => response(status, {}));
+    await assert.rejects(service.updatePage({ pageId: "page", currentVersion: 1, draft }), (error) => error.code === code);
+  }
+});
+
+test("treats malformed and unreachable update results as outcome-unknown without retry", async () => {
+  let calls = 0;
+  const malformed = createConfluenceService(async () => { calls += 1; return response(200, { id: "page", title: draft.title, spaceId: "space" }); });
+  await assert.rejects(malformed.updatePage({ pageId: "page", currentVersion: 1, draft }), (error) => error.code === "MALFORMED_UPDATE_RESPONSE");
+  assert.equal(calls, 1);
+  const unreachable = createConfluenceService(async () => { throw new Error("secret-stack"); });
+  await assert.rejects(unreachable.updatePage({ pageId: "page", currentVersion: 1, draft }), (error) => error.code === "UPDATE_RESULT_UNKNOWN" && !error.message.includes("secret-stack"));
+});
+
+test("single-flight updater prevents duplicate PUT while an update is pending", async () => {
+  let resolveRequest;
+  let putCount = 0;
+  const service = createConfluenceService(async () => {
+    putCount += 1;
+    return await new Promise((resolve) => { resolveRequest = resolve; });
+  });
+  const updater = createSingleFlightUpdater(service);
+  const first = updater.update({ pageId: "page", currentVersion: 1, draft });
+  await assert.rejects(updater.update({ pageId: "page", currentVersion: 1, draft }), (error) => error.code === "UPDATE_IN_PROGRESS");
+  assert.equal(putCount, 1);
+  resolveRequest(response(200, { id: "page", title: draft.title, spaceId: "space", version: { number: 2 } }));
+  assert.equal((await first).version, 2);
+  assert.equal(updater.isPending(), false);
 });

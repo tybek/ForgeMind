@@ -2,15 +2,22 @@ modules:
   jira:globalPage:
     - key: forgemind-atlassian-companion-page
       resource: main
+      resolver:
+        function: publication-mapping
       render: native
       title: ForgeMind Atlassian Companion
+  function:
+    - key: publication-mapping
+      handler: backend/index.handler
 resources:
   - key: main
     path: src/frontend/index.tsx
 permissions:
   scopes:
     - read:space:confluence
+    - read:page:confluence
     - write:page:confluence
+    - storage:app
 app:
   runtime:
     name: nodejs24.x
