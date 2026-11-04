@@ -277,3 +277,13 @@ Open Questions remain lightweight project knowledge, not chat threads or task ti
 4. **Validate Snapshot** checks schema, identity, fixed section order, entry/anchor uniqueness, references, authority semantics, provenance paths, and reports a bounded summary.
 
 The pasted value exists only in companion component state. This workflow performs no upload, storage, Confluence publication, Jira issue operation, Rovo action, sync, provider request, or other remote side effect.
+
+## Explicit Confluence publish
+
+1. Complete the manual snapshot handoff and validate `AtlassianProjectSnapshot` version `1` in ForgeMind Atlassian Companion.
+2. The companion lists Confluence spaces visible in the connected current-user context; it does not choose one automatically.
+3. The user selects a target space, reviews or edits the page title, and inspects project, section, entry, and authority summaries.
+4. The user chooses **Publish new page to Confluence**. Only then does the companion revalidate the snapshot and create one escaped storage-format root page.
+5. The companion reports the page ID and a safe page link when the API supplies enough trusted link data. It does not write that ID into ForgeMind.
+
+Every successful publish creates a new page. ForgeMind remains the source of truth and never reads Confluence edits back. CONF-1 has no page mapping, update, deletion, sync, polling, reverse import, child-page tree, Jira operation, Rovo action, background publish, automatic retry, or provider call.
