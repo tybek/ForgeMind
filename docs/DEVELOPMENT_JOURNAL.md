@@ -761,6 +761,15 @@ The user-driven NPC-1 manual PASS was recorded on 2026-09-27. It confirmed Creat
 
 **IMP-1.2 is implemented and headless validated, but the diagnostic-led live recheck and IMP-1 Manual PASS remain pending. No Tavily, Writers' Room, authority, candidate-type, Apply, duplicate, or adjacent feature behavior changed.**
 
+### CONF-1 Explicit One-Way Confluence Publishing
+
+- Completed the independent Forge companion workflow for one explicit, current-user Confluence page creation from a validated `AtlassianProjectSnapshot` version `1`. Users select a visible space, review an editable title and bounded preview, and click **Publish new page to Confluence**; ForgeMind remains authoritative and stores no remote page mapping.
+- Preserved the Jira-required, Confluence-optional multi-app topology under the existing Forge app ID with only `read:space:confluence` and `write:page:confluence`. The final development installation reports one shared identity for `Jira (Required), Confluence`.
+- Live acceptance passed on 2026-11-04 using the public-safe synthetic snapshot. One page titled **ForgeMind CONF-1 Synthetic Test — Project Brain** visibly preserved source identity, schema/timestamp, sections, content, status, authority, provenance, and the derived-copy disclaimer. No private or corporate data was used, and no repeat page was created.
+- CONF-1 adds no reverse synchronization, update-existing-page behavior, page mapping, automatic retry, Jira issue integration, Rovo dependency, Forge Storage business state, desktop transport, or provider call.
+
+**CONF-1 is complete after headless validation and the single controlled development-site live publish.**
+
 ## Update policy
 
 ## MODEL-1 — 2026-10-27

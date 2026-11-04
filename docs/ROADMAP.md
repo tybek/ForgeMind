@@ -294,6 +294,14 @@ The contract preserves identity, fixed section order, real status and authority 
 
 Exit condition met: the desktop produces a deterministic local DTO that the independently packaged Forge companion can validate through an explicit manual paste handoff.
 
+## CONF-1 Explicit One-Way Publish to Confluence — COMPLETE
+
+The existing ForgeMind Atlassian Companion now supports Jira as its required Atlassian app and Confluence as an optional compatible app under the same Forge app ID. It requests only `read:space:confluence` and `write:page:confluence`. After manual snapshot paste and validation, the user explicitly selects a visible space, reviews an editable bounded title and publish summary, and chooses **Publish new page to Confluence**. A dedicated adapter uses Confluence REST API v2 as the current Forge user, while an isolated renderer transforms `AtlassianProjectSnapshot` version `1` into escaped storage-format page content.
+
+Every successful action creates exactly one new page. No mapping is persisted, no POST is automatically retried, and ForgeMind remains the sole source of project truth. There is no update-existing-page behavior, synchronization, polling, reverse import, remote-edit ingestion, deletion, child-page tree, Jira integration, Rovo implementation, Forge Storage business state, desktop credential, or provider request.
+
+Headless contract, renderer, adapter, failure, and single-flight coverage passes with TypeScript and ESLint. Live acceptance passed on 2026-11-04 after the existing development app was upgraded with only the two documented Confluence scopes and Confluence was connected as the optional product under the Jira-required installation. One explicit publish created **ForgeMind CONF-1 Synthetic Test — Project Brain** from the public-safe synthetic snapshot; the rendered page visibly preserved project identity, schema version, generated timestamp, sections, content, status, authority, provenance, and the derived-copy/source-of-truth notice. No private or corporate data was used, and no second page was created.
+
 ## IMP-1 Existing Project Knowledge Import — IMPLEMENTED, IMP-1.1/IMP-1.2 HEADLESS VALIDATED; MANUAL ACCEPTANCE PENDING
 
 IMP-1 adds a bounded **Game Wiki -> Import Knowledge** path for an existing project. The user explicitly selects 1-10 project-contained `.md` files; native preflight rejects traversal, external paths, symlink escape, non-Markdown input, files above 128 KiB, and batches above 512 KiB rather than truncating silently. One confirmed Nebius Token Factory request asks the selected registry model, defaulting to NVIDIA Nemotron, for at most 30 strict `KNOWLEDGE`, `DECISION`, or `OPEN_QUESTION` candidates. Imported Markdown is framed as untrusted data and source IDs remain project-relative.
